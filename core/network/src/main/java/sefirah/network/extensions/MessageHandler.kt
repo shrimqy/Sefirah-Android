@@ -11,6 +11,9 @@ import sefirah.network.NetworkService
 
 suspend fun NetworkService.handleMessage(message: SocketMessage) {
     when (message) {
+        is NotificationMessage -> notificationHandler.removeNotification(message.notificationKey)
+        is NotificationAction -> notificationHandler.performNotificationAction(message)
+        is ReplyAction -> notificationHandler.performReplyAction(message)
         is DeviceInfo -> handleDeviceInfo(message)
         else -> {
 

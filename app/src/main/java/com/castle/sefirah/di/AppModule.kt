@@ -20,6 +20,8 @@ import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PlaybackRepository
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
+import sefirah.media.MediaHandler
+import sefirah.media.MediaService
 import sefirah.network.NetworkManagerImpl
 import sefirah.network.NsdService
 import sefirah.network.SftpServer
@@ -136,6 +138,24 @@ object AppModule {
     fun providesClipboardHandler(
         service: ClipboardService
     ): ClipboardHandler {
+        return service
+    }
+
+    @Provides
+    @Singleton
+    fun providesMediaService(
+        context: Context,
+        networkManager: NetworkManager,
+        notificationCenter: NotificationCenter
+    ) : MediaService {
+        return MediaService(context, networkManager, notificationCenter)
+    }
+
+    @Provides
+    @Singleton
+    fun providesMediaHandler(
+        service: MediaService
+    ) : MediaHandler {
         return service
     }
 

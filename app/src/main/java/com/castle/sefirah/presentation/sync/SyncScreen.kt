@@ -33,10 +33,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.castle.sefirah.presentation.sync.components.DeviceItem
 import com.castle.sefirah.navigation.Graph
-import komu.seki.presentation.screens.LoadingScreen
 import sefirah.domain.model.RemoteDevice
 import sefirah.presentation.components.PullRefresh
 import sefirah.presentation.screens.EmptyScreen
+import sefirah.presentation.screens.LoadingScreen
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs

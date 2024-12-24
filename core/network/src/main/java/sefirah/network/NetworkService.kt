@@ -1,13 +1,11 @@
 package sefirah.network
 
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationCompat.EXTRA_NOTIFICATION_ID
 import dagger.hilt.android.AndroidEntryPoint
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.openReadChannel
@@ -26,12 +24,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import sefirah.clipboard.ClipboardChangeActivity
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.R
 import sefirah.common.extensions.NotificationCenter
 import sefirah.data.repository.AppRepository
-import sefirah.database.model.toEntity
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
