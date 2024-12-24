@@ -19,9 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Sekia"
+rootProject.name = "Sefirah"
 include(":app")
-include(":core:common")
-include(":core:presentation")
-include(":core:data")
-include(":core:domain")
+ 

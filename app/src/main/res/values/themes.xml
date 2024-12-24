@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Sekia" parent="android:Theme.Material.Light.NoActionBar" />
 
-    <!-- Default splash screen theme for older devices -->
-    <style name="App.Starting.Theme" parent="Theme.SplashScreen">
-        <item name="postSplashScreenTheme">@style/Theme.Sekia</item>
-    </style>
+    <style name="Theme.Sefirah" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

@@ -1,126 +1,32 @@
 [versions]
-minSdk = "26"
-compileSdk = "34"
-
-agp = "8.7.1"
+agp = "8.7.3"
 kotlin = "2.0.0"
-ksp = "2.0.0-1.0.22"
-coreKtx = "1.13.1"
+coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.6"
-navigation = "2.8.0"
-datastore = "1.1.1"
-room = "2.6.1"
-
-androidx-media = "1.7.0"
-
-hilt = "2.51.1"
-hilt-androidx = "1.2.0"
-
-ktorVersion = "2.3.12"
-
-composeBom = "2024.09.02"
-compose-coil = "2.6.0"
-compose-activity = "1.9.2"
-
-compose-ui = "1.7.2"
-material3 = "1.3.0"
-
-appcompat = "1.7.0"
-material = "1.12.0"
-core-splashscreen = "1.0.1"
+lifecycleRuntimeKtx = "2.8.7"
+activityCompose = "1.9.3"
+composeBom = "2024.04.01"
 
 [libraries]
-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
-androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-compose-navigation = { module = "androidx.navigation:navigation-compose", version.ref = "navigation"}
-datastore = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore"}
-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "core-splashscreen" }
-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
-kotlinx-immutables = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version = "0.3.7" }
-androidx-work = { module= "androidx.work:work-runtime-ktx", version = "2.9.1"}
-
-
-# Media
-androidx-media = { module = "androidx.media:media", version.ref = "androidx-media" }
-
-
-
-
-# Coil
-coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "compose-coil" }
-
-# Hilt
-hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref ="hilt"}
-hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt"}
-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hilt-androidx"}
-hilt-androidx-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hilt-androidx" }
-
-# Compose
-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "compose-activity" }
-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose-ui" }
-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose-ui" }
-
-animation = { module = "androidx.compose.animation:animation", version.ref = "compose-ui"}
-animation-graphics = { module = "androidx.compose.animation:animation-graphics", version.ref = "compose-ui" }
-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose-ui" }
-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "compose-ui" }
-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
-ui-util = { module = "androidx.compose.ui:ui-util" }
-compose-ui-test-junit = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "compose-ui" }
-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "compose-ui" }
-
-material3-core = { module = "androidx.compose.material3:material3", version.ref = "material3" }
-material-icons = { module = "androidx.compose.material:material-icons-extended", version.ref = "compose-ui" }
-
-# Ktor
-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorVersion" }
-ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktorVersion" }
-ktor-client-websocket = { module = "io.ktor:ktor-client-websockets", version.ref = "ktorVersion"}
-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktorVersion"}
-ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorVersion" }
-ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktorVersion" }
-ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorVersion" }
-
-# Room
-androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
-androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
-androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
-androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-
-# Testing
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
-
-
-# gradle
-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
-kotlin-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 
-
-[bundles]
-compose-android = [
-    "activity-compose", "foundation", "animation", "animation-graphics", "compose-ui",
-    "material3-core", "material-icons",  "ui-tooling-preview"
-]
-
-ktor = [
-    "ktor-client-core", "ktor-client-okhttp", "ktor-client-logging",
-    "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json",
-    "ktor-client-websocket", "ktor-client-cio"
-]

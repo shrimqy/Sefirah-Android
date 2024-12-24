@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
-    <share-target android:targetClass="com.komu.sekia.ui.shortcut">
-        <data android:mimeType="text/plain" />
-        <category android:name="com.android.shortcut.conversation" />
-    </share-target>
-</shortcuts>
