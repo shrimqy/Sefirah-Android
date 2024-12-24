@@ -52,6 +52,10 @@ kotlin {
 
 
 dependencies {
+    api(projects.core.common)
+    api(projects.core.network)
+    api(projects.core.presentation)
+
     implementation(libs.androidx.appcompat)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.core.ktx)
