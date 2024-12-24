@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Sefirah</string>
+    <string name="notification_device_connection">Device Connection Status</string>
+    <string name="version">Version</string>
+    <string name="about">About</string>
+    <string name="whats_new">What\&apos;s new</string>
+    <string name="notification_media_playback">Desktop Media Playback</string>
+    <string name="notification_clipboard_action">Send Clipboard</string>
+</resources>
