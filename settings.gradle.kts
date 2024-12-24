@@ -23,4 +23,17 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 rootProject.name = "Sefirah"
 include(":app")
- 
+
+include(":core:common")
+include(":core:network")
+include(":core:database")
+include(":core:presentation")
+
+include(":domain")
+include(":data")
+include(":data")
+
+include(":feature:clipboard")
+include(":feature:media")
+include(":feature:notification")
+include(":feature:screen")
