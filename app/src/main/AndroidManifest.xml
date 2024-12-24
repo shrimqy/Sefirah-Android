@@ -50,6 +50,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+
+        <activity android:name="sefirah.clipboard.ClipboardChangeActivity"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:theme="@style/TranslucentTheme.Dark" />
+
+        <service android:name="sefirah.network.NetworkService" android:foregroundServiceType="dataSync"/>
+
+        <service android:name="sefirah.notification.NotificationListener"
+            android:label="@string/app_name"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

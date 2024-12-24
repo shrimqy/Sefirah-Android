@@ -11,6 +11,9 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import sefirah.clipboard.ClipboardHandler
+import sefirah.clipboard.ClipboardService
+import sefirah.common.extensions.NotificationCenter
 import sefirah.data.repository.PlaybackRepositoryImpl
 import sefirah.data.repository.PreferencesDatastore
 import sefirah.domain.repository.NetworkManager
@@ -23,6 +26,9 @@ import sefirah.network.SftpServer
 import sefirah.network.SocketFactoryImpl
 import sefirah.network.util.MessageSerializer
 import sefirah.network.util.TrustManager
+import sefirah.notification.NotificationCallback
+import sefirah.notification.NotificationHandler
+import sefirah.notification.NotificationService
 import javax.inject.Singleton
 
 @Module
@@ -51,7 +57,6 @@ object AppModule {
     fun providedPlaybackRepository(): PlaybackRepository {
         return PlaybackRepositoryImpl()
     }
-
 
     @Provides
     @Singleton
@@ -93,6 +98,45 @@ object AppModule {
         context: Context
     ): NetworkManager {
         return NetworkManagerImpl(context)
+    }
+
+    @Provides
+    @Singleton
+    fun providesNotificationService(
+        context: Context,
+        networkManager: NetworkManager
+    ): NotificationService {
+        return NotificationService(context, networkManager)
+    }
+
+    @Provides
+    @Singleton
+    fun providesNotificationCenter(
+        context: Context
+    ): NotificationCenter = NotificationCenter(context)
+
+    @Provides
+    @Singleton
+    fun providesNotificationHandler(
+        service: NotificationService
+    ): NotificationHandler {
+        return service
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotificationCallback(
+        service: NotificationService
+    ): NotificationCallback {
+        return service
+    }
+
+    @Provides
+    @Singleton
+    fun providesClipboardHandler(
+        service: ClipboardService
+    ): ClipboardHandler {
+        return service
     }
 
 }

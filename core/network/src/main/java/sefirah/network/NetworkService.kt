@@ -1,11 +1,13 @@
 package sefirah.network
 
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationCompat.EXTRA_NOTIFICATION_ID
 import dagger.hilt.android.AndroidEntryPoint
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.openReadChannel
@@ -24,9 +26,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import sefirah.clipboard.ClipboardChangeActivity
+import sefirah.clipboard.ClipboardHandler
 import sefirah.common.R
 import sefirah.common.extensions.NotificationCenter
 import sefirah.data.repository.AppRepository
+import sefirah.database.model.toEntity
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
@@ -35,6 +40,7 @@ import sefirah.domain.repository.SocketFactory
 import sefirah.network.extensions.handleMessage
 import sefirah.network.extensions.setNotification
 import sefirah.network.util.MessageSerializer
+import sefirah.notification.NotificationHandler
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -42,7 +48,9 @@ class NetworkService : Service() {
     @Inject lateinit var socketFactory: SocketFactory
     @Inject lateinit var appRepository: AppRepository
     @Inject lateinit var messageSerializer: MessageSerializer
+    @Inject lateinit var notificationHandler: NotificationHandler
     @Inject lateinit var notificationCenter: NotificationCenter
+    @Inject lateinit var clipboardHandler: ClipboardHandler
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
@@ -104,6 +112,8 @@ class NetworkService : Service() {
                 ))
                 delay(10) // Add a delay for verification from the other side
                 setNotification(true, remoteInfo.deviceName)
+                notificationHandler.sendActiveNotifications()
+                clipboardHandler.start()
             } catch (e: Exception) {
                 Log.e(TAG, "Error in connecting", e)
                 _isConnected.value = false
