@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,14 +30,16 @@ import sefirah.presentation.R
 fun AppTopBar(
     items: List<NavigationItem>,
     selectedItem: Int,
-    onNewDeviceClick: ()-> Unit,
+    onNewDeviceClick: () -> Unit,
+    onSearchQueryChange: (String) -> Unit
 ) {
-    var isOverflowExpanded by remember {
-        mutableStateOf(false)
-    }
-
+    var isOverflowExpanded by remember { mutableStateOf(false) }
     var text by remember { mutableStateOf("") }
     var active by remember { mutableStateOf(false) }
+
+    LaunchedEffect(text) {
+        onSearchQueryChange(text)
+    }
 
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -45,8 +48,7 @@ fun AppTopBar(
         title = {
             if (!active) {
                 Text(text = items[selectedItem].text)
-            }
-            else {
+            } else {
                 SearchBar(
                     query = text,
                     onQueryChange = { text = it },
@@ -92,7 +94,10 @@ fun AppTopBar(
             Row {
                 if (!active && selectedItem == 1) {
                     IconButton(onClick = { active = true }) {
-                        Icon(imageVector = Icons.Default.Search, contentDescription = "Search Icon")
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search Icon"
+                        )
                     }
                 }
 
@@ -113,7 +118,10 @@ fun AppTopBar(
                 ) {
                     DropdownMenuItem(
                         text = { Text(text = "Add a New Device") },
-                        onClick = { onNewDeviceClick() },
+                        onClick = { 
+                            isOverflowExpanded = false
+                            onNewDeviceClick() 
+                        },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Outlined.Devices,

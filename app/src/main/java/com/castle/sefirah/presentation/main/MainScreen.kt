@@ -11,8 +11,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -68,6 +70,8 @@ fun MainScreen(
     }
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
+    var searchQuery by remember { mutableStateOf("") }
+
     PullRefresh(
         refreshing = isRefreshing,
         enabled = isPullRefreshEnabled,
@@ -79,7 +83,10 @@ fun MainScreen(
                     AppTopBar(
                         items = navigationItems,
                         selectedItem = selectedItem,
-                        onNewDeviceClick = { rootNavController.navigate(route = SyncRoute.SyncScreen.route) }
+                        onNewDeviceClick = { rootNavController.navigate(route = SyncRoute.SyncScreen.route) },
+                        onSearchQueryChange = { query -> 
+                            searchQuery = query
+                        }
                     )
                 }
             },
@@ -102,6 +109,7 @@ fun MainScreen(
                 rootNavController = rootNavController,
                 homeNavController = homeNavController,
                 innerPadding = innerPadding,
+                searchQuery = searchQuery
             )
         }
     }

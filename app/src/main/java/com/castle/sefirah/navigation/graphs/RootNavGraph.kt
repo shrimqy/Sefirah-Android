@@ -10,6 +10,13 @@ import com.castle.sefirah.presentation.sync.SyncScreen
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.OnboardingRoute
 import com.castle.sefirah.navigation.SyncRoute
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import com.castle.sefirah.navigation.transitions.NavigationTransitions
 
 @Composable
 fun RootNavGraph(startDestination: String) {
@@ -19,6 +26,10 @@ fun RootNavGraph(startDestination: String) {
         navController = rootNavController,
         route = Graph.RootGraph,
         startDestination = startDestination,
+        enterTransition = { NavigationTransitions.rootEnterTransition(this) },
+        exitTransition = { NavigationTransitions.rootExitTransition(this) },
+        popEnterTransition = { NavigationTransitions.rootPopEnterTransition(this) },
+        popExitTransition = { NavigationTransitions.rootPopExitTransition(this) }
     ) {
 
         composable(route = OnboardingRoute.OnboardingScreen.route) {

@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -22,8 +23,15 @@ import sefirah.presentation.screens.EmptyScreen
 @Composable
 fun DevicesScreen(
     rootNavController: NavHostController,
+    searchQuery: String = ""
 ) {
     val devicesViewModel: DevicesViewModel = hiltViewModel()
+    
+    // Update search query in ViewModel
+    LaunchedEffect(searchQuery) {
+        devicesViewModel.updateSearchQuery(searchQuery)
+    }
+
     val deviceDetails by devicesViewModel.deviceDetails.collectAsState()
     val syncStatus by devicesViewModel.syncStatus.collectAsState()
     val lastConnected by devicesViewModel.lastConnected.collectAsState()
@@ -38,7 +46,10 @@ fun DevicesScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top,
         ) {
-            items(deviceDetails) { device ->
+            items(
+                items = deviceDetails,
+                key = { it.deviceId }
+            ) { device ->
                 Column(modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
@@ -54,7 +65,7 @@ fun DevicesScreen(
                                 // Perform sync action
                             }
                         },
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
             }

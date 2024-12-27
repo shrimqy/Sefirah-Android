@@ -44,5 +44,3 @@ data class NavigationItem @OptIn(ExperimentalAnimationGraphicsApi::class) constr
     val text: String,
     val route: String
 )
-
-
