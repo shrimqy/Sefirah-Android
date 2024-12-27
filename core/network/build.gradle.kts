@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.apache.sshd.mina)
     implementation(libs.apache.mina.core)
     implementation(libs.bcpkix.jdk18on)
+    implementation(libs.androidx.work)
 
     implementation(libs.bundles.ktor)
 }
