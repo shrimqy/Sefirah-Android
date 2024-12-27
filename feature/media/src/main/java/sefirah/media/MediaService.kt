@@ -33,60 +33,99 @@ class MediaService @Inject constructor(
     }
 
     override fun updateMediaSession(playbackData: PlaybackData) {
-        mediaSession.apply {
-            setMetadata(
-                MediaMetadataCompat.Builder()
-                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playbackData.trackTitle)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, playbackData.artist)
-                    .putBitmap(
-                        MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
-                        playbackData.thumbnail?.let { base64ToBitmap(it) })
-                    .build()
-            )
+        CoroutineScope(Dispatchers.Main).launch {
+            mediaSession.apply {
+                setMetadata(
+                    playbackData.maxSeekTime?.let {maxSeekTime ->
+                        MediaMetadataCompat.Builder()
+                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playbackData.trackTitle)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, playbackData.artist)
+                            .putBitmap(
+                                MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
+                                playbackData.thumbnail?.let { base64ToBitmap(it) })
+                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, maxSeekTime)
+                            .build()
+                    }
+                )
 
-            setPlaybackState(
-                PlaybackStateCompat.Builder()
-                    .setState(
-                        if (playbackData.isPlaying == true) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-                        PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f
-                    )
-                    .setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE or PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
-                    .build()
-            )
+                setPlaybackState(
+                    playbackData.position?.let {
+                        PlaybackStateCompat.Builder()
+                            .setState(
+                                if (playbackData.isPlaying == true) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
+                                it.toLong(),
+                                1f
+                            )
+                            .setActions(
+                                PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                                        PlaybackStateCompat.ACTION_SEEK_TO or
+                                        PlaybackStateCompat.ACTION_FAST_FORWARD or
+                                        PlaybackStateCompat.ACTION_REWIND
+                            )
+                            .build()
+                    }
+                )
 
-            setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() {
-                    handleMediaAction(playbackData, MediaAction.RESUME)
-                }
+                setCallback(object : MediaSessionCompat.Callback() {
+                    override fun onPlay() {
+                        handleMediaAction(playbackData, MediaAction.RESUME)
+                    }
 
-                override fun onPause() {
-                    handleMediaAction(playbackData, MediaAction.PAUSE)
-                }
+                    override fun onPause() {
+                        handleMediaAction(playbackData, MediaAction.PAUSE)
+                    }
 
-                override fun onSkipToNext() {
-                    handleMediaAction(playbackData, MediaAction.NEXT_QUEUE)
-                }
+                    override fun onSkipToNext() {
+                        handleMediaAction(playbackData, MediaAction.NEXT_QUEUE)
+                    }
 
-                override fun onSkipToPrevious() {
-                    handleMediaAction(playbackData, MediaAction.PREV_QUEUE)
-                }
-            })
-        }
+                    override fun onSkipToPrevious() {
+                        handleMediaAction(playbackData, MediaAction.PREV_QUEUE)
+                    }
 
-        notificationCenter.showNotification(
-            channelId = channelId,
-            channelName = channelName,
-            notificationId = notificationId
-        ) {
-            setContentTitle(playbackData.trackTitle)
-            setContentText(playbackData.artist)
-            setLargeIcon(playbackData.thumbnail?.let { base64ToBitmap(it) })
-            setStyle(
-                NotificationCompat.MediaStyle()
-                    .setMediaSession(mediaSession.sessionToken)
-                    .setShowActionsInCompactView(0, 1, 2)
-            )
-            setOngoing(true)
+                    override fun onSeekTo(pos: Long) {
+                        handleMediaAction(
+                            playbackData.copy(position = pos),
+                            MediaAction.SEEK
+                        )
+                    }
+
+//                    override fun onFastForward() {
+//                        val newPosition = minOf(
+//                            playbackData.position + SEEK_FORWARD_INCREMENT,
+//                            playbackData.maxSeekTime
+//                        )
+//                        onSeekTo(newPosition)
+//                    }
+//
+//                    override fun onRewind() {
+//                        val newPosition = maxOf(
+//                            playbackData.position - SEEK_BACKWARD_INCREMENT,
+//                            playbackData.minSeekTime
+//                        )
+//                        onSeekTo(newPosition)
+//                    }
+                })
+            }
+
+            notificationCenter.showNotification(
+                channelId = channelId,
+                channelName = channelName,
+                notificationId = notificationId
+            ) {
+                setContentTitle(playbackData.trackTitle)
+                setContentText(playbackData.artist)
+                setLargeIcon(playbackData.thumbnail?.let { base64ToBitmap(it) })
+                setStyle(
+                    NotificationCompat.MediaStyle()
+                        .setMediaSession(mediaSession.sessionToken)
+                        .setShowActionsInCompactView(0, 1, 2)
+                )
+                setSilent(true)
+                setOngoing(true)
+            }
         }
 
         Log.d(TAG, "Notification updated for playback: ${playbackData.trackTitle}")
@@ -110,6 +149,8 @@ class MediaService @Inject constructor(
     companion object {
         private const val TAG = "MediaHandler"
         private const val MEDIA_SESSION_TAG = "DesktopMediaSession"
+        private const val SEEK_FORWARD_INCREMENT = 10_000L
+        private const val SEEK_BACKWARD_INCREMENT = 10_000L
     }
 }
 
