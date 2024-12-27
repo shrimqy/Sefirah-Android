@@ -27,7 +27,7 @@ class MainViewModel @Inject constructor(
     var splashCondition by mutableStateOf(true)
         private set
 
-    var startDestination by mutableStateOf(Graph.MainScreenGraph)
+    var startDestination by mutableStateOf(OnboardingRoute.OnboardingScreen.route)
         private set
 
     init {
