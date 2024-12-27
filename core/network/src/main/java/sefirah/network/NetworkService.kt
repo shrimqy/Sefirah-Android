@@ -1,6 +1,5 @@
 package sefirah.network
 
-import sefirah.domain.model.ConnectionState
 import android.app.Service
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -19,22 +18,19 @@ import io.ktor.utils.io.readUTF8Line
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.R
 import sefirah.common.extensions.NotificationCenter
 import sefirah.data.repository.AppRepository
+import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
@@ -100,7 +96,7 @@ class NetworkService : Service() {
                     start(remoteInfo)
                 }
             }
-            Actions.STOP.name -> stop()
+            Actions.STOP.name -> stop(true)
         }
         return START_NOT_STICKY
     }
@@ -114,6 +110,7 @@ class NetworkService : Service() {
                 readChannel = socket?.openReadChannel()
                 connectedDevice = remoteInfo
                 _connectionState.value = ConnectionState.Connected
+                networkDiscovery.addCurrentNetworkSSID()
                 scope.launch {
                     startListening()
                 }
@@ -135,8 +132,14 @@ class NetworkService : Service() {
         }
     }
 
-    private fun stop() {
+
+
+    private fun stop(forcedStop: Boolean) {
+        if (!forcedStop) {
+            networkDiscovery.register()
+        }
         scope.launch {
+            notificationHandler.stopListener()
             writeChannel?.close()
             socket?.close()
             _connectionState.value = ConnectionState.Disconnected
@@ -194,7 +197,7 @@ class NetworkService : Service() {
             e.printStackTrace()
         } finally {
             Log.d(TAG, "Session closed")
-            stop()
+            stop(false)
         }
     }
 

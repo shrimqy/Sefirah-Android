@@ -50,6 +50,7 @@ espressoCore = "3.6.1"
 # Material Design
 material = "1.12.0"
 
+
 [libraries]
 # AndroidX Core
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -87,6 +88,8 @@ material-icons = { module = "androidx.compose.material:material-icons-extended",
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "composeCoil" }
 
 # Dependency Injection
+androidx-hilt-common = { group = "androidx.hilt", name = "hilt-common", version.ref = "hiltAndroidx" }
+androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltAndroidx" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltAndroidx" }
@@ -129,6 +132,7 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

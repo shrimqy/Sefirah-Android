@@ -49,3 +49,15 @@ fun base64ToIconCompat(base64String: String?): IconCompat? {
         null
     }
 }
+
+// Helper function to convert Drawable to Base64 String (optional)
+fun drawableToBase64(drawable: Drawable): String? {
+    if (drawable is BitmapDrawable) {
+        val bitmap = drawable.bitmap
+        val outputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        val byteArray = outputStream.toByteArray()
+        return Base64.encodeToString(byteArray, Base64.NO_WRAP)
+    }
+    return null
+}

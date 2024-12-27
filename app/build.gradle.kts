@@ -68,6 +68,7 @@ dependencies {
     implementation(libs.splashscreen)
 
     implementation(libs.androidx.media)
+    implementation(libs.androidx.hilt.work)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
