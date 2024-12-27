@@ -14,12 +14,13 @@ import com.castle.sefirah.presentation.home.HomeScreen
 import com.castle.sefirah.presentation.settings.SettingsScreen
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.MainRouteScreen
+import com.castle.sefirah.presentation.home.HomeViewModel
 
 @Composable
 fun MainNavGraph(
     rootNavController: NavHostController,
     homeNavController: NavHostController,
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
 ) {
     NavHost(
         navController = homeNavController,

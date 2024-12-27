@@ -1,7 +1,9 @@
 package sefirah.network
 
+import sefirah.domain.model.ConnectionState
 import android.app.Service
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
@@ -10,20 +12,25 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
+import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.close
 import io.ktor.utils.io.readUTF8Line
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.R
 import sefirah.common.extensions.NotificationCenter
@@ -33,6 +40,7 @@ import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.SocketType
 import sefirah.domain.repository.SocketFactory
+import sefirah.media.MediaHandler
 import sefirah.network.extensions.handleMessage
 import sefirah.network.extensions.setNotification
 import sefirah.network.util.MessageSerializer
@@ -47,6 +55,8 @@ class NetworkService : Service() {
     @Inject lateinit var notificationHandler: NotificationHandler
     @Inject lateinit var notificationCenter: NotificationCenter
     @Inject lateinit var clipboardHandler: ClipboardHandler
+    @Inject lateinit var networkDiscovery: NetworkDiscovery
+    @Inject lateinit var mediaHandler: MediaHandler
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
@@ -60,12 +70,14 @@ class NetworkService : Service() {
     }
 
     lateinit var notificationBuilder: NotificationCompat.Builder
+    private lateinit var connectivityManager: ConnectivityManager
 
-    private val _isConnected = MutableStateFlow(false)
-    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     private var socket: Socket? = null
     private var writeChannel: ByteWriteChannel? = null
+    private var readChannel: ByteReadChannel? = null
 
     lateinit var connectedDevice: RemoteDevice
 
@@ -75,6 +87,7 @@ class NetworkService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -82,6 +95,7 @@ class NetworkService : Service() {
             Actions.START.name -> {
                 val remoteInfo = intent.getParcelableExtra<RemoteDevice>(REMOTE_INFO)
                 if (remoteInfo != null) {
+                    _connectionState.value = ConnectionState.Connecting
                     setNotification(false, remoteInfo.deviceName)
                     start(remoteInfo)
                 }
@@ -97,9 +111,12 @@ class NetworkService : Service() {
                 val localDevice = appRepository.getLocalDevice()
                 socket = socketFactory.createSocket(SocketType.DEFAULT, remoteInfo).getOrNull()
                 writeChannel = socket?.openWriteChannel()
+                readChannel = socket?.openReadChannel()
                 connectedDevice = remoteInfo
-                _isConnected.value = true
-                startListening()
+                _connectionState.value = ConnectionState.Connected
+                scope.launch {
+                    startListening()
+                }
                 sendMessage(DeviceInfo(
                     deviceId = localDevice.deviceId,
                     publicKey = localDevice.publicKey,
@@ -110,9 +127,10 @@ class NetworkService : Service() {
                 setNotification(true, remoteInfo.deviceName)
                 notificationHandler.sendActiveNotifications()
                 clipboardHandler.start()
+                networkDiscovery.unregister()
             } catch (e: Exception) {
                 Log.e(TAG, "Error in connecting", e)
-                _isConnected.value = false
+                _connectionState.value = ConnectionState.Disconnected
             }
         }
     }
@@ -121,7 +139,7 @@ class NetworkService : Service() {
         scope.launch {
             writeChannel?.close()
             socket?.close()
-            _isConnected.value = false
+            _connectionState.value = ConnectionState.Disconnected
             stopForeground(STOP_FOREGROUND_REMOVE)
         }
     }
@@ -131,7 +149,7 @@ class NetworkService : Service() {
         // Only one coroutine at a time can acquire the lock and send the message
         mutex.withLock {
             try {
-                if (_isConnected.value) {
+                if (_connectionState.value == ConnectionState.Connected || _connectionState.value == ConnectionState.Connecting) {
                     writeChannel?.let { channel ->
                         val jsonMessage = messageSerializer.serialize(message)
                         channel.writeStringUtf8("$jsonMessage\n") // Add newline to separate messages
@@ -146,7 +164,6 @@ class NetworkService : Service() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send message", e)
-                _isConnected.value = false
             }
         }
     }
@@ -154,13 +171,11 @@ class NetworkService : Service() {
     private suspend fun startListening() {
         try {
             Log.d(TAG, "listening started")
-            val receiveChannel = socket?.openReadChannel()
-            receiveChannel?.let { channel ->
+            readChannel?.let { channel ->
                 while (!channel.isClosedForRead) {
                     try {
                         // Read the incoming data as a line
                         val receivedData = channel.readUTF8Line()
-
                         receivedData?.let { jsonMessage ->
                             Log.d(TAG, "Raw received data: $jsonMessage")
                             messageSerializer.deserialize(jsonMessage).also { socketMessage->

@@ -14,6 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import sefirah.clipboard.ClipboardHandler
 import sefirah.clipboard.ClipboardService
 import sefirah.common.extensions.NotificationCenter
+import sefirah.data.repository.AppRepository
 import sefirah.data.repository.PlaybackRepositoryImpl
 import sefirah.data.repository.PreferencesDatastore
 import sefirah.domain.repository.NetworkManager
@@ -50,24 +51,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providesPreferencesRepository(
-        application: Application
-    ): PreferencesRepository = PreferencesDatastore(context = application)
-
-    @Provides
-    @Singleton
-    fun providedPlaybackRepository(): PlaybackRepository {
-        return PlaybackRepositoryImpl()
-    }
-
-    @Provides
-    @Singleton
-    fun providesSftpServer(
-        application: Application
-    ): SftpServer = SftpServer(application)
-
-    @Provides
-    @Singleton
     fun providesMessageSerializer(): MessageSerializer = MessageSerializer()
 
     @Provides
@@ -83,7 +66,6 @@ object AppModule {
     ): TrustManager {
         return TrustManager(application)
     }
-
 
     @Provides
     @Singleton
@@ -101,6 +83,12 @@ object AppModule {
     ): NetworkManager {
         return NetworkManagerImpl(context)
     }
+
+    @Provides
+    @Singleton
+    fun providesSftpServer(
+        application: Application
+    ): SftpServer = SftpServer(application)
 
     @Provides
     @Singleton
@@ -159,4 +147,15 @@ object AppModule {
         return service
     }
 
+    @Provides
+    @Singleton
+    fun providesPreferencesRepository(
+        application: Application
+    ): PreferencesRepository = PreferencesDatastore(context = application)
+
+    @Provides
+    @Singleton
+    fun providedPlaybackRepository(): PlaybackRepository {
+        return PlaybackRepositoryImpl()
+    }
 }

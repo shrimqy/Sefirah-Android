@@ -126,7 +126,7 @@ fun SyncScreen(
                 Button(
                     onClick = {
                         Log.d("Service", "Connecting to service: ${selectedService.value}")
-                        viewModel.authenticate(context, selectedService.value!!, Base64.encodeToString(hashedSecret, Base64.DEFAULT))
+                        viewModel.authenticate(context, selectedService.value!!, Base64.encodeToString(hashedSecret, Base64.DEFAULT), rootNavController)
                         rootNavController.navigate(route = Graph.MainScreenGraph)
                         showDialog.value = false
                     }

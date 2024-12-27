@@ -46,6 +46,10 @@ class NotificationListener : NotificationListenerService() {
             val intent = Intent(context, NotificationListener::class.java)
             context.startService(intent)
         }
+        fun stop(context: Context) {
+            val intent = Intent(context, NotificationListener::class.java)
+            context.stopService(intent)
+        }
     }
 }
 

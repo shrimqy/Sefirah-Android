@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -62,7 +63,6 @@ fun SettingsScreen(
         item {
             LogoHeader()
         }
-
         item {
             if (checkForDevices != null) {
                 SwitchPreferenceWidget(
@@ -92,6 +92,16 @@ fun SettingsScreen(
                     }
                 )
             }
+        }
+
+        item {
+            TextPreferenceWidget(
+                title = "Permissions",
+                icon =  Icons.Default.SettingsSuggest,
+                onPreferenceClick = {
+                    rootNavController.navigate(SettingsRouteScreen.AboutScreen.route)
+                }
+            )
         }
 
         item {

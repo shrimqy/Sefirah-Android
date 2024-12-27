@@ -17,7 +17,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.Message
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationMessage
@@ -40,8 +43,18 @@ class NotificationService @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var isConnected : Boolean = false
+
+    private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    
     private lateinit var listener: NotificationListenerService
 
+    init {
+        scope.launch {
+            networkManager.connectionState.collect { state ->
+                connectionState.value = state
+            }
+        }
+    }
 
     override fun sendActiveNotifications() {
         if (!isConnected) {
@@ -83,7 +96,9 @@ class NotificationService @Inject constructor(
     override fun onListenerConnected(service: NotificationListenerService) {
         isConnected = true
         listener = service
-        sendActiveNotifications()
+        if (connectionState.value == ConnectionState.Connected) {
+            sendActiveNotifications()
+        }
     }
 
     override fun onListenerDisconnected() {
@@ -131,6 +146,10 @@ class NotificationService @Inject constructor(
         } catch (e: PendingIntent.CanceledException) {
             Log.e("NotificationService", "Error performing reply action", e)
         }
+    }
+
+    override fun stopListener() {
+        NotificationListener.stop(context)
     }
 
 

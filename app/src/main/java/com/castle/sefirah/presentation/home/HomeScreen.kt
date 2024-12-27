@@ -11,23 +11,35 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.castle.sefirah.navigation.Graph
+import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.presentation.home.components.DeviceCard
 import com.castle.sefirah.presentation.home.components.MediaPlaybackCard
 import com.castle.sefirah.presentation.home.components.VolumeSlider
+import com.castle.sefirah.presentation.main.ConnectionViewModel
+import sefirah.domain.model.ConnectionState
 
 @Composable
 fun HomeScreen(
-    navController: NavController
+    rootNavController: NavHostController,
 ) {
+    val backStackState = rootNavController.currentBackStackEntryAsState().value
+    val backStackEntry = remember(key1 = backStackState) { rootNavController.getBackStackEntry(Graph.MainScreenGraph) }
+    val connectionViewModel: ConnectionViewModel = hiltViewModel(backStackEntry)
+
     val viewModel: HomeViewModel = hiltViewModel()
-    val deviceDetails by viewModel.deviceDetails.collectAsState()
-    val syncStatus by viewModel.syncStatus.collectAsState()
+    val deviceDetails by connectionViewModel.deviceDetails.collectAsState()
+    val connectionState by connectionViewModel.connectionState.collectAsState()
     val context = LocalContext.current
     val playbackData by viewModel.playbackData.collectAsState()
 
@@ -48,9 +60,9 @@ fun HomeScreen(
             ) {
                 DeviceCard(
                     device = deviceDetails,
-                    onSyncAction = { viewModel.toggleSync(!syncStatus) },
-                    syncStatus = syncStatus,
-                    navController = navController
+                    onSyncAction = { connectionViewModel.toggleSync(connectionState == ConnectionState.Disconnected) },
+                    connectionState = connectionState,
+                    navController = rootNavController
                 )
             }
         }

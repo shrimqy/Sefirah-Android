@@ -9,4 +9,5 @@ interface NotificationHandler {
     fun removeNotification(notificationId: String?)
     fun performNotificationAction(action: NotificationAction)
     fun performReplyAction(action: ReplyAction)
+    fun stopListener()
 }

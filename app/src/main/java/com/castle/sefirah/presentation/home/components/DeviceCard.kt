@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.castle.sefirah.navigation.SyncRoute
+import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.RemoteDevice
 import sefirah.presentation.util.base64ToBitmap
 
@@ -41,7 +42,7 @@ import sefirah.presentation.util.base64ToBitmap
 fun DeviceCard(
     modifier: Modifier = Modifier,
     device: RemoteDevice?,
-    syncStatus: Boolean,
+    connectionState: ConnectionState,
     onSyncAction: () -> Unit,
     batteryLevel: Int? = null,
     navController: NavController
@@ -92,13 +93,13 @@ fun DeviceCard(
                                 }
                             }
                             Text(
-                                text = if (syncStatus) "Connected" else "Disconnected",
+                                text = if (connectionState == ConnectionState.Connected) "Connected" else "Disconnected",
                             )
                         }
                         IconButton(onClick = onSyncAction) {
                             Icon(
-                                imageVector = if (syncStatus) Icons.Rounded.SyncDisabled else Icons.Rounded.Sync,
-                                contentDescription = if (syncStatus) "Disconnect" else "Sync",
+                                imageVector = if (connectionState == ConnectionState.Connected) Icons.Rounded.SyncDisabled else Icons.Rounded.Sync,
+                                contentDescription = if (connectionState == ConnectionState.Connected) "Disconnect" else "Sync",
                                 tint = MaterialTheme.colorScheme.surfaceTint,
                             )
                         }

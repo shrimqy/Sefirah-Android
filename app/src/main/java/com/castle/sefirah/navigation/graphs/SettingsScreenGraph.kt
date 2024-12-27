@@ -1,4 +1,4 @@
-package com.komu.sekia.navigation.graphs
+package com.castle.sefirah.navigation.graphs
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController

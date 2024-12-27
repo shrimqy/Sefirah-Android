@@ -4,13 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.castle.sefirah.presentation.MainScreen
+import com.castle.sefirah.presentation.main.MainScreen
 import com.castle.sefirah.presentation.onboarding.OnboardingScreen
 import com.castle.sefirah.presentation.sync.SyncScreen
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.OnboardingRoute
 import com.castle.sefirah.navigation.SyncRoute
-import com.komu.sekia.navigation.graphs.settingsNavGraph
 
 @Composable
 fun RootNavGraph(startDestination: String) {

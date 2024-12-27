@@ -22,7 +22,6 @@ class SocketFactoryImpl @Inject constructor(
     private val customTrustManager: TrustManager
 ): SocketFactory {
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     override suspend fun createSocket(
         type: SocketType,
         remoteDevice: RemoteDevice,

@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import sefirah.domain.model.RemoteDevice
-import sefirah.network.util.CryptoUtils
 import java.util.concurrent.Executors
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,7 +31,9 @@ import javax.inject.Singleton
 @Singleton
 class NsdService @Inject constructor(@ApplicationContext private val context: Context) {
 
-    private val nsdManager: NsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
+    private val nsdManager by lazy { 
+        context.getSystemService(Context.NSD_SERVICE) as NsdManager 
+    }
     private val _services = MutableStateFlow<List<RemoteDevice>>(emptyList())
     val services: StateFlow<List<RemoteDevice>> = _services
     private var serviceDiscoveryStatus by mutableStateOf(false)

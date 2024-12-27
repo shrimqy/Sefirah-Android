@@ -1,4 +1,4 @@
-package com.castle.sefirah.presentation
+package com.castle.sefirah.presentation.main
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -11,11 +11,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -23,7 +20,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.castle.sefirah.R
-import com.castle.sefirah.presentation.home.HomeViewModel
 import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.navigation.SyncRoute
 import com.castle.sefirah.navigation.graphs.MainNavGraph
@@ -39,47 +35,37 @@ import sefirah.presentation.components.PullRefresh
 @Composable
 fun MainScreen(
     rootNavController: NavHostController,
-    homeNavController: NavHostController = rememberNavController()
+    homeNavController: NavHostController = rememberNavController(),
 ) {
-    val showBottomNavEvent = Channel<Boolean>()
+    val backStackState = homeNavController.currentBackStackEntryAsState().value
+    val viewModel: ConnectionViewModel = hiltViewModel()
 
     val homeAnimatedIcon = AnimatedImageVector.animatedVectorResource(R.drawable.ic_home)
     val devicesAnimatedIcon = AnimatedImageVector.animatedVectorResource(R.drawable.ic_devices)
     val settingsAnimatedIcon = AnimatedImageVector.animatedVectorResource(R.drawable.ic_settings)
-    val navigationItem = remember {
+    val navigationItems = remember {
         listOf(
-            NavigationItem(homeAnimatedIcon, text = "Home"),
-            NavigationItem(devicesAnimatedIcon, text = "Devices"),
-            NavigationItem(settingsAnimatedIcon, text = "Settings")
+            NavigationItem(homeAnimatedIcon, text = "Home", route = MainRouteScreen.HomeScreen.route),
+            NavigationItem(devicesAnimatedIcon, text = "Devices", route = MainRouteScreen.DevicesScreen.route),
+            NavigationItem(settingsAnimatedIcon, text = "Settings", route = MainRouteScreen.SettingsScreen.route)
         )
     }
 
-    val backStackState = homeNavController.currentBackStackEntryAsState().value
-    var selectedItem by rememberSaveable {
-        mutableIntStateOf(0)
-    }
 
+    val currentRoute = backStackState?.destination?.route
 
-    selectedItem = when (backStackState?.destination?.route) {
-        MainRouteScreen.HomeScreen.route -> 0
-        MainRouteScreen.DevicesScreen.route -> 1
-        MainRouteScreen.SettingsScreen.route -> 2
-        else -> 0
+    val selectedItem = remember(backStackState) {
+        navigationItems.indexOfFirst { it.route == currentRoute }.takeIf { it >= 0 } ?: 0
     }
 
     //Hide the bottom navigation when the user is in the details screen
     val isBarVisible = remember(key1 = backStackState) {
-        backStackState?.destination?.route == MainRouteScreen.HomeScreen.route ||
-                backStackState?.destination?.route == MainRouteScreen.DevicesScreen.route ||
-                backStackState?.destination?.route == MainRouteScreen.SettingsScreen.route
+        navigationItems.any { it.route == currentRoute }
     }
 
     val isPullRefreshEnabled = remember(key1 = backStackState) {
-        backStackState?.destination?.route == MainRouteScreen.HomeScreen.route
+        currentRoute == MainRouteScreen.HomeScreen.route
     }
-
-    val viewModel: HomeViewModel = hiltViewModel()
-    val deviceDetails by viewModel.deviceDetails.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     PullRefresh(
@@ -91,7 +77,7 @@ fun MainScreen(
             topBar = {
                 if (isBarVisible) {
                     AppTopBar(
-                        items = navigationItem,
+                        items = navigationItems,
                         selectedItem = selectedItem,
                         onNewDeviceClick = { rootNavController.navigate(route = SyncRoute.SyncScreen.route) }
                     )
@@ -99,45 +85,23 @@ fun MainScreen(
             },
             bottomBar = {
                 if (isBarVisible) {
-                    val bottomNavVisible by produceState(initialValue = true) {
-                        showBottomNavEvent.receiveAsFlow().collectLatest { value = it }
-                    }
-                    AnimatedVisibility(
-                        visible = bottomNavVisible,
-                        enter = expandVertically(),
-                        exit = shrinkVertically(),
-                    ) {
-                        NavBar(
-                            items = navigationItem,
-                            selectedItem = selectedItem,
-                            onItemClick = { index ->
-                                when (index) {
-                                    0 -> navigateToTab(
-                                        navController = homeNavController,
-                                        route = MainRouteScreen.HomeScreen.route
-                                    )
-
-                                    1 -> navigateToTab(
-                                        navController = homeNavController,
-                                        route = MainRouteScreen.DevicesScreen.route
-                                    )
-
-                                    2 -> navigateToTab(
-                                        navController = homeNavController,
-                                        route = MainRouteScreen.SettingsScreen.route
-                                    )
-                                }
-                            }
-                        )
-                    }
-
+                    BottomNavigationBar(
+                        items = navigationItems,
+                        selectedItem = selectedItem,
+                        onItemClick = { index ->
+                            navigateToTab(
+                                navController = homeNavController,
+                                route = navigationItems[index].route
+                            )
+                        }
+                    )
                 }
             }
         ) { innerPadding ->
             MainNavGraph(
                 rootNavController = rootNavController,
                 homeNavController = homeNavController,
-                innerPadding = innerPadding
+                innerPadding = innerPadding,
             )
         }
     }
@@ -153,5 +117,29 @@ private fun navigateToTab(navController: NavController, route: String) {
         }
         launchSingleTop = true
         restoreState = true
+    }
+}
+
+@Composable
+private fun BottomNavigationBar(
+    items: List<NavigationItem>,
+    selectedItem: Int,
+    onItemClick: (Int) -> Unit
+) {
+    val showBottomNavEvent = remember { Channel<Boolean>() }
+    val bottomNavVisible by produceState(initialValue = true) {
+        showBottomNavEvent.receiveAsFlow().collectLatest { value = it }
+    }
+
+    AnimatedVisibility(
+        visible = bottomNavVisible,
+        enter = expandVertically(),
+        exit = shrinkVertically(),
+    ) {
+        NavBar(
+            items = items,
+            selectedItem = selectedItem,
+            onItemClick = onItemClick
+        )
     }
 }

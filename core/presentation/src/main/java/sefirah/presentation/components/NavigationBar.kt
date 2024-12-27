@@ -38,9 +38,11 @@ fun NavBar(
     }
 }
 
+
 data class NavigationItem @OptIn(ExperimentalAnimationGraphicsApi::class) constructor(
     val icon: AnimatedImageVector?,
-    val text: String
+    val text: String,
+    val route: String
 )
 
 
