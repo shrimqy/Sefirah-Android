@@ -30,7 +30,7 @@ hilt = "2.53.1"
 hiltAndroidx = "1.2.0"
 
 # Networking
-ktor = "3.0.1"
+ktor = "2.3.13"
 minaCore = "2.2.3"
 sshdCore = "2.14.0"
 
