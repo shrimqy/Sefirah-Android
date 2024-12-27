@@ -136,7 +136,7 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
                             } catch (e: Exception) {
                                 Log.e(TAG, "Error registering listener: ${e.message}")
                             }
-                        }, 200)
+                        }, 500)
                     } else {
                         // Fallback for older versions
                         nsdManager.resolveService(service, resolveListener)
@@ -259,6 +259,7 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
     fun stopDiscovery() {
         try {
             nsdManager.stopServiceDiscovery(discoveryListener)
+            _services.value = emptyList()
             Log.d(TAG, "Stopped service discovery")
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "Error stopping discovery: ${e.message}")

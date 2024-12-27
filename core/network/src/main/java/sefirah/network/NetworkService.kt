@@ -35,6 +35,7 @@ import sefirah.common.extensions.NotificationCenter
 import sefirah.data.repository.AppRepository
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
+import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.SocketType
@@ -108,41 +109,87 @@ class NetworkService : Service() {
     private fun start(remoteInfo: RemoteDevice) {
         scope.launch {
             try {
-                val localDevice = appRepository.getLocalDevice()
-                socket = socketFactory.createSocket(SocketType.DEFAULT, remoteInfo).getOrNull()
-                writeChannel = socket?.openWriteChannel()
-                readChannel = socket?.openReadChannel()
-                connectedDevice = remoteInfo
-                _connectionState.value = ConnectionState.Connected
-                networkDiscovery.addCurrentNetworkSSID()
-                scope.launch {
-                    startListening()
-                }
-                sendMessage(DeviceInfo(
-                    deviceId = localDevice.deviceId,
-                    publicKey = localDevice.publicKey,
-                    deviceName = localDevice.deviceName,
-                    hashedSecret = remoteInfo.hashedSecret
-                ))
-                delay(10) // Add a delay for verification from the other side
+                if (!initializeConnection(remoteInfo)) return@launch
+                // Send initial device info
+                sendDeviceInfo(remoteInfo)
+                delay(10) // Verification delay
 
+                // Send apps if needed
                 if (remoteInfo.avatar == null) {
-                    val apps = getInstalledApps(packageManager)
-                    for (app in apps) {
-                        sendMessage(app)
-                        delay(10)
-                    }
+                    sendInstalledApps()
                 }
-                setNotification(true, remoteInfo.deviceName)
-                notificationHandler.sendActiveNotifications()
-                clipboardHandler.start()
-                networkDiscovery.unregister()
+
+                // Setup complete
+                finalizeConnection(remoteInfo.deviceName)
+
             } catch (e: Exception) {
                 Log.e(TAG, "Error in connecting", e)
-                networkDiscovery.register()
-                _connectionState.value = ConnectionState.Disconnected
+                handleConnectionFailure()
             }
         }
+    }
+
+    private suspend fun initializeConnection(remoteInfo: RemoteDevice): Boolean {
+        try {
+            var attempts = 0
+            while (attempts < 4) {
+                try {
+                    socket = socketFactory.createSocket(SocketType.DEFAULT, remoteInfo).getOrNull()
+                    if (socket != null) {
+                        writeChannel = socket?.openWriteChannel()
+                        readChannel = socket?.openReadChannel()
+                        connectedDevice = remoteInfo
+                        startListening()
+                        return true
+                    }
+                    attempts++
+                    if (attempts < 4) {
+                        Log.d(TAG, "Connection attempt $attempts failed, retrying...")
+                        delay(2000)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in connecting (attempt $attempts)", e)
+                    attempts++
+                    if (attempts < 4) delay(2000)
+                }
+            }
+            handleConnectionFailure()
+            return false
+        } catch (e: Exception) {
+            handleConnectionFailure()
+            return false
+        }
+    }
+
+    private suspend fun sendDeviceInfo(remoteInfo: RemoteDevice) {
+        val localDevice = appRepository.getLocalDevice()
+        sendMessage(DeviceInfo(
+            deviceId = localDevice.deviceId,
+            publicKey = localDevice.publicKey,
+            deviceName = localDevice.deviceName,
+            hashedSecret = remoteInfo.hashedSecret
+        ))
+    }
+
+    private suspend fun sendInstalledApps() {
+        getInstalledApps(packageManager).forEach { app ->
+            sendMessage(app)
+            delay(10)
+        }
+    }
+
+    private suspend fun finalizeConnection(deviceName: String) {
+        _connectionState.value = ConnectionState.Connected
+        networkDiscovery.addCurrentNetworkSSID()
+        setNotification(true, deviceName)
+        notificationHandler.sendActiveNotifications()
+        clipboardHandler.start()
+        networkDiscovery.unregister()
+    }
+
+    private fun handleConnectionFailure() {
+        networkDiscovery.register()
+        _connectionState.value = ConnectionState.Disconnected
     }
 
     private fun stop(forcedStop: Boolean) {
@@ -181,34 +228,37 @@ class NetworkService : Service() {
         }
     }
 
-    private suspend fun startListening() {
-        try {
-            Log.d(TAG, "listening started")
-            readChannel?.let { channel ->
-                while (!channel.isClosedForRead) {
-                    try {
-                        // Read the incoming data as a line
-                        val receivedData = channel.readUTF8Line()
-                        receivedData?.let { jsonMessage ->
-                            Log.d(TAG, "Raw received data: $jsonMessage")
-                            messageSerializer.deserialize(jsonMessage).also { socketMessage->
-                                socketMessage?.let { handleMessage(it) }
+    private fun startListening() {
+        scope.launch {
+            try {
+                Log.d(TAG, "listening started")
+                readChannel?.let { channel ->
+                    while (!channel.isClosedForRead) {
+                        try {
+                            // Read the incoming data as a line
+                            val receivedData = channel.readUTF8Line()
+                            receivedData?.let { jsonMessage ->
+                                Log.d(TAG, "Raw received data: $jsonMessage")
+                                messageSerializer.deserialize(jsonMessage).also { socketMessage ->
+                                    socketMessage?.let { handleMessage(it) }
+                                }
                             }
+                        } catch (e: Exception) {
+                            Log.d(TAG, "Error while receiving data")
+                            e.printStackTrace()
+                            break
                         }
-                    } catch (e: Exception) {
-                        Log.d(TAG, "Error while receiving data")
-                        e.printStackTrace()
-                        break
                     }
                 }
+            } catch (e: Exception) {
+                Log.d(TAG, "Session error")
+                e.printStackTrace()
+            } finally {
+                Log.d(TAG, "Session closed")
+                if (_connectionState.value == ConnectionState.Connected) {
+                    stop(false)
+                }
             }
-        } catch (e: Exception) {
-            Log.d(TAG, "Session error")
-            e.printStackTrace()
-        } finally {
-            Log.d(TAG, "Session closed")
-            if (_connectionState.value == ConnectionState.Connected)
-            stop(false)
         }
     }
 

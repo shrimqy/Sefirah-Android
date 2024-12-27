@@ -53,13 +53,14 @@ class NotificationService @Inject constructor(
         scope.launch {
             networkManager.connectionState.collect { state ->
                 connectionState.value = state
+                if (state == ConnectionState.Disconnected) activeNotificationsSend = false
             }
         }
     }
 
     override fun sendActiveNotifications() {
         if (!isConnected) {
-            NotificationListener.start(context)
+            return
         } else {
             scope.launch {
                 activeNotificationsSend = true
@@ -73,7 +74,6 @@ class NotificationService @Inject constructor(
                         delay(50)
                     }
                 }
-
             }
         }
     }

@@ -9,11 +9,13 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.util.Log
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import sefirah.data.repository.AppRepository
 import sefirah.database.model.NetworkEntity
@@ -94,19 +96,26 @@ class NetworkDiscovery @Inject constructor(
 
     private fun startNSDDiscovery() {
         CoroutineScope(Dispatchers.IO).launch {
-            val lastConnectedDevice = appRepository.getLastConnectedDevice()
-            nsdService.startDiscovery()
-            nsdService.services.collect { services ->
-                if (services.isNotEmpty() && lastConnectedDevice != null) {
-                    for (service in services) {
-                        if (service.deviceId != lastConnectedDevice.deviceId) break
-                        val workRequest = OneTimeWorkRequestBuilder<NetworkWorker>()
-                            .setInputData(workDataOf(REMOTE_INFO to lastConnectedDevice.deviceId))
-                            .build()
-                        WorkManager.getInstance(context).enqueue(workRequest)
-                        nsdService.stopDiscovery()
-                    }
+            try {
+                val lastConnectedDevice = appRepository.getLastConnectedDevice() ?: return@launch
+                nsdService.startDiscovery()
+                nsdService.services.collectLatest { services ->
+                    services.find { it.deviceId == lastConnectedDevice.deviceId } ?: return@collectLatest
+                    val workRequest = OneTimeWorkRequestBuilder<NetworkWorker>()
+                        .setInputData(workDataOf(REMOTE_INFO to lastConnectedDevice.deviceId))
+                        .build()
+
+                    WorkManager.getInstance(context)
+                        .enqueueUniqueWork(
+                            NETWORK_WORKER_NAME,
+                            ExistingWorkPolicy.REPLACE,
+                            workRequest
+                        )
                 }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in NSD discovery", e)
+                nsdService.stopDiscovery()
             }
         }
     }
@@ -132,5 +141,6 @@ class NetworkDiscovery @Inject constructor(
 
     companion object {
         private const val TAG = "NetworkDiscovery"
+        private const val NETWORK_WORKER_NAME = "network_connection_worker"
     }
 }
