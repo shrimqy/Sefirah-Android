@@ -13,12 +13,15 @@ import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.cancel
 import io.ktor.utils.io.close
+import io.ktor.utils.io.copyAndClose
 import io.ktor.utils.io.readUTF8Line
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +43,7 @@ import sefirah.media.MediaHandler
 import sefirah.network.extensions.handleMessage
 import sefirah.network.extensions.setNotification
 import sefirah.network.util.MessageSerializer
+import sefirah.network.util.getInstalledApps
 import sefirah.notification.NotificationHandler
 import javax.inject.Inject
 
@@ -121,28 +125,34 @@ class NetworkService : Service() {
                     hashedSecret = remoteInfo.hashedSecret
                 ))
                 delay(10) // Add a delay for verification from the other side
+
+                if (remoteInfo.avatar == null) {
+                    val apps = getInstalledApps(packageManager)
+                    for (app in apps) {
+                        sendMessage(app)
+                        delay(10)
+                    }
+                }
                 setNotification(true, remoteInfo.deviceName)
                 notificationHandler.sendActiveNotifications()
                 clipboardHandler.start()
                 networkDiscovery.unregister()
             } catch (e: Exception) {
                 Log.e(TAG, "Error in connecting", e)
+                networkDiscovery.register()
                 _connectionState.value = ConnectionState.Disconnected
             }
         }
     }
 
-
-
     private fun stop(forcedStop: Boolean) {
+        _connectionState.value = ConnectionState.Disconnected
         if (!forcedStop) {
             networkDiscovery.register()
         }
         scope.launch {
-            notificationHandler.stopListener()
             writeChannel?.close()
             socket?.close()
-            _connectionState.value = ConnectionState.Disconnected
             stopForeground(STOP_FOREGROUND_REMOVE)
         }
     }
@@ -197,6 +207,7 @@ class NetworkService : Service() {
             e.printStackTrace()
         } finally {
             Log.d(TAG, "Session closed")
+            if (_connectionState.value == ConnectionState.Connected)
             stop(false)
         }
     }
