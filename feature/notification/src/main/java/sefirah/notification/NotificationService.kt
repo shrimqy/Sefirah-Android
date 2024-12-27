@@ -18,7 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.Message
@@ -38,7 +37,7 @@ import javax.inject.Singleton
 @Singleton
 class NotificationService @Inject constructor(
     private val context: Context,
-    private val networkManager: NetworkManager
+    private val networkManager: NetworkManager,
 ) : NotificationHandler, NotificationCallback {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -47,6 +46,8 @@ class NotificationService @Inject constructor(
     private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     
     private lateinit var listener: NotificationListenerService
+
+    private var activeNotificationsSend : Boolean = false
 
     init {
         scope.launch {
@@ -61,6 +62,7 @@ class NotificationService @Inject constructor(
             NotificationListener.start(context)
         } else {
             scope.launch {
+                activeNotificationsSend = true
                 val activeNotifications = listener.activeNotifications
                 if (activeNotifications.isNullOrEmpty()) {
                     Log.d("activeNotification", "No active notifications found.")
@@ -90,13 +92,22 @@ class NotificationService @Inject constructor(
     }
 
     override fun onNotificationRemoved(notification: StatusBarNotification) {
-
+        // to remove the notification on the desktop
+        val removeNotificationMessage = NotificationMessage(
+            appPackage = notification.packageName,
+            notificationKey = notification.key,
+            notificationType = NotificationType.REMOVED,
+            tag = notification.tag,
+        )
+        scope.launch {
+            networkManager.sendMessage(removeNotificationMessage)
+        }
     }
 
     override fun onListenerConnected(service: NotificationListenerService) {
         isConnected = true
         listener = service
-        if (connectionState.value == ConnectionState.Connected) {
+        if ((connectionState.value == ConnectionState.Connected) && !activeNotificationsSend) {
             sendActiveNotifications()
         }
     }
@@ -155,6 +166,20 @@ class NotificationService @Inject constructor(
 
     private fun sendNotification(sbn: StatusBarNotification, notificationType: NotificationType) {
         val notification = sbn.notification
+        val packageName = sbn.packageName
+
+        // Get the app name using PackageManager
+        val packageManager = listener.packageManager
+
+
+        val appName = try {
+            val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(applicationInfo).toString()
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.e("NotificationService", "Couldn't resolve name $packageName", e)
+            null
+        }
+
         val extras = notification.extras
         // Check for progress-related extras
         val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
@@ -163,25 +188,34 @@ class NotificationService @Inject constructor(
 
         val hasProgress = (progress >= 1 || maxProgress >= 1) || isIndeterminate
         // Check if the notification is ongoing, media-style, or belongs to the 'progress' category
-        if ((notification.flags and Notification.FLAG_ONGOING_EVENT != 0 && notification.flags and Notification.FLAG_FOREGROUND_SERVICE != 0)
+        if ((notification.flags and Notification.FLAG_ONGOING_EVENT) != 0
+            || (notification.flags and Notification.FLAG_FOREGROUND_SERVICE) != 0
             || notification.isMediaStyle()
             || hasProgress) {
             return
         }
 
+        if ("com.facebook.orca" == packageName &&
+            (sbn.id == 10012) &&
+            "Messenger" == appName && notification.tickerText == null
+        ) {
+            //HACK: Hide weird Facebook empty "Messenger" notification that is actually not shown in the phone
+            return
+        }
+
+        if ("com.android.systemui" == packageName &&
+            "low_battery" == sbn.tag
+        ) {
+            //HACK: Android low battery notification are posted again every few seconds. Ignore them, as we already have a battery indicator.
+            return
+        }
+
+        if ("com.castle.sefirah" == packageName) {
+            // Don't send our own notifications
+            return
+        }
+
         scope.launch {
-            val packageName = sbn.packageName
-
-            // Get the app name using PackageManager
-            val packageManager = listener.packageManager
-
-            val appName = try {
-                val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
-                packageManager.getApplicationLabel(applicationInfo).toString()
-            } catch (e: PackageManager.NameNotFoundException) {
-                "Unknown App"
-            }
-
             // Get app icon
             val appIcon = try {
                 val appIconDrawable = packageManager.getApplicationIcon(packageName)
