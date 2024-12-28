@@ -31,6 +31,7 @@ import org.apache.sshd.sftp.server.SftpSubsystemFactory
 import org.apache.sshd.sftp.server.SftpSubsystemProxy
 import sefirah.domain.model.SftpServerInfo
 import sefirah.network.util.MediaStoreHelper
+import sefirah.network.util.getDeviceIpAddress
 import java.io.InputStream
 import java.net.InetAddress
 import java.net.NetworkInterface
@@ -180,7 +181,7 @@ class SftpServer @Inject constructor(
         this.sshd = sshd
     }
 
-    fun start() : sefirah.domain.model.SftpServerInfo? {
+    fun start() : SftpServerInfo? {
         if (isRunning()) {
             sshd?.close()
         }
@@ -203,7 +204,7 @@ class SftpServer @Inject constructor(
             Log.d("SftpService", "SFTP server started: $ipAddress on port 8668")
 
             serverInfo = ipAddress?.let {
-                sefirah.domain.model.SftpServerInfo(
+                SftpServerInfo(
                     username = "sun",
                     password = "praisethefool",
                     ipAddress = it,
@@ -215,24 +216,6 @@ class SftpServer @Inject constructor(
             Log.e("SftpService", "Failed to start SFTP server", e)
             throw e
         }
-    }
-
-    private fun getDeviceIpAddress(): String? {
-        val interfaces = Collections.list(NetworkInterface.getNetworkInterfaces())
-        for (networkInterface in interfaces) {
-            val addresses = Collections.list(networkInterface.inetAddresses)
-            for (address in addresses) {
-                if (!address.isLoopbackAddress && address is InetAddress) {
-                    val hostAddress = address.hostAddress
-                    if (hostAddress != null) {
-                        if (!hostAddress.contains(":")) { // Skip IPv6 addresses
-                            return hostAddress
-                        }
-                    }
-                }
-            }
-        }
-        return null
     }
 
     fun stop() {

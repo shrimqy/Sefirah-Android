@@ -118,45 +118,29 @@ class NetworkService : Service() {
                 if (remoteInfo.avatar == null) {
                     sendInstalledApps()
                 }
-
                 // Setup complete
                 finalizeConnection(remoteInfo.deviceName)
-
             } catch (e: Exception) {
                 Log.e(TAG, "Error in connecting", e)
-                handleConnectionFailure()
+                stop(false)
             }
         }
     }
 
     private suspend fun initializeConnection(remoteInfo: RemoteDevice): Boolean {
         try {
-            var attempts = 0
-            while (attempts < 4) {
-                try {
-                    socket = socketFactory.createSocket(SocketType.DEFAULT, remoteInfo).getOrNull()
-                    if (socket != null) {
-                        writeChannel = socket?.openWriteChannel()
-                        readChannel = socket?.openReadChannel()
-                        connectedDevice = remoteInfo
-                        startListening()
-                        return true
-                    }
-                    attempts++
-                    if (attempts < 4) {
-                        Log.d(TAG, "Connection attempt $attempts failed, retrying...")
-                        delay(2000)
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in connecting (attempt $attempts)", e)
-                    attempts++
-                    if (attempts < 4) delay(2000)
-                }
+            socket = socketFactory.createSocket(SocketType.DEFAULT, remoteInfo).getOrNull()
+            if (socket != null) {
+                writeChannel = socket?.openWriteChannel()
+                readChannel = socket?.openReadChannel()
+                connectedDevice = remoteInfo
+                startListening()
+                return true
             }
-            handleConnectionFailure()
+            stop(false)
             return false
         } catch (e: Exception) {
-            handleConnectionFailure()
+            stop(false)
             return false
         }
     }
@@ -185,11 +169,6 @@ class NetworkService : Service() {
         notificationHandler.sendActiveNotifications()
         clipboardHandler.start()
         networkDiscovery.unregister()
-    }
-
-    private fun handleConnectionFailure() {
-        networkDiscovery.register()
-        _connectionState.value = ConnectionState.Disconnected
     }
 
     private fun stop(forcedStop: Boolean) {
