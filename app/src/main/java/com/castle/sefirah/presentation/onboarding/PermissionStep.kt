@@ -41,10 +41,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.getSystemService
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import sefirah.clipboard.ClipboardListener
+import sefirah.clipboard.ClipboardService
 import sefirah.presentation.components.padding
 
 internal class PermissionStep : OnboardingStep {
@@ -135,15 +138,46 @@ internal class PermissionStep : OnboardingStep {
                     )
 
                     // Location Permission
-                    val locationPermissionRequester = rememberLauncherForActivityResult(
+                    val backgroundLocationRequester = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.RequestPermission(),
                         onResult = { /* handled in onResume */ }
                     )
+
+                    val foregroundLocationRequester = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestMultiplePermissions(),
+                        onResult = { permissions ->
+                            // Check if foreground permissions were granted
+                            val isForegroundGranted = permissions.entries.all { it.value }
+                            if (isForegroundGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                // If foreground permissions granted, request background permission
+                                backgroundLocationRequester.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                            }
+                        }
+                    )
+
                     PermissionItem(
                         title = "Location Permission",
                         subtitle = "Required for WiFi network discovery",
                         granted = locationGranted,
-                        onRequest = { locationPermissionRequester.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
+                        onRequest = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                // First request foreground permissions
+                                foregroundLocationRequester.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            } else {
+                                // For Android 9 and below, request only foreground location
+                                foregroundLocationRequester.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        }
                     )
 
                     // Storage Permission
@@ -201,9 +235,16 @@ internal class PermissionStep : OnboardingStep {
         batteryGranted = context.getSystemService<PowerManager>()!!
             .isIgnoringBatteryOptimizations(context.packageName)
 
-        // Check Location Permission
-        locationGranted = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == 
+        // Check Location Permissions
+        val hasFineLocation = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == 
                 PackageManager.PERMISSION_GRANTED
+        val hasBackgroundLocation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == 
+                    PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Background location permission not required for Android 9 and below
+        }
+        locationGranted = hasFineLocation && hasBackgroundLocation
 
         // Check Storage Permission
         storageGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -213,21 +254,21 @@ internal class PermissionStep : OnboardingStep {
                     PackageManager.PERMISSION_GRANTED
         }
 
-        // Check Accessibility Service
-//        accessibilityGranted = isAccessibilityServiceEnabled(context)
+//         Check Accessibility Service
+        accessibilityGranted = isAccessibilityServiceEnabled(context)
 
         // Check Notification Listener
         notificationListenerGranted = isNotificationListenerEnabled(context)
     }
 
-//    private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-//        val accessibilityServiceName = "${context.packageName}/${ScreenHandler::class.java.canonicalName}"
-//        val enabledServices = Settings.Secure.getString(
-//            context.contentResolver,
-//            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-//        )
-//        return enabledServices?.contains(accessibilityServiceName) == true
-//    }
+    private fun isAccessibilityServiceEnabled(context: Context): Boolean {
+        val accessibilityServiceName = "${context.packageName}/${ClipboardListener::class.java.canonicalName}"
+        val enabledServices = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        )
+        return enabledServices?.contains(accessibilityServiceName) == true
+    }
 
     private fun isNotificationListenerEnabled(context: Context): Boolean {
         val flat = Settings.Secure.getString(

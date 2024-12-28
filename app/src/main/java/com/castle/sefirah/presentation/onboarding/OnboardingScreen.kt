@@ -66,6 +66,15 @@ fun OnboardingScreen(
         }
     }
 
+    val buttonEnabled = remember {
+        derivedStateOf {
+            when(pagerState.currentPage) {
+                steps.size - 1 -> steps[pagerState.currentPage].isComplete
+                else -> true
+            }
+        }
+    }
+
     Scaffold(
         bottomBar = {
             Row(
@@ -84,6 +93,7 @@ fun OnboardingScreen(
                 Row(verticalAlignment = Alignment.CenterVertically){
                     if (buttonState.value.isNotEmpty()) {
                         TextButton(
+                            enabled = buttonEnabled.value,
                             onClick = {
                                 scope.launch {
                                     if (pagerState.currentPage == steps.size - 1) {
@@ -98,7 +108,9 @@ fun OnboardingScreen(
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
                             ),
                             shape = RoundedCornerShape(size = 6.dp)
                         ) {
