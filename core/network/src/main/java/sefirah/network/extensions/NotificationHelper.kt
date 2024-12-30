@@ -1,5 +1,6 @@
 package sefirah.network.extensions
 
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import androidx.core.app.NotificationCompat.EXTRA_NOTIFICATION_ID
@@ -36,14 +37,15 @@ fun NetworkService.setNotification(isConnected: Boolean, deviceName: String? = n
     notificationBuilder = notificationCenter.showNotification(
         channelId = channelId,
         channelName = channelName,
-        notificationId = notificationId
+        notificationId = notificationId,
+        importance = NotificationManager.IMPORTANCE_DEFAULT
     ) {
         setContentTitle(getString(R.string.notification_device_connection))
         setContentText(contentText)
         setContentIntent(mainPendingIntent)
         setOngoing(true)
         setSilent(true)
-            .addAction(R.drawable.ic_launcher_foreground, actionText, disconnectPendingIntent)
+        .addAction(R.drawable.ic_launcher_foreground, actionText, disconnectPendingIntent)
 //            .addAction(R.drawable.ic_launcher_foreground, getString(R.string.notification_clipboard_action), clipboardPendingIntent)
     }
     startForeground(notificationId, notificationBuilder.build())

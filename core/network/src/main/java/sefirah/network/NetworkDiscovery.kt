@@ -99,8 +99,11 @@ class NetworkDiscovery @Inject constructor(
             try {
                 val lastConnectedDevice = appRepository.getLastConnectedDevice() ?: return@launch
                 nsdService.startDiscovery()
-                nsdService.services.collectLatest { services ->
-                    services.find { it.deviceId == lastConnectedDevice.deviceId } ?: return@collectLatest
+                nsdService.services.collect { services ->
+                    // Check if any service matches the last connected device
+                    services.find { it.deviceId == lastConnectedDevice.deviceId } ?: return@collect
+                    
+                    // Only start the worker when we find a matching service
                     val workRequest = OneTimeWorkRequestBuilder<NetworkWorker>()
                         .setInputData(workDataOf(REMOTE_INFO to lastConnectedDevice.deviceId))
                         .build()

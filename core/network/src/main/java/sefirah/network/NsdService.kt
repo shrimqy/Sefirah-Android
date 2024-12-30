@@ -201,15 +201,18 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
         }
     }
 
-    // New ServiceInfoCallback for API level 34+
+    // ServiceInfoCallback for API level 34+
     private val serviceInfoCallback = @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     object : NsdManager.ServiceInfoCallback {
+        private var currentMonitoredService: NsdServiceInfo? = null
+
         override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {
             Log.e(TAG, "ServiceInfoCallback registration failed: $errorCode")
         }
 
         override fun onServiceUpdated(serviceInfo: NsdServiceInfo) {
             Log.d(TAG, "Service updated: $serviceInfo")
+            currentMonitoredService = serviceInfo  // Store the current service
             try {
                 val deviceName = serviceInfo.attributes["deviceName"]?.let { String(it, Charsets.UTF_8) } ?: return
                 val publicKey = serviceInfo.attributes["publicKey"]?.let { String(it, Charsets.UTF_8) } ?: return
@@ -231,11 +234,14 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
 
         override fun onServiceLost() {
             Log.e(TAG, "Service lost")
-            // Since no service info is provided, you'll have to rely on existing service data.
+            currentMonitoredService?.let { lostService ->
+                _services.value = _services.value.filter { it.deviceId != lostService.serviceName }
+            }
         }
 
         override fun onServiceInfoCallbackUnregistered() {
             Log.d(TAG, "ServiceInfoCallback unregistered")
+            currentMonitoredService = null
         }
     }
 

@@ -95,7 +95,7 @@ class NetworkService : Service() {
         when (intent?.action) {
             Actions.START.name -> {
                 val remoteInfo = intent.getParcelableExtra<RemoteDevice>(REMOTE_INFO)
-                if (remoteInfo != null) {
+                if (remoteInfo != null && _connectionState.value == ConnectionState.Disconnected) {
                     _connectionState.value = ConnectionState.Connecting
                     setNotification(false, remoteInfo.deviceName)
                     start(remoteInfo)
