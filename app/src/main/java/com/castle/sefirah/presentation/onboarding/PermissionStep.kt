@@ -2,6 +2,7 @@ package com.castle.sefirah.presentation.onboarding
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -117,6 +118,7 @@ internal class PermissionStep : OnboardingStep {
                         PermissionItem(
                             title = "Notifications",
                             subtitle = "For connection status updates",
+                            permission = Manifest.permission.POST_NOTIFICATIONS,
                             granted = notificationGranted,
                             onRequest = { permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS) }
                         )
@@ -158,6 +160,7 @@ internal class PermissionStep : OnboardingStep {
                     PermissionItem(
                         title = "Location Permission",
                         subtitle = "Required for WiFi network discovery",
+                        permission = Manifest.permission.ACCESS_FINE_LOCATION,
                         granted = locationGranted,
                         onRequest = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -222,6 +225,15 @@ internal class PermissionStep : OnboardingStep {
         }
     }
 
+    
+    private fun openAppSettings(context: Context) {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
+
     private fun checkAllPermissions(context: Context) {
         // Check Notification Permission (Android 13+)
         notificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -282,9 +294,18 @@ internal class PermissionStep : OnboardingStep {
     private fun PermissionItem(
         title: String,
         subtitle: String,
+        permission: String? = null,
         granted: Boolean,
         onRequest: () -> Unit
     ) {
+        val context = LocalContext.current
+        val activity = context as Activity
+        
+        // Check if permission is permanently denied (don't ask again)
+        val isPermanentlyDenied = permission?.let {
+            !granted && !ActivityCompat.shouldShowRequestPermissionRationale(activity, it)
+        } ?: false
+
         ListItem(
             headlineContent = { 
                 Text(
@@ -294,7 +315,9 @@ internal class PermissionStep : OnboardingStep {
             },
             supportingContent = {
                 Text(
-                    text = subtitle,
+                    text = if (isPermanentlyDenied) 
+                        "Permission denied. Please enable it in Settings to use this feature."
+                    else subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -307,8 +330,22 @@ internal class PermissionStep : OnboardingStep {
                         tint = MaterialTheme.colorScheme.primary
                     )
                 } else {
-                    TextButton(onClick = onRequest) {
-                        Text("Grant")
+                    TextButton(
+                        onClick = {
+                            if (isPermanentlyDenied) {
+                                // Open settings if permission is permanently denied
+                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            } else {
+                                // Normal permission request flow
+                                onRequest()
+                            }
+                        }
+                    ) {
+                        Text(if (isPermanentlyDenied) "Settings" else "Grant")
                     }
                 }
             },
