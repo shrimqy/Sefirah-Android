@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.sefirah.android.library)
     alias(libs.plugins.kotlin.parcelize)
@@ -7,6 +10,19 @@ plugins {
 
 android {
     namespace = "sefirah.network"
+
+    val file = rootProject.file("local.properties")
+    val properties = Properties()
+    properties.load(FileInputStream(file))
+
+    defaultConfig {
+        buildConfigField("String", "certPwd", "\"${properties.getProperty("certPwd")}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
 
     packaging {
         resources {
@@ -19,6 +35,7 @@ android {
         }
     }
 }
+
 
 dependencies {
     api(projects.core.common)

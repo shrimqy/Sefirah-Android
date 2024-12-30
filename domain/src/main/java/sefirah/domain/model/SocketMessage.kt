@@ -145,10 +145,26 @@ data class Command(
 @Serializable
 @SerialName("7")
 data class FileTransfer(
-    val dataTransferType: DataTransferType,
-    val metadata: FileMetadata? = null,
-    val chunkSize: Int? = null,
+    val serverInfo: ServerInfo,
+    val metadata: FileMetadata,
 ) : SocketMessage()
+
+@Serializable
+data class ServerInfo(
+    val ipAddress: String,
+    val port: Int
+)
+
+
+@Serializable
+@Parcelize
+data class FileMetadata(
+    val fileName: String,
+    val mimeType: String,
+    val fileSize: Long,
+    val uri: String,
+) : Parcelable, SocketMessage()
+
 
 @Serializable
 @SerialName("8")
@@ -259,11 +275,3 @@ enum class KeyboardActionType {
     Tab, Backspace, Enter, Escape, CtrlC, CtrlV, CtrlX, CtrlA
 }
 
-@Parcelize
-@Serializable
-data class FileMetadata(
-    val fileName: String,
-    val mimeType: String,
-    val fileSize: Long,
-    val uri: String,
-) : Parcelable

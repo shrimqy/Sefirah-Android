@@ -1,9 +1,11 @@
 package sefirah.network.util
 
 import android.content.Context
+import sefirah.network.BuildConfig
 import sefirah.network.R
 import java.security.KeyStore
 import javax.inject.Inject
+import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
@@ -11,14 +13,20 @@ class TrustManager @Inject constructor(
     private val context: Context
 ) {
     fun getTrustManager(): X509TrustManager {
-        val keyStore = loadKeyStore()
+        val keyStore = getKeyStore()
         return createTrustManager(keyStore)
     }
 
-    private fun loadKeyStore(): KeyStore {
+    fun getKeyManagerFactory(): KeyManagerFactory {
+        return KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply {
+            init(getKeyStore(), BuildConfig.certPwd.toCharArray())
+        }
+    }
+
+    fun getKeyStore(): KeyStore {
         return KeyStore.getInstance("PKCS12").apply {
             context.resources.openRawResource(R.raw.server).use { stream ->
-                load(stream, "1864thround".toCharArray())
+                load(stream, BuildConfig.certPwd.toCharArray())
             }
         }
     }

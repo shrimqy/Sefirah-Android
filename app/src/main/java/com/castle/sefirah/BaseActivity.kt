@@ -13,16 +13,28 @@ import sefirah.network.NetworkService
 abstract class BaseActivity : ComponentActivity() {
     protected var networkService: NetworkService? = null
     protected var bound: Boolean = false
+    
+    private var serviceConnectionCallback: ((Boolean) -> Unit)? = null
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as NetworkService.LocalBinder
             networkService = binder.getService()
             bound = true
+            serviceConnectionCallback?.invoke(true)
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
             bound = false
+            serviceConnectionCallback?.invoke(false)
+        }
+    }
+
+    protected fun setServiceConnectionCallback(callback: (Boolean) -> Unit) {
+        serviceConnectionCallback = callback
+        // If already bound, notify immediately
+        if (bound) {
+            callback(true)
         }
     }
 

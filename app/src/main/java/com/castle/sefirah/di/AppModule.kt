@@ -87,8 +87,9 @@ object AppModule {
     @Provides
     @Singleton
     fun providesSftpServer(
-        application: Application
-    ): SftpServer = SftpServer(application)
+        application: Application,
+        customTrustManager: TrustManager
+    ): SftpServer = SftpServer(application, customTrustManager)
 
     @Provides
     @Singleton

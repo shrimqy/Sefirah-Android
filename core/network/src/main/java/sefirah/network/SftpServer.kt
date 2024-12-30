@@ -31,10 +31,8 @@ import org.apache.sshd.sftp.server.SftpSubsystemFactory
 import org.apache.sshd.sftp.server.SftpSubsystemProxy
 import sefirah.domain.model.SftpServerInfo
 import sefirah.network.util.MediaStoreHelper
+import sefirah.network.util.TrustManager
 import sefirah.network.util.getDeviceIpAddress
-import java.io.InputStream
-import java.net.InetAddress
-import java.net.NetworkInterface
 import java.nio.channels.Channel
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.CopyOption
@@ -44,14 +42,13 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.FileAttribute
 import java.security.KeyPair
-import java.security.KeyStore
 import java.security.interfaces.RSAPrivateKey
 import java.security.interfaces.RSAPublicKey
-import java.util.Collections
 import javax.inject.Inject
 
 class SftpServer @Inject constructor(
-    private val context: Context
+    private val context: Context,
+    private val customTrustManager: TrustManager
 ) {
     private var sshd: SshServer? = null
 
@@ -61,12 +58,9 @@ class SftpServer @Inject constructor(
         private val keyPair: KeyPair = initializeKeyPair()
 
         private fun initializeKeyPair(): KeyPair {
-            val keyStore = KeyStore.getInstance("PKCS12")
-            val inputStream: InputStream = context.resources.openRawResource(R.raw.server)
-            keyStore.load(inputStream, "1864thround".toCharArray())
-
+            val keyStore = customTrustManager.getKeyStore()
             val alias = keyStore.aliases().nextElement()
-            val privateKey = keyStore.getKey(alias, "1864thround".toCharArray()) as RSAPrivateKey
+            val privateKey = keyStore.getKey(alias, BuildConfig.certPwd.toCharArray()) as RSAPrivateKey
             val cert = keyStore.getCertificate(alias)
             val publicKey = cert.publicKey as RSAPublicKey
 
@@ -182,18 +176,17 @@ class SftpServer @Inject constructor(
     }
 
     fun start() : SftpServerInfo? {
-        if (isRunning()) {
-            sshd?.close()
-        }
+        if (isRunning()) return serverInfo
+
+        val pwd = regeneratePassword()
         try {
             sshd = SshServer.setUpDefaultServer().apply {
-                port = 8668 // Fixed port as you requested
+                port = 8668
                 keyPairProvider = PfxKeyPairProvider()
 
-                // Simplest possible authentication
                 publickeyAuthenticator = PublickeyAuthenticator { _, _, _ -> true }
                 passwordAuthenticator = PasswordAuthenticator { username, password, _ ->
-                    username == "sun" && password == "praisethefool"
+                    username == USER && password == pwd
                 }
 
                 fileSystemFactory = SimpleFileSystemFactory()
@@ -205,8 +198,8 @@ class SftpServer @Inject constructor(
 
             serverInfo = ipAddress?.let {
                 SftpServerInfo(
-                    username = "sun",
-                    password = "praisethefool",
+                    username = USER,
+                    password = pwd,
                     ipAddress = it,
                     port = 8668
                 )
@@ -233,10 +226,21 @@ class SftpServer @Inject constructor(
         return sshd != null && !sshd!!.isClosed
     }
 
-    companion object {
-        private const val TAG = "SimpleSftpServer"
 
+    /**
+     * Generate a random password with 12 characters, including uppercase letters, lowercase letters, numbers, and special characters.
+     */
+    fun regeneratePassword(): String {
+        val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9') + "!@#$%^&*"
+        return (1..12).map { allowedChars.random() }.joinToString("")
+    }
+
+    companion object {
+        private const val TAG = "SftpServer"
+        private const val USER = "sun"
         val SUPPORTS_NATIVEFS = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+
+        private val PORT_RANGE = 1739..1764
 
         init {
             System.setProperty(SECURITY_PROVIDER_REGISTRARS, "") // disable BouncyCastle
