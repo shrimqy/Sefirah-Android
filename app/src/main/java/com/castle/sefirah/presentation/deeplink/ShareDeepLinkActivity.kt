@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import sefirah.network.FileTransferService
+import sefirah.network.FileTransferService.Companion.ACTION_SEND_FILE
 
 @AndroidEntryPoint
 class ShareDeepLinkActivity: BaseActivity() {
@@ -56,6 +57,7 @@ class ShareDeepLinkActivity: BaseActivity() {
 
         if (uri != null) {
             val serviceIntent = Intent(applicationContext, FileTransferService::class.java).apply {
+                action = ACTION_SEND_FILE
                 data = uri
             }
             startForegroundService(serviceIntent)

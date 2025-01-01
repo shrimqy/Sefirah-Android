@@ -85,6 +85,13 @@ class PreferencesDatastore @Inject constructor(
         }
     }
 
+    override suspend fun getStorageLocation(): Flow<String> {
+        return datastore.data.map { preferences ->
+            preferences[PreferencesKeys.STORAGE_LOCATION] ?: ""
+        }
+    }
+
+
     override fun preferenceSettings(): Flow<PreferencesSettings>  {
         return datastore.data.catch {
             emit(emptyPreferences())

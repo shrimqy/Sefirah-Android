@@ -30,18 +30,19 @@ class SocketFactoryImpl @Inject constructor(
 
     override suspend fun createSocket(
         type: SocketType,
-        remoteDevice: RemoteDevice,
+        ipAddress: String,
+        port: Int
     ): Result<Socket> {
         return try {
             Log.d("connect", "Trying to connect")
             val selectorManager = SelectorManager(Dispatchers.IO)
             val socket = aSocket(selectorManager).tcp()
-                .connect(remoteDevice.ipAddress, remoteDevice.port)
+                .connect(ipAddress, port)
                 .tls(coroutineContext) {
                     trustManager = customTrustManager.getTrustManager()
                 }
 
-            Log.d("connect", "Client Connected to ${remoteDevice.ipAddress}")
+            Log.d("connect", "Client Connected to $ipAddress")
             Result.success(socket)
         } catch (e: Exception) {
             Log.e("connect", "Failed to connect", e)

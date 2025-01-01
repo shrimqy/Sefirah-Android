@@ -143,17 +143,19 @@ data class Command(
 ) : SocketMessage()
 
 @Serializable
+@Parcelize
 @SerialName("7")
-data class FileTransfer(
+data class FileTransferInfo(
     val serverInfo: ServerInfo,
     val metadata: FileMetadata,
-) : SocketMessage()
+) : Parcelable, SocketMessage()
 
+@Parcelize
 @Serializable
 data class ServerInfo(
     val ipAddress: String,
     val port: Int
-)
+) : Parcelable
 
 
 @Serializable

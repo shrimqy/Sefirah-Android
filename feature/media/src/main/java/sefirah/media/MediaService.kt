@@ -10,7 +10,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import sefirah.common.R
-import sefirah.common.extensions.NotificationCenter
+import sefirah.common.notifications.AppNotifications
+import sefirah.common.notifications.NotificationCenter
 import sefirah.domain.model.MediaAction
 import sefirah.domain.model.PlaybackData
 import sefirah.domain.repository.NetworkManager
@@ -111,9 +112,8 @@ class MediaService @Inject constructor(
             }
 
             notificationCenter.showNotification(
-                channelId = channelId,
-                channelName = channelName,
-                notificationId = notificationId
+                channelId = AppNotifications.MEDIA_PLAYBACK_CHANNEL,
+                notificationId = AppNotifications.MEDIA_PLAYBACK_ID,
             ) {
                 setContentTitle(playbackData.trackTitle)
                 setContentText(playbackData.artist)
@@ -149,6 +149,7 @@ class MediaService @Inject constructor(
     companion object {
         private const val TAG = "MediaHandler"
         private const val MEDIA_SESSION_TAG = "DesktopMediaSession"
+        private const val MEDIA_NOTIFICATION_GROUP = "file_transfer_group"
         private const val SEEK_FORWARD_INCREMENT = 10_000L
         private const val SEEK_BACKWARD_INCREMENT = 10_000L
     }

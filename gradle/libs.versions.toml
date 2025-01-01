@@ -49,6 +49,7 @@ espressoCore = "3.6.1"
 
 # Material Design
 material = "1.12.0"
+documentfile = "1.0.1"
 
 
 [libraries]
@@ -132,6 +133,7 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 
 
 [plugins]

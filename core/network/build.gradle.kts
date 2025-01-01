@@ -47,6 +47,7 @@ dependencies {
     api(projects.feature.media)
     api(projects.feature.screen)
 
+    implementation(libs.core.ktx)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.runtime)
@@ -60,4 +61,5 @@ dependencies {
 
     implementation(libs.bundles.ktor)
     implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.documentfile)
 }

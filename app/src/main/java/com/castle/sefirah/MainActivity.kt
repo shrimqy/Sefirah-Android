@@ -1,6 +1,7 @@
 package com.castle.sefirah
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -13,6 +14,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.castle.sefirah.ui.theme.SefirahTheme
 import com.castle.sefirah.navigation.graphs.RootNavGraph
 import dagger.hilt.android.AndroidEntryPoint
+import sefirah.common.notifications.AppNotifications
 
 @AndroidEntryPoint
 class MainActivity : BaseActivity() {
@@ -25,6 +27,7 @@ class MainActivity : BaseActivity() {
                 viewModel.splashCondition
             }
         }
+        setupNotificationChannels()
         enableEdgeToEdge()
         setContent {
             SefirahTheme() {
@@ -38,4 +41,12 @@ class MainActivity : BaseActivity() {
             }
         }
     }
+    private fun setupNotificationChannels() {
+        try {
+            AppNotifications.createChannels(this)
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error creating notification channels", e)
+        }
+    }
 }
+

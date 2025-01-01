@@ -13,15 +13,12 @@ import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
-import io.ktor.utils.io.cancel
 import io.ktor.utils.io.close
-import io.ktor.utils.io.copyAndClose
 import io.ktor.utils.io.readUTF8Line
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,11 +28,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.R
-import sefirah.common.extensions.NotificationCenter
+import sefirah.common.notifications.NotificationCenter
 import sefirah.data.repository.AppRepository
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
-import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.SocketType
@@ -58,6 +54,7 @@ class NetworkService : Service() {
     @Inject lateinit var clipboardHandler: ClipboardHandler
     @Inject lateinit var networkDiscovery: NetworkDiscovery
     @Inject lateinit var mediaHandler: MediaHandler
+    @Inject lateinit var sftpServer: SftpServer
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
@@ -88,6 +85,7 @@ class NetworkService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        sftpServer.initialize()
         connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
     }
 
@@ -129,7 +127,7 @@ class NetworkService : Service() {
 
     private suspend fun initializeConnection(remoteInfo: RemoteDevice): Boolean {
         try {
-            socket = socketFactory.createSocket(SocketType.DEFAULT, remoteInfo).getOrNull()
+            socket = socketFactory.createSocket(SocketType.DEFAULT, remoteInfo.ipAddress, remoteInfo.port).getOrNull()
             if (socket != null) {
                 writeChannel = socket?.openWriteChannel()
                 readChannel = socket?.openReadChannel()
@@ -168,6 +166,7 @@ class NetworkService : Service() {
         setNotification(true, deviceName)
         notificationHandler.sendActiveNotifications()
         clipboardHandler.start()
+        sftpServer.start()?.let { sendMessage(it) }
         networkDiscovery.unregister()
     }
 

@@ -13,8 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import sefirah.clipboard.ClipboardHandler
 import sefirah.clipboard.ClipboardService
-import sefirah.common.extensions.NotificationCenter
-import sefirah.data.repository.AppRepository
+import sefirah.common.notifications.NotificationCenter
 import sefirah.data.repository.PlaybackRepositoryImpl
 import sefirah.data.repository.PreferencesDatastore
 import sefirah.domain.repository.NetworkManager

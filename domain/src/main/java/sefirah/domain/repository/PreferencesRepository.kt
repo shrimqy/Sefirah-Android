@@ -17,6 +17,7 @@ interface PreferencesRepository {
     suspend fun saveAutoDiscoverySettings(discoverySettings: Boolean)
     suspend fun saveImageClipboardSettings(clipboardSettings: Boolean)
     suspend fun updateStorageLocation(uri: String)
+    suspend fun getStorageLocation(): Flow<String>
     fun preferenceSettings(): Flow<PreferencesSettings>
 }
 

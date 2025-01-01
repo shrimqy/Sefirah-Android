@@ -9,4 +9,18 @@
     <string name="notification_clipboard_action">Send Clipboard</string>\
     <string name="notification_file_transfer">File Transfer</string>
     <string name="notification_file_transfer_error">File Transfer Error</string>
+    <string name="cancel">Cancel</string>
+    <string name="notification_file_transfer_progress">Ongoing file transfer</string>
+    <string name="notification_file_transfer_complete">Completed file transfer</string>
+
+    <!-- Notification Groups -->
+    <string name="group_file_transfer">File Transfer</string>
+    <string name="group_network">Network</string>
+    <string name="group_media">Media</string>
+
+    <!-- Notification Channels -->
+    <string name="channel_transfer_progress">Transfer Progress</string>
+    <string name="channel_transfer_complete">Transfer Complete</string>
+    <string name="channel_device_connection">Device Connection</string>
+    <string name="channel_media_playback">Desktop Media Playback</string>
 </resources>
