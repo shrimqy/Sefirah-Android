@@ -1,6 +1,7 @@
 package com.castle.sefirah.presentation.sync.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,12 +22,16 @@ import com.castle.sefirah.presentation.settings.components.LocalPreferenceHighli
 import com.castle.sefirah.presentation.settings.components.LocalPreferenceMinHeight
 import com.castle.sefirah.presentation.settings.components.PrefsHorizontalPadding
 import com.castle.sefirah.presentation.settings.components.highlightBackground
-import sefirah.domain.model.RemoteDevice
+import sefirah.domain.model.UdpBroadcast
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import kotlin.math.abs
 
 @Composable
 fun DeviceItem(
     modifier: Modifier = Modifier,
-    service: RemoteDevice,
+    device: UdpBroadcast,
+    key: String,
     onClick: () -> Unit
 ) {
     TextButton(
@@ -43,18 +48,27 @@ fun DeviceItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                modifier = Modifier.padding(start = PrefsHorizontalPadding, end = 8.dp).size(48.dp),
+                modifier = Modifier
+                    .padding(start = PrefsHorizontalPadding, end = 8.dp)
+                    .size(48.dp),
                 imageVector = Icons.Rounded.Devices,
                 contentDescription = "Device Icon",
                 tint = MaterialTheme.colorScheme.surfaceTint,
             )
-            Text(
-                modifier = Modifier.padding(horizontal = PrefsHorizontalPadding),
-                text = service.deviceName,
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center,
-            )
+            Column(
+                modifier = Modifier.padding(horizontal = PrefsHorizontalPadding)
+            ) {
+                Text(
+                    text = device.deviceName,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = "Key: $key",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
-
     }
 }

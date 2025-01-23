@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -58,7 +59,7 @@ fun OnboardingScreen(
     val buttonState = remember {
         derivedStateOf {
             when(pagerState.currentPage) {
-                0 -> "Get Started"
+                0 -> "Next"
                 1 -> "Next"
                 2 -> "Finish"
                 else -> ""
@@ -76,6 +77,9 @@ fun OnboardingScreen(
     }
 
     Scaffold(
+        topBar = {
+            Spacer(modifier = Modifier.padding(28.dp))
+        },
         bottomBar = {
             Row(
                 modifier = Modifier

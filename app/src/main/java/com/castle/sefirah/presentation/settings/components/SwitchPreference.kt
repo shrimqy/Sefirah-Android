@@ -1,4 +1,4 @@
-package com.komu.presentation.settings.components
+package com.castle.sefirah.presentation.settings.components
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Switch

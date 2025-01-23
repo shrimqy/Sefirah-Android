@@ -9,20 +9,24 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.castle.sefirah.navigation.Graph
+import com.castle.sefirah.navigation.OnboardingRoute
+import com.castle.sefirah.navigation.SyncRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import sefirah.common.util.getCertFromString
 import sefirah.data.repository.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.RemoteDevice
-import sefirah.domain.model.SocketMessage
+import sefirah.domain.model.UdpBroadcast
 import sefirah.domain.repository.NetworkManager
+import sefirah.network.NetworkDiscovery
 import sefirah.network.NetworkService
 import sefirah.network.NetworkService.Companion.Actions
 import sefirah.network.NsdService
@@ -36,60 +40,94 @@ class SyncViewModel @Inject constructor(
     application: Application,
     private val nsdService: NsdService,
     private val appRepository: AppRepository,
-    private val networkManager: NetworkManager
+    private val networkManager: NetworkManager,
+    private val networkDiscovery: NetworkDiscovery
 ) : ViewModel() {
 
-    private val _messages = MutableStateFlow<List<SocketMessage>>(emptyList())
-    val messages: StateFlow<List<SocketMessage>> get() = _messages
+    private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
 
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
-    val connectionState: StateFlow<ConnectionState> = _connectionState
-
-    // Capture the stateflow from the service as the data updates
-    val services: StateFlow<List<RemoteDevice>> = nsdService.services
+    val discoveredDevices: StateFlow<List<UdpBroadcast>> = networkDiscovery.discoveredDevices
     private lateinit var localDevice: LocalDevice
     init {
         // Starting Nsd Discovery for mDNS services at start
         viewModelScope.launch {
             nsdService.startDiscovery()
             localDevice = appRepository.getLocalDevice().toDomain()
-            nsdService.advertiseService(localDevice.publicKey)
+            networkDiscovery.startDiscovery()
             delay(1.seconds)
-            if (services.value.isEmpty()) {
+            if (discoveredDevices.value.isEmpty()) {
                 Toast.makeText(application.applicationContext, "Make sure you're connected to the same network as your PC", Toast.LENGTH_LONG).show()
             }
         }
 
-       viewModelScope.launch {
-           networkManager.connectionState.collectLatest { state ->
-               _connectionState.value = state
-           }
-       }
+        viewModelScope.launch {
+            networkManager.connectionState.collectLatest { state ->
+                connectionState.value = state
+            }
+        }
     }
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
-    fun authenticate(context: Context, remoteDevice: RemoteDevice, hashedSecret: String, rootNavController: NavController) : Boolean {
+    private var connectionStateJob: Job? = null
 
-        try {
-            viewModelScope.launch {
-                remoteDevice.hashedSecret = hashedSecret
+    fun authenticate(context: Context, remoteDevice: RemoteDevice, rootNavController: NavController) {
+        // Cancel any existing collection
+        connectionStateJob?.cancel()
+
+        connectionStateJob = viewModelScope.launch {
+            try {
                 val intent = Intent(context, NetworkService::class.java).apply {
                     action = Actions.START.name
                     putExtra(NetworkService.REMOTE_INFO, remoteDevice)
                 }
                 context.startService(intent)
-               while (_connectionState.value == ConnectionState.Connecting) {
-                   _isRefreshing.value = true
-               }
-               _isRefreshing.value = false
-               rootNavController.navigate(route = Graph.MainScreenGraph)
+                delay(200)
+                // Monitor connection state changes until Connected or Disconnected
+                connectionState.collect { state ->
+                    when (state) {
+                        ConnectionState.Connected -> {
+                            _isRefreshing.value = false
+                            networkDiscovery.stopDiscovery()
+                            rootNavController.navigate(route = Graph.MainScreenGraph) {
+                                popUpTo(SyncRoute.SyncScreen.route) { inclusive = true }
+                            }
+                            connectionStateJob?.cancel() // Stop collecting after navigation
+                        }
+                        ConnectionState.Disconnected -> {
+                            _isRefreshing.value = false
+                            Toast.makeText(
+                                context,
+                                "Connection failed: Device declined pairing or is unavailable",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            connectionStateJob?.cancel() // Stop collecting after failure
+                        }
+                        ConnectionState.Connecting -> {
+                            _isRefreshing.value = true
+                        }
+                        is ConnectionState.Error -> {
+                            _isRefreshing.value = false
+                            Toast.makeText(
+                                context,
+                                "Connection error occurred",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            connectionStateJob?.cancel()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error saving to service: ${e.message}", e)
+                _isRefreshing.value = false
+                Toast.makeText(
+                    context,
+                    "Failed to initiate connection",
+                    Toast.LENGTH_LONG
+                ).show()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving to service: ${e.message}", e)
         }
-        return false
     }
 
     fun findServices() {
@@ -108,6 +146,13 @@ class SyncViewModel @Inject constructor(
 
     private fun stopDiscovery() {
         nsdService.stopDiscovery()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        connectionStateJob?.cancel()
+        networkDiscovery.stopDiscovery()
+        stopDiscovery()
     }
 
     companion object {

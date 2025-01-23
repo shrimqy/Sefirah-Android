@@ -4,19 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.castle.sefirah.presentation.main.MainScreen
-import com.castle.sefirah.presentation.onboarding.OnboardingScreen
-import com.castle.sefirah.presentation.sync.SyncScreen
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.OnboardingRoute
 import com.castle.sefirah.navigation.SyncRoute
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import com.castle.sefirah.navigation.transitions.NavigationTransitions
+import com.castle.sefirah.presentation.main.MainScreen
+import com.castle.sefirah.presentation.onboarding.OnboardingScreen
+import com.castle.sefirah.presentation.sync.SyncScreen
 
 @Composable
 fun RootNavGraph(startDestination: String) {

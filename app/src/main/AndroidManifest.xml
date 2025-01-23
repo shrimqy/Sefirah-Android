@@ -24,6 +24,10 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" />
+
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
@@ -75,6 +79,7 @@
         <activity android:name="sefirah.clipboard.ClipboardChangeActivity"
             android:exported="false"
             android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
             android:theme="@style/TranslucentTheme.Dark" />
 
         <service android:name="sefirah.network.NetworkService" android:foregroundServiceType="dataSync"/>

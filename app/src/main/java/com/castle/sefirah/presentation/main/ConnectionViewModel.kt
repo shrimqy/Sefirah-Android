@@ -1,11 +1,16 @@
 package com.castle.sefirah.presentation.main
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.castle.sefirah.navigation.Graph
 import com.komu.sekia.di.AppCoroutineScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +24,7 @@ import sefirah.database.model.toDomain
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.repository.NetworkManager
+import sefirah.network.NetworkDiscovery
 import sefirah.network.NetworkService
 import sefirah.network.NetworkService.Companion.Actions
 import javax.inject.Inject
@@ -28,6 +34,7 @@ class ConnectionViewModel @Inject constructor(
     private val networkManager: NetworkManager,
     private val appScope: AppCoroutineScope,
     private val appRepository: AppRepository,
+    private val networkDiscovery: NetworkDiscovery,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -86,18 +93,52 @@ class ConnectionViewModel @Inject constructor(
                         startService(Actions.STOP)
                     }
                 }
-
-                delay(500)
-                _isRefreshing.value = false
             }
         }
     }
+    private var connectionStateJob: Job? = null
+
     private fun startService(action: Actions, device: RemoteDevice? = null) {
         val intent = Intent(getApplication(), NetworkService::class.java).apply {
             this.action = action.name
             device?.let { putExtra(NetworkService.REMOTE_INFO, it) }
         }
         getApplication<Application>().startService(intent)
-    }
+        if (action.name == Actions.STOP.name) return
 
+        // Cancel any existing collection
+        connectionStateJob?.cancel()
+        connectionStateJob = viewModelScope.launch {
+            delay(200)
+            // Monitor connection state changes until Connected or Disconnected
+            connectionState.collect { state ->
+                when (state) {
+                    ConnectionState.Connected -> {
+                        _isRefreshing.value = false
+                    }
+                    ConnectionState.Disconnected -> {
+                        _isRefreshing.value = false
+                        Toast.makeText(
+                            getApplication(),
+                            "Device unavailable",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        connectionStateJob?.cancel()
+                    }
+                    ConnectionState.Connecting -> {
+                        _isRefreshing.value = true
+                    }
+                    is ConnectionState.Error -> {
+                        _isRefreshing.value = false
+                        Toast.makeText(
+                            getApplication(),
+                            "Connection error occurred",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        connectionStateJob?.cancel()
+                    }
+                }
+            }
+        }
+    }
 }

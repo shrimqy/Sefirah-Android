@@ -1,11 +1,5 @@
 package com.castle.sefirah.navigation.graphs
 
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -15,10 +9,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.MainRouteScreen
+import com.castle.sefirah.navigation.transitions.NavigationTransitions
 import com.castle.sefirah.presentation.devices.DevicesScreen
 import com.castle.sefirah.presentation.home.HomeScreen
 import com.castle.sefirah.presentation.settings.SettingsScreen
-import com.castle.sefirah.navigation.transitions.NavigationTransitions
 
 @Composable
 fun MainNavGraph(

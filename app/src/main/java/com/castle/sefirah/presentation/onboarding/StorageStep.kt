@@ -48,7 +48,6 @@ internal class StorageStep : OnboardingStep {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 48.dp)
                 .padding(horizontal = MaterialTheme.padding.medium),
         ) {
             Row(
@@ -71,9 +70,8 @@ internal class StorageStep : OnboardingStep {
                 )
             }
 
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
+            Spacer(modifier = Modifier.height(8.dp))
+
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -81,8 +79,8 @@ internal class StorageStep : OnboardingStep {
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Select a folder where Sekia will store received files. Downloads will be used as default.",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "Select a folder where the app will store received files. Downloads will be used as default.",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
@@ -90,7 +88,7 @@ internal class StorageStep : OnboardingStep {
 
                     Text(
                         text = "Selected folder: ${getReadablePathFromUri(context, storageLocation)}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     

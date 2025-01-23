@@ -22,6 +22,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -32,11 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.castle.sefirah.presentation.sync.components.DeviceItem
-import com.castle.sefirah.navigation.Graph
+import sefirah.common.util.getCertFromString
 import sefirah.domain.model.RemoteDevice
 import sefirah.presentation.components.PullRefresh
 import sefirah.presentation.screens.EmptyScreen
-import sefirah.presentation.screens.LoadingScreen
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
@@ -49,11 +49,11 @@ fun SyncScreen(
 ) {
     val scope = rememberCoroutineScope()
     val viewModel: SyncViewModel = hiltViewModel()
-    val services by viewModel.services.collectAsState()
+    val discoveredDevices by viewModel.discoveredDevices.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val showDialog = remember { mutableStateOf(false) }
-    val selectedService = remember { mutableStateOf<RemoteDevice?>(null) }
-
+    val selectedDevice = remember { mutableStateOf<RemoteDevice?>(null) }
+    val key = remember { mutableStateOf("") }
     val context = LocalContext.current
 
     PullRefresh(
@@ -84,8 +84,7 @@ fun SyncScreen(
             }
         ) { contentPadding ->
             when {
-                isRefreshing -> LoadingScreen()
-                services.isEmpty() -> { EmptyScreen(message = "No Devices found") }
+                discoveredDevices.isEmpty() -> { EmptyScreen(message = "No Devices found") }
                 else -> {
                     LazyColumn(
                         modifier = Modifier
@@ -94,11 +93,24 @@ fun SyncScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         contentPadding = contentPadding
                     ) {
-                        items(services) { service ->
+                        items(discoveredDevices) { device ->
+                            val hashedSecret = viewModel.deriveSharedSecretCode(device.publicKey)
+                            val rawKey = abs(ByteBuffer.wrap(hashedSecret).order(ByteOrder.LITTLE_ENDIAN).int)
+                            key.value = rawKey.toString().takeLast(6).padStart(6, '0')
+                            val remoteDevice = RemoteDevice(
+                                deviceId = device.deviceId,
+                                ipAddress = device.ipAddress!!,
+                                port = device.port!!,
+                                publicKey = device.publicKey,
+                                deviceName = device.deviceName,
+                                hashedSecret = Base64.encodeToString(hashedSecret, Base64.DEFAULT),
+                                certificate = getCertFromString(device.certificate!!)
+                            )
                             DeviceItem(
-                                service = service,
+                                device = device,
+                                key = key.value,
                                 onClick = {
-                                    selectedService.value = service
+                                    selectedDevice.value = remoteDevice
                                     showDialog.value = true
                                 })
                         }
@@ -109,25 +121,22 @@ fun SyncScreen(
     }
 
 
-    if (showDialog.value && selectedService.value != null) {
-        val hashedSecret = viewModel.deriveSharedSecretCode(selectedService.value!!.publicKey)
-        val derivedKey = abs(ByteBuffer.wrap(hashedSecret).order(ByteOrder.LITTLE_ENDIAN).int) % 1_000_000
-        derivedKey.toString().padStart(6, '0')
+    if (showDialog.value && selectedDevice.value != null) {
         AlertDialog(
             onDismissRequest = { showDialog.value = false },
             title = { Text("Connect") },
             text = {
                 Column {
-                    Text("Do you want to connect to ${selectedService.value?.deviceName}?")
-                    Text("Key: $derivedKey")
+                    Text("Do you want to connect to ${selectedDevice.value?.deviceName}?")
+                    Text("Key: ${key.value}")
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        Log.d("Service", "Connecting to service: ${selectedService.value}")
-                        viewModel.authenticate(context, selectedService.value!!, Base64.encodeToString(hashedSecret, Base64.DEFAULT), rootNavController)
-                        rootNavController.navigate(route = Graph.MainScreenGraph)
+                        viewModel.authenticate(context, selectedDevice.value!!, rootNavController)
+                        Log.d("Service", "Connecting to service: ${selectedDevice.value}")
+//                        viewModel.authenticate(context, selectedService.value!!, Base64.encodeToString(hashedSecret, Base64.DEFAULT), rootNavController)
                         showDialog.value = false
                     }
                 ) {

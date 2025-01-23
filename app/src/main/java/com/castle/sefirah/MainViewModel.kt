@@ -15,14 +15,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import okhttp3.Route
 import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     context: Context,
-    preferencesRepository: PreferencesRepository,
+    private val preferencesRepository: PreferencesRepository,
 ): ViewModel() {
     var splashCondition by mutableStateOf(true)
         private set
@@ -31,11 +36,11 @@ class MainViewModel @Inject constructor(
         private set
 
     init {
-        Log.d("MainViewModel", "ViewModel initialized")
-        viewModelScope.launch {
-            preferencesRepository.readAppEntry().collectLatest { shouldStartFromHomeScreen ->
-                Log.d("AppEntry", shouldStartFromHomeScreen.toString())
-                startDestination = if(shouldStartFromHomeScreen) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val hasCompletedOnboarding = preferencesRepository.readAppEntry().first()
+            
+            withContext(Dispatchers.Main) {
+                startDestination = if (hasCompletedOnboarding) {
                     Graph.MainScreenGraph
                 } else {
                     OnboardingRoute.OnboardingScreen.route

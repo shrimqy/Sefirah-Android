@@ -21,7 +21,9 @@ sealed class SyncRoute(var route: String) {
 }
 
 sealed class SettingsRouteScreen(var route: String) {
+    data object NetworkScreen: SettingsRouteScreen("discovery")
     data object AboutScreen: SettingsRouteScreen("about")
+    data object PermissionScreen: SettingsRouteScreen("permission")
 }
 
 sealed class DevicesRouteScreen(var route: String) {

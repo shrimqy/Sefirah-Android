@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,8 +35,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,12 +47,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.getSystemService
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import sefirah.clipboard.ClipboardListener
-import sefirah.clipboard.ClipboardService
+import sefirah.common.util.isAccessibilityServiceEnabled
+import sefirah.common.util.openAppSettings
 import sefirah.presentation.components.padding
 
 internal class PermissionStep : OnboardingStep {
@@ -59,13 +68,16 @@ internal class PermissionStep : OnboardingStep {
     private var storageGranted by mutableStateOf(false)
     private var accessibilityGranted by mutableStateOf(false)
     private var notificationListenerGranted by mutableStateOf(false)
+    private var readMediaGranted by mutableStateOf(false)
 
     override val isComplete: Boolean
-        get() = notificationGranted && batteryGranted && locationGranted && 
-                storageGranted && accessibilityGranted && notificationListenerGranted
+        get() = (notificationGranted && storageGranted) &&
+                (notificationListenerGranted || readMediaGranted || batteryGranted || locationGranted || accessibilityGranted)
+
 
     @Composable
     override fun Content() {
+        val viewModel: OnboardingViewModel = hiltViewModel()
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -81,13 +93,14 @@ internal class PermissionStep : OnboardingStep {
             }
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 48.dp)
                 .padding(horizontal = MaterialTheme.padding.medium)
         ) {
-            Row(    
+            Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -100,7 +113,7 @@ internal class PermissionStep : OnboardingStep {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Required Permissions",  
+                    text = "Required Permissions",
                     style = MaterialTheme.typography.headlineSmall,
                 )
             }
@@ -122,22 +135,7 @@ internal class PermissionStep : OnboardingStep {
                             granted = notificationGranted,
                             onRequest = { permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS) }
                         )
-                        HorizontalDivider()
                     }
-
-                    // Battery Optimization
-                    PermissionItem(
-                        title = "Background Battery Usage",
-                        subtitle = "Allow the app to maintain stable connections by disabling battery optimizations",
-                        granted = batteryGranted,
-                        onRequest = {
-                            @SuppressLint("BatteryLife")
-                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                data = Uri.parse("package:${context.packageName}")
-                            }
-                            context.startActivity(intent)
-                        }
-                    )
 
                     // Location Permission
                     val backgroundLocationRequester = rememberLauncherForActivityResult(
@@ -183,6 +181,40 @@ internal class PermissionStep : OnboardingStep {
                         }
                     )
 
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val mediaPermissionRequester = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.RequestPermission(),
+                            onResult = { /* handled in onResume */ }
+                        )
+                        
+                        PermissionItem(
+                            title = "Media Access",
+                            subtitle = "Required for accessing the media files",
+                            permission = Manifest.permission.READ_MEDIA_IMAGES,
+                            granted = readMediaGranted,
+                            onRequest = { 
+                                mediaPermissionRequester.launch(Manifest.permission.READ_MEDIA_IMAGES)
+                            }
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    // Battery Optimization
+                    PermissionItem(
+                        title = "Background Battery Usage",
+                        subtitle = "Allow the app to maintain stable connections by disabling battery optimizations",
+                        granted = batteryGranted,
+                        onRequest = {
+                            @SuppressLint("BatteryLife")
+                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                data = Uri.parse("package:${context.packageName}")
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+
+
                     // Storage Permission
                     PermissionItem(
                         title = "Storage Access",
@@ -204,7 +236,7 @@ internal class PermissionStep : OnboardingStep {
                     // Accessibility Service
                     PermissionItem(
                         title = "Accessibility Service",
-                        subtitle = "Required for simulating gestures when casting",
+                        subtitle = "Required for detecting clipboard",
                         granted = accessibilityGranted,
                         onRequest = {
                             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -225,7 +257,7 @@ internal class PermissionStep : OnboardingStep {
         }
     }
 
-    
+
     private fun openAppSettings(context: Context) {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.fromParts("package", context.packageName, null)
@@ -237,7 +269,7 @@ internal class PermissionStep : OnboardingStep {
     private fun checkAllPermissions(context: Context) {
         // Check Notification Permission (Android 13+)
         notificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == 
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
                     PackageManager.PERMISSION_GRANTED
         } else {
             true
@@ -248,10 +280,10 @@ internal class PermissionStep : OnboardingStep {
             .isIgnoringBatteryOptimizations(context.packageName)
 
         // Check Location Permissions
-        val hasFineLocation = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == 
+        val hasFineLocation = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED
         val hasBackgroundLocation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == 
+            context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
                     PackageManager.PERMISSION_GRANTED
         } else {
             true // Background location permission not required for Android 9 and below
@@ -262,15 +294,27 @@ internal class PermissionStep : OnboardingStep {
         storageGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()
         } else {
-            context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == 
+            context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
                     PackageManager.PERMISSION_GRANTED
         }
 
 //         Check Accessibility Service
-        accessibilityGranted = isAccessibilityServiceEnabled(context)
+        accessibilityGranted = isAccessibilityServiceEnabled(
+            context,
+            "${context.packageName}/${ClipboardListener::class.java.canonicalName}"
+        )
 
         // Check Notification Listener
         notificationListenerGranted = isNotificationListenerEnabled(context)
+
+        // Add this new permission check
+        readMediaGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) ==
+                    PackageManager.PERMISSION_GRANTED
+        } else {
+            // For older versions, we already have storage permission
+            storageGranted
+        }
     }
 
     private fun isAccessibilityServiceEnabled(context: Context): Boolean {
@@ -284,74 +328,99 @@ internal class PermissionStep : OnboardingStep {
 
     private fun isNotificationListenerEnabled(context: Context): Boolean {
         val flat = Settings.Secure.getString(
-            context.contentResolver, 
+            context.contentResolver,
             "enabled_notification_listeners"
         )
         return flat?.contains(context.packageName) == true
     }
+}
 
-    @Composable
-    private fun PermissionItem(
-        title: String,
-        subtitle: String,
-        permission: String? = null,
-        granted: Boolean,
-        onRequest: () -> Unit
-    ) {
-        val context = LocalContext.current
-        val activity = context as Activity
-        
-        // Check if permission is permanently denied (don't ask again)
-        val isPermanentlyDenied = permission?.let {
-            !granted && !ActivityCompat.shouldShowRequestPermissionRationale(activity, it)
-        } ?: false
+@Composable
+fun PermissionItem(
+    title: String,
+    subtitle: String,
+    permission: String? = null,
+    granted: Boolean,
+    onRequest: () -> Unit,
+    viewModel: OnboardingViewModel = hiltViewModel()
+) {
+    val context = LocalContext.current
+    val activity = context as Activity
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-        ListItem(
-            headlineContent = { 
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium
-                )
-            },
-            supportingContent = {
-                Text(
-                    text = if (isPermanentlyDenied) 
-                        "Permission denied. Please enable it in Settings to use this feature."
-                    else subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            trailingContent = {
-                if (granted) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    TextButton(
-                        onClick = {
-                            if (isPermanentlyDenied) {
-                                // Open settings if permission is permanently denied
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", context.packageName, null)
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(intent)
-                            } else {
-                                // Normal permission request flow
-                                onRequest()
-                            }
-                        }
-                    ) {
-                        Text(if (isPermanentlyDenied) "Settings" else "Grant")
-                    }
-                }
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            )
-        )
+    var permissionCheckTrigger by remember { mutableIntStateOf(0) }
+    val hasRequestedBefore = if (permission != null) {
+        viewModel.hasRequestedPermission(permission)
+            .collectAsState(initial = false).value
+    } else {
+        false
     }
+
+    // Force recomposition when permission result comes back
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissionCheckTrigger++ // Force recomposition
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+
+    // These will be recalculated when permissionCheckTrigger changes
+    val permissionDenied = remember(permissionCheckTrigger) {
+        permission?.let {
+            ActivityCompat.checkSelfPermission(activity, it) == PackageManager.PERMISSION_DENIED
+        } ?: false
+    }
+
+    val canShowRationale = remember(permissionCheckTrigger) {
+        permission?.let {
+            shouldShowRequestPermissionRationale(activity, it)
+        } ?: false
+    }
+
+    val showSettings = if (permission == null) {
+        false
+    } else {
+        permissionDenied && hasRequestedBefore && !canShowRationale
+    }
+
+    ListItem(
+        headlineContent = { Text(text = title, style = MaterialTheme.typography.titleMedium) },
+        supportingContent = {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        trailingContent = {
+            if (granted) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                TextButton(
+                    onClick = {
+                        if (showSettings) {
+                            openAppSettings(context)
+                        } else {
+                            permission?.let { viewModel.savePermissionRequested(it) }
+                            onRequest()
+                            permissionCheckTrigger++
+                        }
+                    }
+                ) {
+                    Text(if (showSettings) "Settings" else "Grant")
+                }
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
 }
