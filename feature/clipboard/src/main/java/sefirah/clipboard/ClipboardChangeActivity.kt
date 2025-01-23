@@ -55,7 +55,7 @@ class ClipboardChangeActivity : FragmentActivity() {
     private fun sendClip(data: String?) {
         if (data != null) {
             CoroutineScope(Dispatchers.IO).launch {
-                networkManager.sendMessage(ClipboardMessage(data))
+                networkManager.sendMessage(ClipboardMessage("text/plain", data))
             }
         }
     }

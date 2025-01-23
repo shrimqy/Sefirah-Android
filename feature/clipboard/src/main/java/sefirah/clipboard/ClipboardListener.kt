@@ -8,8 +8,14 @@ import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.launch
 import sefirah.clipboard.extensions.LanguageDetector
 import sefirah.domain.repository.NetworkManager
+import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -17,8 +23,10 @@ class ClipboardListener : AccessibilityService() {
     @Inject
     lateinit var networkManager: NetworkManager
 
-    private lateinit var clipboardDetector: ClipboardDetection
+    @Inject
+    lateinit var preferencesRepository: PreferencesRepository
 
+    private lateinit var clipboardDetector: ClipboardDetection
     override fun onCreate() {
         super.onCreate()
         clipboardDetector = ClipboardDetection(LanguageDetector.getCopyForLocale(applicationContext))
@@ -28,9 +36,8 @@ class ClipboardListener : AccessibilityService() {
     private var runForNextEventAlso = false
 
     override fun onServiceConnected() {
-        super.onServiceConnected( )
-
-        Log.d(TAG,"Service Connected")
+        super.onServiceConnected()
+        
         val info = AccessibilityServiceInfo()
         info.apply {
             eventTypes = MONITORED_EVENTS
@@ -39,6 +46,7 @@ class ClipboardListener : AccessibilityService() {
             notificationTimeout = 120
         }
         serviceInfo = info
+        
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

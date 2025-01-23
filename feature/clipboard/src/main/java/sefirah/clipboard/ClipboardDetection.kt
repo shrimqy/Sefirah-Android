@@ -131,9 +131,9 @@ class ClipboardDetection(
         var sourceActions: List<AccessibilityNodeInfo.AccessibilityAction> = emptyList(),
     ) {
         companion object {
-            internal val copyActions = listOf<AccessibilityNodeInfo.AccessibilityAction>(
-                AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK,
-            )
+//            internal val copyActions = listOf<AccessibilityNodeInfo.AccessibilityAction>(
+//                AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK,
+//            )
             internal val copyKeyWords = "(copied)|(Copied)|(clipboard)".toRegex()
 
             fun from(event: AccessibilityEvent): AEvent {
