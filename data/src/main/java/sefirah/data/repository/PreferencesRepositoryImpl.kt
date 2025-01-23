@@ -24,9 +24,14 @@ class PreferencesDatastore @Inject constructor(
         val SYNC_STATUS = booleanPreferencesKey("syncStatus")
         val LAST_CONNECTED = stringPreferencesKey("lastConnected")
         val AUTO_DISCOVERY = booleanPreferencesKey("autoDiscovery")
+        val CLIPBOARD_SYNC = booleanPreferencesKey("clipboardSync")
+        val READ_SENSITIVE_NOTIFICATIONS = booleanPreferencesKey("readSensitiveNotifications")
+        val MEDIA_SESSION = booleanPreferencesKey("mediaSession")
         val IMAGE_CLIPBOARD = booleanPreferencesKey("autoImageClipboard")
         val STORAGE_LOCATION = stringPreferencesKey("storageLocation")
         val APP_ENTRY = booleanPreferencesKey("appEntry")
+        val PERMISSION_REQUESTED = stringPreferencesKey("permission_requested")
+        val NOTIFICATION_SYNC = booleanPreferencesKey("notificationSync")
     }
 
     private val datastore = context.dataStore
@@ -73,9 +78,63 @@ class PreferencesDatastore @Inject constructor(
         }
     }
 
-    override suspend fun saveImageClipboardSettings(clipboardSettings: Boolean) {
+    override suspend fun saveClipboardSyncSettings(clipboardSync: Boolean) {
         datastore.edit {
-            it[PreferencesKeys.IMAGE_CLIPBOARD] = clipboardSettings
+            it[PreferencesKeys.CLIPBOARD_SYNC] = clipboardSync
+        }
+    }
+
+    override fun readClipboardSyncSettings(): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[PreferencesKeys.CLIPBOARD_SYNC] ?: true
+        }
+    }
+
+    override suspend fun saveReadSensitiveNotificationsSettings(readSensitiveNotifications: Boolean) {
+        datastore.edit {
+            it[PreferencesKeys.READ_SENSITIVE_NOTIFICATIONS] = readSensitiveNotifications
+        }
+    }
+
+    override fun readReadSensitiveNotificationsSettings(): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[PreferencesKeys.READ_SENSITIVE_NOTIFICATIONS] ?: false
+        }
+    }
+
+    override suspend fun saveNotificationSyncSettings(notificationSync: Boolean) {
+        datastore.edit {
+            it[PreferencesKeys.NOTIFICATION_SYNC] = notificationSync
+        }
+    }
+
+    override fun readNotificationSyncSettings(): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[PreferencesKeys.NOTIFICATION_SYNC] ?: true
+        }
+    }
+
+    override suspend fun saveMediaSessionSettings(showMediaSession: Boolean) {
+        datastore.edit {
+            it[PreferencesKeys.MEDIA_SESSION] = showMediaSession
+        }
+    }
+
+    override fun readMediaSessionSettings(): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[PreferencesKeys.MEDIA_SESSION] ?: true
+        }
+    }
+
+    override suspend fun saveImageClipboardSettings(copyImagesToClipboard: Boolean) {
+        datastore.edit {
+            it[PreferencesKeys.IMAGE_CLIPBOARD] = copyImagesToClipboard
+        }
+    }
+
+    override fun readImageClipboardSettings(): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[PreferencesKeys.IMAGE_CLIPBOARD] ?: true
         }
     }
 
@@ -96,11 +155,37 @@ class PreferencesDatastore @Inject constructor(
         return datastore.data.catch {
             emit(emptyPreferences())
         }.map { preferences->
-
             val discovery = preferences[PreferencesKeys.AUTO_DISCOVERY] ?: true
-            val imageClipboard = preferences[PreferencesKeys.IMAGE_CLIPBOARD] ?: true
             val storageLocation = preferences[PreferencesKeys.STORAGE_LOCATION] ?: ""
-            PreferencesSettings(discovery, imageClipboard, storageLocation)
+            val readSensitiveNotifications = preferences[PreferencesKeys.READ_SENSITIVE_NOTIFICATIONS] ?: false
+            val notificationSync =  preferences[PreferencesKeys.NOTIFICATION_SYNC] ?: true
+            val imageClipboard = preferences[PreferencesKeys.IMAGE_CLIPBOARD] ?: true
+            val clipboardSync = preferences[PreferencesKeys.CLIPBOARD_SYNC] ?: true
+            val mediaSession = preferences[PreferencesKeys.MEDIA_SESSION] ?: true
+            PreferencesSettings(
+                autoDiscovery =  discovery,
+                storageLocation =  storageLocation,
+                readSensitiveNotifications = readSensitiveNotifications,
+                notificationSync = notificationSync,
+                mediaSession =  mediaSession,
+                clipboardSync =  clipboardSync,
+                imageClipboard =  imageClipboard)
+        }
+    }
+
+    override suspend fun savePermissionRequested(permission: String) {
+        datastore.edit { prefs ->
+            val requested = prefs[PreferencesKeys.PERMISSION_REQUESTED] ?: ""
+            if (!requested.contains(permission)) {
+                prefs[PreferencesKeys.PERMISSION_REQUESTED] = "$requested,$permission"
+            }
+        }
+    }
+
+    override fun hasRequestedPermission(permission: String): Flow<Boolean> {
+        return datastore.data.map { prefs ->
+            val requested = prefs[PreferencesKeys.PERMISSION_REQUESTED] ?: ""
+            requested.split(",").contains(permission)
         }
     }
 
