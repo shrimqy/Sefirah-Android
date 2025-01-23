@@ -1,9 +1,11 @@
 package sefirah.network
 
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -16,18 +18,25 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import dagger.hilt.android.AndroidEntryPoint
 import io.ktor.network.sockets.openReadChannel
+import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.jvm.javaio.copyTo
+import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import sefirah.common.R
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
-import sefirah.domain.model.FileTransferInfo
+import sefirah.common.util.getCertFromString
+import sefirah.data.repository.AppRepository
+import sefirah.domain.model.BulkFileTransfer
+import sefirah.domain.model.FileMetadata
+import sefirah.domain.model.FileTransfer
 import sefirah.domain.model.ServerInfo
 import sefirah.domain.model.SocketType
 import sefirah.domain.repository.NetworkManager
@@ -51,6 +60,7 @@ class FileTransferService : Service() {
     @Inject lateinit var networkManager: NetworkManager
     @Inject lateinit var notificationCenter: NotificationCenter
     @Inject lateinit var preferencesRepository: PreferencesRepository
+    @Inject lateinit var appRepository: AppRepository
 
     private var serverSocket: SSLServerSocket? = null
     private var socket: Socket? = null
@@ -61,7 +71,11 @@ class FileTransferService : Service() {
 
     private sealed class TransferType {
         data class Sending(val fileName: String) : TransferType()
-        data class Receiving(val fileName: String) : TransferType()
+        data class Receiving(
+            val fileName: String,
+            val currentFileIndex: Int = 0,
+            val totalFiles: Int = 1
+        ) : TransferType()
     }
 
     private lateinit var currentTransfer: TransferType
@@ -96,20 +110,32 @@ class FileTransferService : Service() {
             }
 
             ACTION_RECEIVE_FILE -> {
-                val fileTransferInfo = intent.getParcelableExtra<FileTransferInfo>(EXTRA_FILE_TRANSFER_INFO)
-                fileTransferInfo?.let {
-                    serviceScope.launch {
-                        try {
-                            Log.d(TAG, "Starting file transfer process")
-                            receiveFile(fileTransferInfo)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "File transfer failed", e)
-                            updateNotificationForError(e.message ?: "Transfer failed")
-                        } finally {
-                            Log.d(TAG, "Transfer process completed, stopping service")
+                val fileTransfer = intent.getParcelableExtra<FileTransfer>(EXTRA_FILE_TRANSFER)
+                val bulkTransfer = intent.getParcelableExtra<BulkFileTransfer>(EXTRA_BULK_TRANSFER)
+                
+                when {
+                    fileTransfer != null -> {
+                        serviceScope.launch {
+                            try {
+                                Log.d(TAG, "Starting single file transfer process")
+                                receiveSingleFile(fileTransfer)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "File transfer failed", e)
+                                updateNotificationForError(e.message ?: "Transfer failed")
+                            }
                         }
                     }
-
+                    bulkTransfer != null -> {
+                        serviceScope.launch {
+                            try {
+                                Log.d(TAG, "Starting bulk file transfer process")
+                                receiveBulkFiles(bulkTransfer)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Bulk file transfer failed", e)
+                                updateNotificationForError(e.message ?: "Transfer failed")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -124,7 +150,7 @@ class FileTransferService : Service() {
             fileInputStream = this.contentResolver.openInputStream(fileUri)
             val fileMetadata = getFileMetadata(this, fileUri)
 
-            val message = FileTransferInfo(serverInfo, fileMetadata)
+            val message = FileTransfer(serverInfo, fileMetadata)
             networkManager.sendMessage(message)
 
             withContext(Dispatchers.IO) {
@@ -159,7 +185,7 @@ class FileTransferService : Service() {
         val ipAddress = getDeviceIpAddress()
         PORT_RANGE.forEach { port ->
             try {
-                serverSocket = ipAddress?.let { socketFactory.createServer(port, it) } ?: return null
+                serverSocket = ipAddress?.let { socketFactory.tcpServerSocket(port, it) } ?: return null
                 Log.d(TAG, "Server socket created on ${ipAddress}:${port}, waiting for client to connect")
                 return ServerInfo(ipAddress, port)
             } catch (e: Exception) {
@@ -170,17 +196,98 @@ class FileTransferService : Service() {
         return null
     }
 
-    private suspend fun receiveFile(fileTransferInfo: FileTransferInfo) {
-        setupNotification(TransferType.Receiving(fileTransferInfo.metadata.fileName))
-        clientSocket = socketFactory.createSocket(
+    private suspend fun receiveSingleFile(fileTransfer: FileTransfer) {
+        setupNotification(TransferType.Receiving(fileTransfer.fileMetadata.fileName))
+        
+        // For single file, establish connection here
+        val certificate = appRepository.getLastConnectedCert() ?: return
+        clientSocket = socketFactory.tcpClientSocket(
             SocketType.FILE_TRANSFER,
-            fileTransferInfo.serverInfo.ipAddress,
-            fileTransferInfo.serverInfo.port
-        ).getOrNull()
-        val readChannel = clientSocket?.openReadChannel() ?: throw IOException("Failed to open read channel")
-        val metadata = fileTransferInfo.metadata
-        var fileUri: Uri? = null
+            fileTransfer.serverInfo.ipAddress,
+            fileTransfer.serverInfo.port,
+            getCertFromString(certificate)
+        ).getOrNull() ?: throw IOException("Failed to establish connection")
 
+        val readChannel = clientSocket?.openReadChannel() ?: throw IOException("Failed to open read channel")
+        val writeChannel = clientSocket?.openWriteChannel() ?: throw IOException("Failed to open read channel")
+        try {
+            val fileUri = receiveFileInternal(
+                readChannel = readChannel,
+                metadata = fileTransfer.fileMetadata
+            )
+            writeChannel.writeStringUtf8("Success")
+            writeChannel.flush()
+            if (preferencesRepository.readImageClipboardSettings().first()) {
+                val clipboardManager = this.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboardManager.setPrimaryClip(ClipData.newUri(contentResolver, "received file", fileUri))
+            }
+        } finally {
+            cleanup()
+        }
+    }
+
+    private suspend fun receiveBulkFiles(bulkTransfer: BulkFileTransfer) {
+        var totalReceived = 0L
+        val totalSize = bulkTransfer.files.sumOf { it.fileSize }
+        
+        // Establish connection once for all files
+        val certificate = appRepository.getLastConnectedCert() ?: return
+        clientSocket = socketFactory.tcpClientSocket(
+            SocketType.FILE_TRANSFER,
+            bulkTransfer.serverInfo.ipAddress,
+            bulkTransfer.serverInfo.port,
+            getCertFromString(certificate)
+        ).getOrNull() ?: throw IOException("Failed to establish connection")
+        val readChannel = clientSocket?.openReadChannel() ?: throw IOException("Failed to open read channel")
+        val writeChannel = clientSocket?.openWriteChannel() ?: throw IOException("Failed to open read channel")
+
+        try {
+            bulkTransfer.files.forEachIndexed { index, metadata ->
+                try {
+                    setupNotification(TransferType.Receiving(
+                        fileName = metadata.fileName,
+                        currentFileIndex = index + 1,
+                        totalFiles = bulkTransfer.files.size
+                    ))
+                    
+                    receiveFileInternal(
+                        readChannel = readChannel,  // Pass the existing readChannel
+                        metadata = metadata,
+                        totalReceived = totalReceived,
+                        totalSize = totalSize
+                    )
+                    writeChannel.writeStringUtf8("Success")
+                    writeChannel.flush()
+                    totalReceived += metadata.fileSize
+                    
+                    showCompletedNotification(
+                        currentFile = index + 1,
+                        totalFiles = bulkTransfer.files.size,
+                        fileName = metadata.fileName
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to receive file: ${metadata.fileName}", e)
+                    updateNotificationForError(
+                        error = "Failed to receive ${metadata.fileName}",
+                        currentFile = index + 1,
+                        totalFiles = bulkTransfer.files.size
+                    )
+                    throw e  // Rethrow to stop the bulk transfer
+                }
+            }
+            showBulkTransferCompletedNotification(bulkTransfer.files.size)
+        } finally {
+            cleanup()
+        }
+    }
+
+    private suspend fun receiveFileInternal(
+        readChannel: io.ktor.utils.io.ByteReadChannel,  // Now passed as parameter
+        metadata: FileMetadata,
+        totalReceived: Long = 0,
+        totalSize: Long = metadata.fileSize
+    ) : Uri {
+        var fileUri: Uri? = null
         try {
             // Create the output file URI
             fileUri = when {
@@ -192,7 +299,7 @@ class FileTransferService : Service() {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
                     val values = ContentValues().apply {
                         put(MediaStore.Downloads.DISPLAY_NAME, metadata.fileName)
-                        put(MediaStore.Downloads.MIME_TYPE, metadata.mimeType ?: "*/*")
+                        put(MediaStore.Downloads.MIME_TYPE, metadata.mimeType)
                         put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                     }
                     contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
@@ -208,24 +315,31 @@ class FileTransferService : Service() {
 
             contentResolver.openOutputStream(fileUri)?.use { output ->
                 val fileSize = metadata.fileSize
-                var totalBytesReceived = 0L
+                var currentFileReceived = 0L
 
-                while (totalBytesReceived < fileSize) {
-                    val bytesToRead = minOf(DEFAULT_BUFFER_SIZE.toLong(), fileSize - totalBytesReceived)
+                while (currentFileReceived < fileSize) {
+                    val bytesToRead = minOf(DEFAULT_BUFFER_SIZE.toLong(), fileSize - currentFileReceived)
                     val bytesRead = readChannel.copyTo(output, bytesToRead)
 
-                    if (bytesRead == 0L) break  // End of stream
-                    totalBytesReceived += bytesRead
-                    updateTransferProgress(totalBytesReceived, fileSize)
+                    if (bytesRead == 0L) break
+                    currentFileReceived += bytesRead
+                    
+                    // Update both current file and total progress
+                    updateTransferProgress(
+                        currentFileReceived = currentFileReceived,
+                        currentFileSize = fileSize,
+                        totalReceived = totalReceived + currentFileReceived,
+                        totalSize = totalSize
+                    )
                 }
 
-                if (totalBytesReceived != fileSize) {
-                    throw IOException("Incomplete transfer: received $totalBytesReceived bytes out of $fileSize.")
+                if (currentFileReceived != fileSize) {
+                    throw IOException("Incomplete transfer: received $currentFileReceived bytes out of $fileSize.")
                 }
-
-                Log.d(TAG, "Transfer completed successfully: $totalBytesReceived/$fileSize bytes")
+                Log.d(TAG, "Transfer completed successfully: $currentFileReceived/$fileSize bytes")
             }
-            showCompletedNotification(fileUri, metadata.mimeType)
+            showCompletedNotification(fileUri = fileUri, mimeType = metadata.mimeType)
+            return fileUri
         } catch (e: Exception) {
             Log.e(TAG, "File transfer failed: ${e.message}", e)
             fileUri?.let { uri ->
@@ -236,8 +350,7 @@ class FileTransferService : Service() {
                 }
             }
             updateNotificationForError(e.message ?: "Transfer failed")
-        } finally {
-            cleanup()
+            throw e
         }
     }
 
@@ -282,51 +395,72 @@ class FileTransferService : Service() {
         startForeground(AppNotifications.TRANSFER_PROGRESS_ID, notificationBuilder.build())
     }
 
-    private fun updateTransferProgress(transferred: Long, total: Long) {
-        val progress = ((transferred.toFloat() / total) * 100).toInt()
-        val transferredMB = transferred / 1024f / 1024f
-        val totalMB = total / 1024f / 1024f
-
-        val actionText = when (currentTransfer) {
-            is TransferType.Sending -> "Sending"
-            is TransferType.Receiving -> "Receiving"
-        }
-        notificationCenter.modifyNotification(notificationBuilder, AppNotifications.TRANSFER_PROGRESS_ID) {
-            setProgress(100, progress, false)
-            setContentText("$actionText: %.1f MB / %.1f MB".format(transferredMB, totalMB))
+    private fun updateTransferProgress(
+        currentFileReceived: Long,
+        currentFileSize: Long,
+        totalReceived: Long = currentFileReceived,
+        totalSize: Long = currentFileSize
+    ) {
+        val currentProgress = ((currentFileReceived.toFloat() / currentFileSize) * 100).toInt()
+        val totalProgress = ((totalReceived.toFloat() / totalSize) * 100).toInt()
+        
+        val currentMB = currentFileReceived / 1024f / 1024f
+        val currentTotalMB = currentFileSize / 1024f / 1024f
+        
+        when (val transfer = currentTransfer) {
+            is TransferType.Receiving -> {
+                val progressText = if (transfer.totalFiles > 1) {
+                    "File ${transfer.currentFileIndex}/${transfer.totalFiles}: %.1f MB / %.1f MB\nTotal Progress: $totalProgress%%"
+                        .format(currentMB, currentTotalMB)
+                } else {
+                    "Receiving: %.1f MB / %.1f MB".format(currentMB, currentTotalMB)
+                }
+                
+                notificationCenter.modifyNotification(notificationBuilder, AppNotifications.TRANSFER_PROGRESS_ID) {
+                    setProgress(100, currentProgress, false)
+                    setContentText(progressText)
+                }
+            }
+            is TransferType.Sending -> {
+                // ... existing sending progress code ...
+            }
         }
     }
 
-    private fun showCompletedNotification(fileUri: Uri? = null, mimeType: String? = null) {
+    private fun showCompletedNotification(
+        currentFile: Int? = null,
+        totalFiles: Int? = null,
+        fileName: String? = null,
+        fileUri: Uri? = null,
+        mimeType: String? = null
+    ) {
         stopForeground(STOP_FOREGROUND_REMOVE)
-
-        val fileName = when (currentTransfer) {
-            is TransferType.Sending -> (currentTransfer as TransferType.Sending).fileName
-            is TransferType.Receiving -> (currentTransfer as TransferType.Receiving).fileName
+        
+        val title = when {
+            currentFile != null && totalFiles != null -> 
+                "File $currentFile of $totalFiles Complete"
+            else -> "File Transfer Complete"
         }
-
-        val contentText = when (currentTransfer) {
-            is TransferType.Sending -> "Successfully sent $fileName"
-            is TransferType.Receiving -> "Successfully saved $fileName"
+        
+        val contentText = when {
+            fileName != null -> "Successfully received $fileName"
+            else -> "Transfer completed successfully"
         }
 
         notificationCenter.showNotification(
             channelId = AppNotifications.TRANSFER_COMPLETE_CHANNEL,
             notificationId = AppNotifications.TRANSFER_COMPLETE_ID,
         ) {
-            setContentTitle(when (currentTransfer) {
-                is TransferType.Sending -> "File Sent"
-                is TransferType.Receiving -> "File Received"
-            })
+            setContentTitle(title)
             setContentText(contentText)
             setOngoing(false)
             setAutoCancel(true)
-            setPriority(NotificationCompat.PRIORITY_HIGH)
-            setSilent(currentTransfer is TransferType.Sending)
+            setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            setSilent(false)
 
-            if (currentTransfer is TransferType.Receiving && fileUri != null) {
+            if (fileUri != null && mimeType != null) {
                 val openFileIntent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(fileUri, mimeType ?: "*/*")
+                    setDataAndType(fileUri, mimeType)
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
                 }
 
@@ -341,14 +475,38 @@ class FileTransferService : Service() {
         }
     }
 
-    private fun updateNotificationForError(error: String) {
+    private fun showBulkTransferCompletedNotification(totalFiles: Int) {
+        notificationCenter.showNotification(
+            channelId = AppNotifications.TRANSFER_COMPLETE_CHANNEL,
+            notificationId = AppNotifications.TRANSFER_COMPLETE_ID,
+        ) {
+            setContentTitle("Transfer Complete")
+            setContentText("Successfully received $totalFiles files")
+            setOngoing(false)
+            setAutoCancel(true)
+            setPriority(NotificationCompat.PRIORITY_HIGH)
+            setSilent(false)
+        }
+    }
+
+    private fun updateNotificationForError(
+        error: String,
+        currentFile: Int? = null,
+        totalFiles: Int? = null
+    ) {
         stopForeground(STOP_FOREGROUND_REMOVE)
+
+        val title = when {
+            currentFile != null && totalFiles != null -> 
+                "File Transfer Error (File $currentFile of $totalFiles)"
+            else -> "File Transfer Error"
+        }
 
         notificationCenter.showNotification(
             channelId = AppNotifications.TRANSFER_ERROR_CHANNEL,
             notificationId = AppNotifications.TRANSFER_ERROR_ID,
         ) {
-            setContentTitle("File Transfer Error")
+            setContentTitle(title)
             setContentText(error)
             setPriority(NotificationCompat.PRIORITY_HIGH)
             setAutoCancel(true)
@@ -365,6 +523,7 @@ class FileTransferService : Service() {
     private fun cleanup() {
         try {
             fileInputStream?.close()
+            clientSocket?.close()
             socket?.close()
             serverSocket?.close()
         } catch (e: Exception) {
@@ -376,7 +535,8 @@ class FileTransferService : Service() {
 
         const val ACTION_SEND_FILE = "sefirah.network.action.SEND_FILE"
         const val ACTION_RECEIVE_FILE = "sefirah.network.action.RECEIVE_FILE"
-        const val EXTRA_FILE_TRANSFER_INFO = "sefirah.network.extra.FILE_TRANSFER_INFO"
+        const val EXTRA_FILE_TRANSFER = "sefirah.network.extra.FILE_TRANSFER"
+        const val EXTRA_BULK_TRANSFER = "sefirah.network.extra.BULK_TRANSFER"
         const val ACTION_CANCEL_TRANSFER = "sefirah.network.action.CANCEL_TRANSFER"
 
         private const val TAG = "FileTransferService"
