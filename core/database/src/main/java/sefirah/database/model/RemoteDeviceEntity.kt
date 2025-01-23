@@ -1,7 +1,9 @@
 package sefirah.database.model
 
+import android.util.Base64
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import sefirah.common.util.getCertFromString
 import sefirah.domain.model.RemoteDevice
 
 @Entity
@@ -14,6 +16,7 @@ data class RemoteDeviceEntity (
     val avatar: String? = null,
     var hashedSecret: String? = null,
     var lastConnected: Long? = null,
+    val certificate: String
 )
 
 fun RemoteDeviceEntity.toDomain(): RemoteDevice {
@@ -25,7 +28,8 @@ fun RemoteDeviceEntity.toDomain(): RemoteDevice {
         publicKey = publicKey,
         deviceName = deviceName,
         hashedSecret = hashedSecret,
-        lastConnected = lastConnected
+        lastConnected = lastConnected,
+        certificate = getCertFromString(certificate)
     )
 }
 
@@ -42,6 +46,7 @@ fun RemoteDevice.toEntity(): RemoteDeviceEntity {
         publicKey = publicKey,
         deviceName = deviceName,
         hashedSecret = hashedSecret,
-        lastConnected = lastConnected
+        lastConnected = lastConnected,
+        certificate = Base64.encodeToString(certificate.encoded, Base64.NO_WRAP)
     )
 }

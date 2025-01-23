@@ -9,19 +9,22 @@ data class LocalDeviceEntity (
     @PrimaryKey val deviceId: String,
     val deviceName: String,
     val publicKey: String,
-    val privateKey: String
+    val privateKey: String,
+    val wallpaperBase64: String? = null
 )
 
 fun LocalDeviceEntity.toDomain(): LocalDevice = LocalDevice(
     deviceId = deviceId,
     deviceName = deviceName,
     publicKey = publicKey,
-    privateKey = privateKey
+    privateKey = privateKey,
+    wallpaperBase64 = wallpaperBase64
 )
 
 fun LocalDevice.toEntity(): LocalDeviceEntity = LocalDeviceEntity(
     deviceId = deviceId,
     deviceName = deviceName,
     publicKey = publicKey,
-    privateKey = privateKey
+    privateKey = privateKey,
+    wallpaperBase64 = wallpaperBase64
 )

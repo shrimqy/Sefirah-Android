@@ -7,33 +7,33 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.Serializable
 
+enum class ClipboardType {
+    Image,
+    Text
+}
+
 enum class NotificationType {
-    ACTIVE,
-    NEW,
-    REMOVED,
-    ACTION
+    Active,
+    New,
+    Removed,
+    Action
 }
 enum class MediaAction {
-    RESUME,
-    PAUSE,
-    NEXT_QUEUE,
-    PREV_QUEUE,
-    SEEK,
-    VOLUME
+    Resume,
+    Pause,
+    NextQueue,
+    PrevQueue,
+    Seek,
+    Volume
 }
 
-enum class CommandType {
-    LOCK,
-    SHUTDOWN,
-    SLEEP,
-    HIBERNATE,
-    MIRROR,
-    CLOSE_MIRROR,
-    CLEAR_NOTIFICATIONS
-}
-
-enum class DataTransferType {
-    METADATA, CHUNK
+enum class MiscType {
+    Disconnect,
+    Lock,
+    Shutdown,
+    Sleep,
+    Hibernate,
+    ClearNotifications
 }
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -43,19 +43,39 @@ sealed class SocketMessage
 
 @Serializable
 @SerialName("0")
-data class Response(
-    val resType: String,
-    val content: String,
+data class Misc(
+    val miscType: MiscType,
 ) : SocketMessage()
 
 @Serializable
 @SerialName("1")
+@Parcelize
+data class DeviceInfo(
+    val deviceId: String,
+    val deviceName: String,
+    val avatar: String? = null,
+    val publicKey: String? = null,
+    var hashedSecret: String? = null,
+) : SocketMessage(), Parcelable
+
+@Serializable
+@SerialName("2")
+data class DeviceStatus(
+    val batteryStatus: Int? = null,
+    val chargingStatus: Boolean? = null,
+    val wifiStatus: Boolean? = null,
+    val bluetoothStatus: Boolean? = null,
+) : SocketMessage()
+
+@Serializable
+@SerialName("3")
 data class ClipboardMessage(
+    val clipboardType: String,
     val content: String,
 ) : SocketMessage()
 
 @Serializable
-@SerialName("2")
+@SerialName("4")
 data class NotificationMessage(
     val notificationKey: String,
     val notificationType: NotificationType,
@@ -64,19 +84,19 @@ data class NotificationMessage(
     val appName: String? = null,
     val title: String? = null,
     val text: String? = null,
-    val messages: List<Message>? = emptyList(),
+    val messages: List<Message> = emptyList(),
     val groupKey: String? = null,
-    val tag: String?,
+    val tag: String? = null,
     val appIcon: String? = null,
     val largeIcon: String? = null,
     val bigPicture: String? = null,
     val replyResultKey: String? = null,
-    val actions: List<NotificationAction?> = emptyList(),
+    val actions: List<NotificationAction> = emptyList(),
 ) : SocketMessage()
 
 @Serializable
+@SerialName("5")
 @Parcelize
-@SerialName("13")
 data class NotificationAction(
     val notificationKey: String,
     val label: String,
@@ -85,8 +105,8 @@ data class NotificationAction(
 ) : SocketMessage(), Parcelable
 
 @Serializable
+@SerialName("6")
 @Parcelize
-@SerialName("14")
 data class ReplyAction(
     val notificationKey: String,
     val replyResultKey: String,
@@ -99,29 +119,9 @@ data class Message(
     val text: String
 )
 
+@Serializable
+@SerialName("7")
 @Parcelize
-@Serializable
-@SerialName("3")
-data class DeviceInfo(
-    val deviceId: String,
-    val deviceName: String,
-    val userAvatar: String? = null,
-    val publicKey: String? = null,
-    var hashedSecret: String? = null,
-) : SocketMessage(), Parcelable
-
-@Serializable
-@SerialName("4")
-data class DeviceStatus(
-    val batteryStatus: Int?,
-    val chargingStatus: Boolean?,
-    val wifiStatus: Boolean?,
-    val bluetoothStatus: Boolean?,
-) : SocketMessage()
-
-@Parcelize
-@Serializable
-@SerialName("5")
 data class PlaybackData(
     val appName: String? = null,
     val trackTitle: String? = null,
@@ -137,17 +137,19 @@ data class PlaybackData(
 ) : SocketMessage(), Parcelable
 
 @Serializable
-@SerialName("6")
-data class Command(
-    val commandType: CommandType
-) : SocketMessage()
+@Parcelize
+@SerialName("8")
+data class FileTransfer(
+    val serverInfo: ServerInfo,
+    val fileMetadata: FileMetadata
+) : Parcelable, SocketMessage()
 
 @Serializable
 @Parcelize
-@SerialName("7")
-data class FileTransferInfo(
+@SerialName("9")
+data class BulkFileTransfer(
     val serverInfo: ServerInfo,
-    val metadata: FileMetadata,
+    val files: List<FileMetadata>
 ) : Parcelable, SocketMessage()
 
 @Parcelize
@@ -157,52 +159,48 @@ data class ServerInfo(
     val port: Int
 ) : Parcelable
 
-
 @Serializable
 @Parcelize
 data class FileMetadata(
     val fileName: String,
     val mimeType: String,
     val fileSize: Long,
-    val uri: String,
-) : Parcelable, SocketMessage()
+    val uri: String? = null,
+) : Parcelable
 
-
-@Serializable
-@SerialName("8")
-data class StorageInfo(
-    val totalSpace: Long,
-    val freeSpace: Long,
-    val usedSpace: Long,
-) : SocketMessage()
-
-@Serializable
-@SerialName("9")
-data class DirectoryInfo(
-    val path: String,
-    val name: String,
-    val isDirectory: Boolean,
-    val size: String?
-) : SocketMessage()
+//@Serializable
+//@SerialName("9")
+//data class InteractiveControlMessage(
+//    val control: InteractiveControl
+//) : SocketMessage()
 
 @Serializable
 @SerialName("10")
-data class ScreenData(
-    val timestamp: Long,
-) : SocketMessage()
-
-@Serializable
-@SerialName("11")
-data class InteractiveControlMessage(
-    val control: InteractiveControl
-) : SocketMessage()
-
-@Serializable
-@SerialName("12")
 data class ApplicationInfo(
     val packageName: String,
     val appName: String,
     val appIcon: String?
+) : SocketMessage()
+
+@Serializable
+@SerialName("11")
+data class SftpServerInfo (
+    val username: String,
+    val password: String,
+    val ipAddress: String,
+    val port: Int
+) : SocketMessage()
+
+@Serializable
+@SerialName("12")
+data class UdpBroadcast(
+    val deviceId: String,
+    val deviceName: String,
+    val ipAddress: String? = null,
+    val port: Int? = null,
+    val publicKey: String,
+    val certificate: String? = null,
+    var timestamp: Long?
 ) : SocketMessage()
 
 @Serializable
@@ -231,7 +229,6 @@ sealed class InteractiveControl {
         val action: KeyboardActionType,
     ) : InteractiveControl()
 
-
     @Serializable
     @SerialName("KEY")
     data class KeyEvent(
@@ -258,19 +255,8 @@ sealed class InteractiveControl {
     ) : InteractiveControl()
 }
 
-@Serializable
-@SerialName("15")
-data class SftpServerInfo (
-    val username: String,
-    val password: String,
-    val ipAddress: String,
-    val port: Int
-) : SocketMessage()
-
-
-
 enum class ScrollDirection {
-    UP, DOWN
+    Up, Down
 }
 
 enum class KeyboardActionType {

@@ -30,13 +30,14 @@ class AppRepository @Inject constructor(
 
     fun getLastConnectedDeviceFlow() = deviceDao.getLastConnectedDeviceFlow()
 
-    // LocalDevice functions
     suspend fun addLocalDevice(device: LocalDeviceEntity) = deviceDao.addLocalDevice(device)
     suspend fun updateLocalDevice(device: LocalDeviceEntity) = deviceDao.updateLocalDevice(device)
     suspend fun getLocalDevice() = deviceDao.getLocalDevice()
+    fun getLastConnectedCert(): String? = deviceDao.getLastConnectedCert()
 
-    fun getAllNetworkFlow() = networkDao.getAllNetworksFlow()
+    fun getAllNetworksFlow() = networkDao.getAllNetworksFlow()
     suspend fun addNetwork(network: NetworkEntity) = networkDao.addNetwork(network)
-    fun getNetwork(ssid: String) = networkDao.getNetwork(ssid)
-    suspend fun removeNetwork(ssid: String) = networkDao.removeNetwork(ssid)
+    fun getNetwork(networkId: Int) = networkDao.getNetwork(networkId)
+    suspend fun deleteNetwork(network: NetworkEntity) = networkDao.deleteNetwork(network)
+    suspend fun updateNetwork(network: NetworkEntity) = networkDao.updateNetwork(network)
 }
