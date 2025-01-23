@@ -1,8 +1,19 @@
 package sefirah.network.util
 
 import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x509.BasicConstraints
+import org.bouncycastle.asn1.x509.Extension
+import org.bouncycastle.asn1.x509.KeyUsage
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.crypto.agreement.ECDHBasicAgreement
 import org.bouncycastle.crypto.digests.SHA256Digest
 import org.bouncycastle.crypto.params.ECDomainParameters
@@ -12,26 +23,92 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
+import java.security.KeyStore
 import java.security.Security
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
+import java.util.Calendar
+import java.util.Date
+import javax.security.auth.x500.X500Principal
 
 class CryptoUtils(private val context: Context) {
     companion object {
         private const val TAG = "CryptoUtils"
-        const val KEY_ALIAS = "KumoSeki"
         private const val CERT_VALIDITY_YEARS = 10
-        private const val CERTIFICATE_FILENAME = "kumoseki.cert"
+        private const val KEY_ALIAS = "Sefirah"
     }
 
     init {
-        // Register BouncyCastle as the security provider
         Security.addProvider(BouncyCastleProvider())
     }
-}
 
+    @Throws(Exception::class)
+    private fun createECDSACertificate(): X509Certificate {
+        val keyPairGenerator = KeyPairGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_EC,
+            "AndroidKeyStore"
+        )
+
+        val startDate = Calendar.getInstance()
+        val endDate = Calendar.getInstance()
+        endDate.add(Calendar.YEAR, CERT_VALIDITY_YEARS)
+
+        val parameterSpec = KeyGenParameterSpec.Builder(
+            KEY_ALIAS,
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+        ).apply {
+            setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
+            setCertificateSubject(X500Principal("CN=KumoSeki"))
+            setCertificateSerialNumber(BigInteger.valueOf(System.currentTimeMillis()))
+            setCertificateNotBefore(startDate.time)
+            setCertificateNotAfter(endDate.time)
+            setDigests(KeyProperties.DIGEST_SHA256)
+            setUserAuthenticationRequired(false)
+        }.build()
+
+        keyPairGenerator.initialize(parameterSpec)
+        keyPairGenerator.generateKeyPair()
+
+        // Get the certificate from AndroidKeyStore
+        val keyStore = KeyStore.getInstance("AndroidKeyStore")
+        keyStore.load(null)
+        return keyStore.getCertificate(KEY_ALIAS) as X509Certificate
+    }
+
+    suspend fun getOrCreateCertificate(): X509Certificate {
+        return withContext(Dispatchers.IO) {
+            val keyStore = KeyStore.getInstance("AndroidKeyStore")
+            keyStore.load(null)
+            
+            keyStore.getCertificate(KEY_ALIAS)?.let { 
+                return@withContext it as X509Certificate
+            }
+
+            // Create new certificate if it doesn't exist
+            return@withContext createECDSACertificate()
+        }
+    }
+
+    fun getPublicCertificate(): X509Certificate? {
+        return try {
+            val keyStore = KeyStore.getInstance("AndroidKeyStore")
+            keyStore.load(null)
+            keyStore.getCertificate(KEY_ALIAS) as? X509Certificate
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get public certificate: ${e.message}")
+            null
+        }
+    }
+}
 
 object ECDHHelper {
     private val bcProvider = BouncyCastleProvider()
@@ -78,17 +155,17 @@ object ECDHHelper {
         // Get shared secret as BigInteger first
         val sharedSecretBigInt = agreement.calculateAgreement(publicKeyParams)
 
-        // Convert to unsigned byte array like C# side
+        // Convert to unsigned byte array
         val sharedSecretBytes = sharedSecretBigInt.toByteArray()
-        // Remove leading zero if present (to match C# ToByteArrayUnsigned)
+        // Remove leading zero if present
         val trimmedSecret = if (sharedSecretBytes[0] == 0.toByte() && sharedSecretBytes.size > 1)
             sharedSecretBytes.copyOfRange(1, sharedSecretBytes.size)
         else
             sharedSecretBytes
 
-        Log.d("SharedSecret", "Raw shared secret: ${trimmedSecret.joinToString("") { "%02X".format(it) }}")
+//        Log.d("SharedSecret", "Raw shared secret: ${trimmedSecret.joinToString("") { "%02X".format(it) }}")
 
-        // Use BouncyCastle's SHA256Digest like C# side
+        // Use BouncyCastle's SHA256Digest
         val sha256 = SHA256Digest()
         val hashedSecret = ByteArray(sha256.digestSize)
         sha256.update(trimmedSecret, 0, trimmedSecret.size)

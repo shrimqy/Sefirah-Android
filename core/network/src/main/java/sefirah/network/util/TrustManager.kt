@@ -1,33 +1,44 @@
 package sefirah.network.util
 
 import android.content.Context
-import sefirah.network.BuildConfig
-import sefirah.network.R
 import java.security.KeyStore
+import java.security.cert.X509Certificate
 import javax.inject.Inject
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
 class TrustManager @Inject constructor(
-    private val context: Context
+    private val context: Context,
 ) {
-    fun getTrustManager(): X509TrustManager {
-        val keyStore = getKeyStore()
+    fun getRemoteTrustManager(certificate: X509Certificate): X509TrustManager {
+        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType()).apply {
+            load(null) // Initialize empty keystore
+            setCertificateEntry("remote-cert", certificate)
+        }
         return createTrustManager(keyStore)
     }
 
-    fun getKeyManagerFactory(): KeyManagerFactory {
+    // For our server certificate
+    fun getLocalTrustManager(): X509TrustManager {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore")
+        keyStore.load(null)
+        return createTrustManager(keyStore)
+    }
+
+
+    // For our server
+    fun getLocalKeyManagerFactory(): KeyManagerFactory {
         return KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply {
-            init(getKeyStore(), BuildConfig.certPwd.toCharArray())
+            val keyStore = KeyStore.getInstance("AndroidKeyStore")
+            keyStore.load(null)
+            init(keyStore, null)
         }
     }
 
     fun getKeyStore(): KeyStore {
-        return KeyStore.getInstance("PKCS12").apply {
-            context.resources.openRawResource(R.raw.server).use { stream ->
-                load(stream, BuildConfig.certPwd.toCharArray())
-            }
+        return KeyStore.getInstance("AndroidKeyStore").apply {
+            load(null)
         }
     }
 

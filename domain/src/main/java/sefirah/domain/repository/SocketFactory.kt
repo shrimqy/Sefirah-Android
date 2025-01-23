@@ -1,15 +1,17 @@
 package sefirah.domain.repository
 
+import io.ktor.network.sockets.BoundDatagramSocket
 import io.ktor.network.sockets.ServerSocket
 import io.ktor.network.sockets.Socket
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketType
+import java.security.cert.X509Certificate
 import javax.net.ssl.SSLServerSocket
 
 interface SocketFactory {
-    suspend fun createSocket(type: SocketType, ipAddress: String, port: Int): Result<Socket>
-    suspend fun createServerSocket(type: SocketType, port: Int, ipAddress: String): Result<ServerSocket>
-    suspend fun createServer(port: Int, ipAddress: String): SSLServerSocket
+    suspend fun tcpClientSocket(type: SocketType, ipAddress: String, port: Int, certificate: X509Certificate): Result<Socket>
+    suspend fun tcpServerSocket(port: Int, ipAddress: String): SSLServerSocket
+    fun udpSocket(port: Int): BoundDatagramSocket
 }
 
 

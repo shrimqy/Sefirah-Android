@@ -1,6 +1,5 @@
 package sefirah.network
 
-import sefirah.domain.model.ConnectionState
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -11,9 +10,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.repository.NetworkManager
 import javax.inject.Inject

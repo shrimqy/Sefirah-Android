@@ -23,6 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import sefirah.database.model.toDomain
 import sefirah.domain.model.RemoteDevice
 import java.util.concurrent.Executors
 import javax.inject.Inject
@@ -34,8 +35,8 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
     private val nsdManager by lazy { 
         context.getSystemService(Context.NSD_SERVICE) as NsdManager 
     }
-    private val _services = MutableStateFlow<List<RemoteDevice>>(emptyList())
-    val services: StateFlow<List<RemoteDevice>> = _services
+    private val _services = MutableStateFlow<List<NsdServiceInfo>>(emptyList())
+    val services: StateFlow<List<NsdServiceInfo>> = _services
     private var serviceDiscoveryStatus by mutableStateOf(false)
 
     private var currentServiceID: String? = null
@@ -45,7 +46,7 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
 
     init {
         val wifiManager = context.getSystemService(WIFI_SERVICE) as WifiManager
-        multicastLock = wifiManager.createMulticastLock("SekiaMulticastLock")
+        multicastLock = wifiManager.createMulticastLock("SefiraMulticastLock")
         multicastLock?.setReferenceCounted(true)
         multicastLock?.acquire()
     }
@@ -69,16 +70,15 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
     }
 
     @SuppressLint("HardwareIds")
-    fun advertiseService(publicKey: String) {
+    fun advertiseService(port: Int) {
         val deviceName = Global.getString(context.contentResolver, "device_name")
         currentServiceID = Secure.getString(context.contentResolver, Secure.ANDROID_ID)
-        Log.d(TAG, publicKey)
+
         val serviceInfo = NsdServiceInfo().also {
             it.serviceType = SERVICE_TYPE
             it.serviceName = currentServiceID
-            it.port = 1024
+            it.port = port
         }
-        serviceInfo.setAttribute("publicKey", publicKey);
         serviceInfo.setAttribute("deviceName", deviceName);
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -89,8 +89,6 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
             }
         }
     }
-
-
 
     fun stopAdvertisingService() {
         try {
@@ -151,7 +149,7 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
 
         override fun onServiceLost(service: NsdServiceInfo) {
             Log.e(TAG, "Service lost: $service")
-            _services.value = _services.value.filter { it.deviceId != service.serviceName }
+            _services.value = _services.value.filter { it.serviceName != service.serviceName }
         }
 
         override fun onDiscoveryStopped(serviceType: String) {
@@ -182,19 +180,7 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
             Log.d(TAG, "Service resolved: $serviceInfo")
             
             try {
-                val deviceName = serviceInfo.attributes["deviceName"]?.let { String(it, Charsets.UTF_8) } ?: return
-                val publicKey = serviceInfo.attributes["publicKey"]?.let { String(it, Charsets.UTF_8) } ?: return
-                val hostAddress = serviceInfo.attributes["ipAddress"]?.let { String(it, Charsets.UTF_8) } ?: return
-                val port = serviceInfo.attributes["port"]?.let { String(it, Charsets.UTF_8) } ?: return
-                val remoteDevice = RemoteDevice(
-                    deviceId = serviceInfo.serviceName,
-                    deviceName = deviceName,
-                    ipAddress = hostAddress,
-                    port = port.toInt(),
-                    publicKey = publicKey
-                )
-                
-                _services.value = (_services.value + remoteDevice).distinctBy { it.deviceId }
+                _services.value = (_services.value + serviceInfo).distinctBy { it.serviceName }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse service info: ${e.message}")
             }
@@ -214,19 +200,7 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
             Log.d(TAG, "Service updated: $serviceInfo")
             currentMonitoredService = serviceInfo  // Store the current service
             try {
-                val deviceName = serviceInfo.attributes["deviceName"]?.let { String(it, Charsets.UTF_8) } ?: return
-                val publicKey = serviceInfo.attributes["publicKey"]?.let { String(it, Charsets.UTF_8) } ?: return
-                val hostAddress = serviceInfo.attributes["ipAddress"]?.let { String(it, Charsets.UTF_8) } ?: return
-                val port = serviceInfo.attributes["port"]?.let { String(it, Charsets.UTF_8) } ?: return
-
-                val remoteDevice = RemoteDevice(
-                    deviceId = serviceInfo.serviceName,
-                    deviceName = deviceName,
-                    ipAddress = hostAddress,
-                    port = port.toInt(),
-                    publicKey = publicKey
-                )
-                _services.value = (_services.value + remoteDevice).distinctBy { it.deviceId }
+                _services.value = (_services.value + serviceInfo).distinctBy { it.serviceName }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse service info: ${e.message}")
             }
@@ -235,7 +209,7 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
         override fun onServiceLost() {
             Log.e(TAG, "Service lost")
             currentMonitoredService?.let { lostService ->
-                _services.value = _services.value.filter { it.deviceId != lostService.serviceName }
+                _services.value = _services.value.filter { it.serviceName != lostService.serviceName }
             }
         }
 
@@ -279,6 +253,6 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
 
     companion object {
         private const val TAG = "NsdService"
-        private const val SERVICE_TYPE = "_foo._tcp." // Make sure this matches across platforms
+        private const val SERVICE_TYPE = "_sefirah._udp."
     }
 }

@@ -1,8 +1,14 @@
 package sefirah.network
 
 import android.app.Service
+import android.bluetooth.BluetoothManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.ConnectivityManager
+import android.net.wifi.WifiManager
+import android.os.BatteryManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
@@ -26,21 +32,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import sefirah.clipboard.ClipboardHandler
-import sefirah.common.R
 import sefirah.common.notifications.NotificationCenter
 import sefirah.data.repository.AppRepository
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
+import sefirah.domain.model.DeviceStatus
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.SocketType
+import sefirah.domain.repository.PlaybackRepository
+import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
 import sefirah.media.MediaHandler
+import sefirah.network.extensions.handleDeviceInfo
 import sefirah.network.extensions.handleMessage
 import sefirah.network.extensions.setNotification
 import sefirah.network.util.MessageSerializer
 import sefirah.network.util.getInstalledApps
+import sefirah.network.NetworkDiscovery.NetworkAction
 import sefirah.notification.NotificationHandler
 import javax.inject.Inject
 
@@ -55,6 +66,8 @@ class NetworkService : Service() {
     @Inject lateinit var networkDiscovery: NetworkDiscovery
     @Inject lateinit var mediaHandler: MediaHandler
     @Inject lateinit var sftpServer: SftpServer
+    @Inject lateinit var preferencesRepository: PreferencesRepository
+    @Inject lateinit var playbackRepository: PlaybackRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
@@ -73,21 +86,13 @@ class NetworkService : Service() {
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
+    private var lastBatteryLevel: Int? = null
+
     private var socket: Socket? = null
     private var writeChannel: ByteWriteChannel? = null
     private var readChannel: ByteReadChannel? = null
 
     lateinit var connectedDevice: RemoteDevice
-
-    val channelName by lazy { getString(R.string.notification_device_connection) }
-    val channelId = "Device Connection Status"
-    val notificationId = channelId.hashCode()
-
-    override fun onCreate() {
-        super.onCreate()
-        sftpServer.initialize()
-        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -108,11 +113,29 @@ class NetworkService : Service() {
         scope.launch {
             try {
                 if (!initializeConnection(remoteInfo)) return@launch
-                // Send initial device info
+                // Send initial device info for verification
                 sendDeviceInfo(remoteInfo)
-                delay(10) // Verification delay
-
-                // Send apps if needed
+                
+                // Wait for device info
+                withTimeoutOrNull(60000) { // 30 seconds timeout
+                    readChannel?.readUTF8Line()?.let { jsonMessage ->
+                        Log.d(TAG, "Raw received data: $jsonMessage")
+                        val deviceInfo = messageSerializer.deserialize(jsonMessage) as? DeviceInfo
+                        if (deviceInfo == null) {
+                            Log.e(TAG, "Invalid device info received")
+                            return@withTimeoutOrNull null
+                        }
+                        handleDeviceInfo(deviceInfo)
+                        return@withTimeoutOrNull Unit
+                    }
+                } ?: run {
+                    Log.e(TAG, "Timeout waiting for device info")
+                    _connectionState.value = ConnectionState.Disconnected
+                    stop(false)
+                    return@launch
+                }
+                _connectionState.value = ConnectionState.Connected
+                startListening()
                 if (remoteInfo.avatar == null) {
                     sendInstalledApps()
                 }
@@ -120,6 +143,7 @@ class NetworkService : Service() {
                 finalizeConnection(remoteInfo.deviceName)
             } catch (e: Exception) {
                 Log.e(TAG, "Error in connecting", e)
+                _connectionState.value = ConnectionState.Disconnected
                 stop(false)
             }
         }
@@ -127,12 +151,11 @@ class NetworkService : Service() {
 
     private suspend fun initializeConnection(remoteInfo: RemoteDevice): Boolean {
         try {
-            socket = socketFactory.createSocket(SocketType.DEFAULT, remoteInfo.ipAddress, remoteInfo.port).getOrNull()
+            socket = socketFactory.tcpClientSocket(SocketType.DEFAULT, remoteInfo.ipAddress, remoteInfo.port, remoteInfo.certificate).getOrNull()
             if (socket != null) {
                 writeChannel = socket?.openWriteChannel()
                 readChannel = socket?.openReadChannel()
                 connectedDevice = remoteInfo
-                startListening()
                 return true
             }
             stop(false)
@@ -149,7 +172,8 @@ class NetworkService : Service() {
             deviceId = localDevice.deviceId,
             publicKey = localDevice.publicKey,
             deviceName = localDevice.deviceName,
-            hashedSecret = remoteInfo.hashedSecret
+            hashedSecret = remoteInfo.hashedSecret,
+            avatar = localDevice.wallpaperBase64
         ))
     }
 
@@ -161,25 +185,28 @@ class NetworkService : Service() {
     }
 
     private suspend fun finalizeConnection(deviceName: String) {
-        _connectionState.value = ConnectionState.Connected
-        networkDiscovery.addCurrentNetworkSSID()
+        networkDiscovery.register(NetworkAction.SAVE_NETWORK)
         setNotification(true, deviceName)
+        sendDeviceStatus()
         notificationHandler.sendActiveNotifications()
         clipboardHandler.start()
         sftpServer.start()?.let { sendMessage(it) }
         networkDiscovery.unregister()
     }
 
-    private fun stop(forcedStop: Boolean) {
+    fun stop(forcedStop: Boolean) {
         _connectionState.value = ConnectionState.Disconnected
-        if (!forcedStop) {
-            networkDiscovery.register()
+        if (forcedStop) {
+            networkDiscovery.unregister()
         }
-        scope.launch {
-            writeChannel?.close()
-            socket?.close()
-            stopForeground(STOP_FOREGROUND_REMOVE)
+        else {
+            networkDiscovery.register(NetworkAction.START_DEVICE_DISCOVERY)
         }
+        lastBatteryLevel = null
+        mediaHandler.release()
+        writeChannel?.close()
+        socket?.close()
+        setNotification(false, connectedDevice.deviceName)
     }
 
     private val mutex = Mutex() // Mutex to control write access
@@ -192,6 +219,7 @@ class NetworkService : Service() {
                         val jsonMessage = messageSerializer.serialize(message)
                         channel.writeStringUtf8("$jsonMessage\n") // Add newline to separate messages
                         channel.flush()
+
                         Log.d(TAG, "Message sent successfully")
                     } ?: run {
                         Log.e(TAG, "Write channel is not available")
@@ -238,6 +266,60 @@ class NetworkService : Service() {
                 }
             }
         }
+    }
+
+    private fun sendDeviceStatus() {
+        scope.launch {
+            try {
+                val deviceStatus = getDeviceStatus()
+                val currentBatteryLevel = deviceStatus.batteryStatus
+                // Only send the status if the battery level has changed
+                if (currentBatteryLevel != lastBatteryLevel) {
+                    lastBatteryLevel = currentBatteryLevel
+                    sendMessage(deviceStatus)
+                }
+            } catch (e: Exception) {
+                Log.e("WebSocketService", "Failed to send device status", e)
+            }
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        sftpServer.initialize()
+        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (_connectionState.value == ConnectionState.Connected) {
+                sendDeviceStatus()
+            }
+        }
+    }
+
+    private fun getDeviceStatus(): DeviceStatus {
+        val batteryStatus: Int? =
+            registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+                ?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+
+        val isCharging = batteryStatus != null &&
+                registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+                    ?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
+
+        val wifiManager = getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifi = wifiManager.isWifiEnabled
+
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetooth = bluetoothManager.adapter.isEnabled
+
+        return DeviceStatus(
+            batteryStatus = batteryStatus,
+            wifiStatus = wifi,
+            bluetoothStatus = bluetooth,
+            chargingStatus = isCharging
+        )
     }
 
     companion object {

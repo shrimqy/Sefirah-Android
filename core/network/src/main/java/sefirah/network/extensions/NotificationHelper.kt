@@ -44,6 +44,7 @@ fun NetworkService.setNotification(isConnected: Boolean, deviceName: String? = n
         setContentIntent(mainPendingIntent)
         setOngoing(true)
         setSilent(true)
+        setShowWhen(false)
         .addAction(R.drawable.ic_launcher_foreground, actionText, disconnectPendingIntent)
         .addAction(R.drawable.ic_launcher_foreground, getString(R.string.notification_clipboard_action), clipboardPendingIntent)
     }

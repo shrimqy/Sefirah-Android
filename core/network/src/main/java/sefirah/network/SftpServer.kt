@@ -42,6 +42,7 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.FileAttribute
 import java.security.KeyPair
+import java.security.PrivateKey
 import java.security.interfaces.RSAPrivateKey
 import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
@@ -51,6 +52,7 @@ class SftpServer @Inject constructor(
     private val customTrustManager: TrustManager
 ) {
     private var sshd: SshServer? = null
+    private var isRunning = false
 
     private var serverInfo: SftpServerInfo? = null
 
@@ -60,9 +62,9 @@ class SftpServer @Inject constructor(
         private fun initializeKeyPair(): KeyPair {
             val keyStore = customTrustManager.getKeyStore()
             val alias = keyStore.aliases().nextElement()
-            val privateKey = keyStore.getKey(alias, BuildConfig.certPwd.toCharArray()) as RSAPrivateKey
+            val privateKey = keyStore.getKey(alias, null) as PrivateKey
             val cert = keyStore.getCertificate(alias)
-            val publicKey = cert.publicKey as RSAPublicKey
+            val publicKey = cert.publicKey
 
             return KeyPair(publicKey, privateKey)
         }
@@ -176,7 +178,7 @@ class SftpServer @Inject constructor(
     }
 
     fun start() : SftpServerInfo? {
-        if (isRunning()) return serverInfo
+        if (isRunning) return serverInfo
 
         val pwd = regeneratePassword()
         try {
@@ -194,6 +196,7 @@ class SftpServer @Inject constructor(
                 start()
             }
             val ipAddress = getDeviceIpAddress()
+            isRunning = true
             Log.d("SftpService", "SFTP server started: $ipAddress on port 8668")
 
             serverInfo = ipAddress?.let {
@@ -213,7 +216,7 @@ class SftpServer @Inject constructor(
 
     fun stop() {
         try {
-            if (isRunning()){
+            if (isRunning){
                 sshd?.stop()
             }
             Log.d("SftpService", "SFTP server stopped")
@@ -222,15 +225,10 @@ class SftpServer @Inject constructor(
         }
     }
 
-    fun isRunning(): Boolean {
-        return sshd != null && !sshd!!.isClosed
-    }
-
-
     /**
      * Generate a random password with 12 characters, including uppercase letters, lowercase letters, numbers, and special characters.
      */
-    fun regeneratePassword(): String {
+    private fun regeneratePassword(): String {
         val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9') + "!@#$%^&*"
         return (1..12).map { allowedChars.random() }.joinToString("")
     }
