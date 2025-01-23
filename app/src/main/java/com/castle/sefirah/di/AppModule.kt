@@ -94,9 +94,10 @@ object AppModule {
     @Singleton
     fun providesNotificationService(
         context: Context,
-        networkManager: NetworkManager
+        networkManager: NetworkManager,
+        preferencesRepository: PreferencesRepository
     ): NotificationService {
-        return NotificationService(context, networkManager)
+        return NotificationService(context, networkManager, preferencesRepository)
     }
 
     @Provides
@@ -134,9 +135,10 @@ object AppModule {
     fun providesMediaService(
         context: Context,
         networkManager: NetworkManager,
-        notificationCenter: NotificationCenter
+        notificationCenter: NotificationCenter,
+        preferencesRepository: PreferencesRepository
     ) : MediaService {
-        return MediaService(context, networkManager, notificationCenter)
+        return MediaService(context, networkManager, notificationCenter, preferencesRepository)
     }
 
     @Provides

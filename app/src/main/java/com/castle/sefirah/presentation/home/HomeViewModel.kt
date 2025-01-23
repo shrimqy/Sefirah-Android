@@ -63,7 +63,7 @@ class HomeViewModel @Inject constructor(
 
     // Handle play/pause, next, previous actions
     fun onPlayPause() {
-        val action: MediaAction = if (playbackData.value?.isPlaying == true) MediaAction.PAUSE else MediaAction.RESUME
+        val action: MediaAction = if (playbackData.value?.isPlaying == true) MediaAction.Pause else MediaAction.Resume
         viewModelScope.launch(Dispatchers.IO) {
             sendMessage(PlaybackData(appName = playbackData.value!!.appName, mediaAction = action))
         }
@@ -71,19 +71,19 @@ class HomeViewModel @Inject constructor(
 
     fun onNext() {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(PlaybackData(appName = playbackData.value!!.appName, mediaAction = MediaAction.NEXT_QUEUE))
+            sendMessage(PlaybackData(appName = playbackData.value!!.appName, mediaAction = MediaAction.NextQueue))
         }
     }
 
     fun onPrevious() {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(PlaybackData(appName = playbackData.value!!.appName, mediaAction = MediaAction.PREV_QUEUE))
+            sendMessage(PlaybackData(appName = playbackData.value!!.appName, mediaAction = MediaAction.PrevQueue))
         }
     }
 
     fun onVolumeChange(volume: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(PlaybackData(volume = volume.toFloat(), appName = playbackData.value?.appName, mediaAction = MediaAction.VOLUME))
+            sendMessage(PlaybackData(volume = volume.toFloat(), appName = playbackData.value?.appName, mediaAction = MediaAction.Volume))
         }
     }
 

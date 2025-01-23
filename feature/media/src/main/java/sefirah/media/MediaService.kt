@@ -15,13 +15,15 @@ import sefirah.common.notifications.NotificationCenter
 import sefirah.domain.model.MediaAction
 import sefirah.domain.model.PlaybackData
 import sefirah.domain.repository.NetworkManager
+import sefirah.domain.repository.PreferencesRepository
 import sefirah.presentation.util.base64ToBitmap
 import javax.inject.Inject
 
 class MediaService @Inject constructor(
     val context: Context,
     private val networkManager: NetworkManager,
-    private val notificationCenter: NotificationCenter
+    private val notificationCenter: NotificationCenter,
+    private val preferencesRepository: PreferencesRepository
 ) : MediaHandler {
     private val channelName by lazy { context.getString(R.string.notification_media_playback) }
     private val channelId = "Desktop Media Playback"
@@ -71,25 +73,25 @@ class MediaService @Inject constructor(
 
                 setCallback(object : MediaSessionCompat.Callback() {
                     override fun onPlay() {
-                        handleMediaAction(playbackData, MediaAction.RESUME)
+                        handleMediaAction(playbackData, MediaAction.Resume)
                     }
 
                     override fun onPause() {
-                        handleMediaAction(playbackData, MediaAction.PAUSE)
+                        handleMediaAction(playbackData, MediaAction.Pause)
                     }
 
                     override fun onSkipToNext() {
-                        handleMediaAction(playbackData, MediaAction.NEXT_QUEUE)
+                        handleMediaAction(playbackData, MediaAction.NextQueue)
                     }
 
                     override fun onSkipToPrevious() {
-                        handleMediaAction(playbackData, MediaAction.PREV_QUEUE)
+                        handleMediaAction(playbackData, MediaAction.PrevQueue)
                     }
 
                     override fun onSeekTo(pos: Long) {
                         handleMediaAction(
                             playbackData.copy(position = pos),
-                            MediaAction.SEEK
+                            MediaAction.Seek
                         )
                     }
 

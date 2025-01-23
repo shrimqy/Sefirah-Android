@@ -18,6 +18,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.Message
@@ -26,6 +28,7 @@ import sefirah.domain.model.NotificationMessage
 import sefirah.domain.model.NotificationType
 import sefirah.domain.model.ReplyAction
 import sefirah.domain.repository.NetworkManager
+import sefirah.domain.repository.PreferencesRepository
 import sefirah.presentation.util.bitmapToBase64
 import sefirah.presentation.util.drawableToBitmap
 import java.text.SimpleDateFormat
@@ -38,6 +41,7 @@ import javax.inject.Singleton
 class NotificationService @Inject constructor(
     private val context: Context,
     private val networkManager: NetworkManager,
+    private val preferencesRepository: PreferencesRepository
 ) : NotificationHandler, NotificationCallback {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -49,6 +53,7 @@ class NotificationService @Inject constructor(
 
     private var activeNotificationsSend : Boolean = false
 
+    private var notificationSyncSettings = MutableStateFlow(true)
     init {
         scope.launch {
             networkManager.connectionState.collect { state ->
@@ -56,10 +61,15 @@ class NotificationService @Inject constructor(
                 if (state == ConnectionState.Disconnected) activeNotificationsSend = false
             }
         }
+        scope.launch {
+            preferencesRepository.readNotificationSyncSettings().collectLatest {
+                notificationSyncSettings.value = it
+            }
+        }
     }
 
     override fun sendActiveNotifications() {
-        if (!isConnected) {
+        if (!isConnected && !notificationSyncSettings.value) {
             return
         } else {
             scope.launch {
@@ -70,7 +80,7 @@ class NotificationService @Inject constructor(
                 } else {
                     Log.d("activeNotification", "Active notifications found: ${activeNotifications.size}")
                     activeNotifications.forEach { sbn ->
-                        sendNotification(sbn, NotificationType.ACTIVE)
+                        sendNotification(sbn, NotificationType.Active)
                         delay(50)
                     }
                 }
@@ -88,7 +98,7 @@ class NotificationService @Inject constructor(
 
 
     override fun onNotificationPosted(notification: StatusBarNotification) {
-        sendNotification(notification, NotificationType.NEW)
+        sendNotification(notification, NotificationType.New)
     }
 
     override fun onNotificationRemoved(notification: StatusBarNotification) {
@@ -96,7 +106,7 @@ class NotificationService @Inject constructor(
         val removeNotificationMessage = NotificationMessage(
             appPackage = notification.packageName,
             notificationKey = notification.key,
-            notificationType = NotificationType.REMOVED,
+            notificationType = NotificationType.Removed,
             tag = notification.tag,
         )
         scope.launch {
@@ -165,6 +175,7 @@ class NotificationService @Inject constructor(
 
 
     private fun sendNotification(sbn: StatusBarNotification, notificationType: NotificationType) {
+        if (!notificationSyncSettings.value) return
         val notification = sbn.notification
         val packageName = sbn.packageName
 

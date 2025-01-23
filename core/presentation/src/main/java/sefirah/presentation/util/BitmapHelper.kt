@@ -61,3 +61,52 @@ fun drawableToBase64(drawable: Drawable): String? {
     }
     return null
 }
+
+fun drawableToBase64Compressed(
+    drawable: Drawable, 
+    maxSize: Int = 1024
+): String? {
+    if (drawable !is BitmapDrawable) return null
+    
+    val originalBitmap = drawable.bitmap
+    val originalSize = originalBitmap.byteCount
+    
+    // Calculate dynamic quality based on original image size
+    // For images > 8MB, use minimum quality (30)
+    // For images < 1MB, use maximum quality (90)
+    // For images in between, scale quality linearly
+    val quality = when {
+        originalSize >= 8_000_000 -> 30  // Minimum quality for very large images
+        originalSize <= 1_000_000 -> 90  // Maximum quality for small images
+        else -> {
+            // Linear interpolation between 90 and 30 based on size
+            val sizeRatio = (originalSize - 1_000_000) / 7_000_000f
+            (90 - (sizeRatio * 60)).toInt()  // 60 is the range between max (90) and min (30)
+        }
+    }
+    
+    // Calculate scaling factor to reduce size while maintaining aspect ratio
+    val scale = maxSize.toFloat() / maxOf(originalBitmap.width, originalBitmap.height)
+    val targetWidth = (originalBitmap.width * scale).toInt()
+    val targetHeight = (originalBitmap.height * scale).toInt()
+    
+    // Create scaled bitmap
+    val scaledBitmap = Bitmap.createScaledBitmap(
+        originalBitmap,
+        targetWidth,
+        targetHeight,
+        true
+    )
+    
+    // Compress to bytes
+    val outputStream = ByteArrayOutputStream()
+    scaledBitmap.compress(
+        Bitmap.CompressFormat.PNG,
+        quality.coerceIn(30, 90),  // Ensure quality stays within reasonable bounds
+        outputStream
+    )
+    
+    // Convert to Base64
+    val byteArray = outputStream.toByteArray()
+    return Base64.encodeToString(byteArray, Base64.NO_WRAP)
+}
