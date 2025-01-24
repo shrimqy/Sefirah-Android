@@ -10,11 +10,14 @@ import android.provider.Settings.Secure
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import sefirah.clipboard.ClipboardListener
 import sefirah.data.repository.AppRepository
@@ -31,6 +34,18 @@ class OnboardingViewModel @Inject constructor(
     private val appRepository: AppRepository,
     application: Application
 ) : AndroidViewModel(application) {
+
+    private var appEntryValue: Boolean? = false
+
+    init {
+        viewModelScope.launch {
+            appEntryValue = preferencesRepository.readAppEntry().first()
+        }
+    }
+
+    fun readAppEntry(): Boolean? {
+        return appEntryValue
+    }
 
     fun updateStorageLocation(string: String) {
         viewModelScope.launch {
@@ -77,6 +92,7 @@ class OnboardingViewModel @Inject constructor(
             preferencesRepository.saveAppEntry()
         }
     }
+    
 
     fun savePermissionRequested(permission: String) {
         viewModelScope.launch {
