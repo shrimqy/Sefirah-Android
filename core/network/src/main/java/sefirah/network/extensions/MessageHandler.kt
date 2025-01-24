@@ -31,7 +31,6 @@ suspend fun NetworkService.handleMessage(message: SocketMessage) {
         is NotificationMessage -> notificationHandler.removeNotification(message.notificationKey)
         is NotificationAction -> notificationHandler.performNotificationAction(message)
         is ReplyAction -> notificationHandler.performReplyAction(message)
-        is DeviceInfo -> handleDeviceInfo(message)
         is PlaybackData -> handleMediaInfo(message)
         is ClipboardMessage -> {
             Log.d("ClipboardMessage", "Received clipboard message: ${message.content}")
@@ -61,18 +60,19 @@ fun NetworkService.handleBulkFileTransfer(message: BulkFileTransfer) {
     startService(intent)
 }
 
-suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo) {
+suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo, remoteInfo: RemoteDevice, ipAddress: String) {
     appRepository.addDevice(
         RemoteDevice(
             deviceId = deviceInfo.deviceId,
             deviceName = deviceInfo.deviceName,
             avatar = deviceInfo.avatar,
-            hashedSecret = connectedDevice!!.hashedSecret,
-            port = connectedDevice!!.port,
+            hashedSecret = remoteInfo.hashedSecret,
+            port = remoteInfo.port,
             lastConnected = System.currentTimeMillis(),
-            ipAddress = connectedDevice!!.ipAddress,
-            publicKey = connectedDevice!!.publicKey,
-            certificate = connectedDevice!!.certificate
+            ipAddresses = remoteInfo.ipAddresses,
+            prefAddress = ipAddress,
+            publicKey = remoteInfo.publicKey,
+            certificate = remoteInfo.certificate
         ).toEntity()
     )
 }

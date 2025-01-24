@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.withTransaction
 import sefirah.database.dao.DeviceDao
 import sefirah.database.dao.NetworkDao
@@ -35,7 +36,7 @@ interface AppDatabase {
     version = 1,
     exportSchema = false
 )
-
+@TypeConverters(Converters::class)
 internal abstract class AppRoomDatabase : RoomDatabase(), AppDatabase {
     abstract override fun devicesDao(): DeviceDao
     abstract override fun networkDao(): NetworkDao

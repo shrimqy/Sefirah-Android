@@ -200,13 +200,13 @@ class FileTransferService : Service() {
         setupNotification(TransferType.Receiving(fileTransfer.fileMetadata.fileName))
         
         // For single file, establish connection here
-        val certificate = appRepository.getLastConnectedCert() ?: return
+        val lastConnectedDevice = appRepository.getLastConnectedDevice()
         clientSocket = socketFactory.tcpClientSocket(
             SocketType.FILE_TRANSFER,
-            fileTransfer.serverInfo.ipAddress,
+            lastConnectedDevice!!.prefAddress!!,
             fileTransfer.serverInfo.port,
-            getCertFromString(certificate)
-        ).getOrNull() ?: throw IOException("Failed to establish connection")
+            getCertFromString(lastConnectedDevice.certificate)
+        ) ?: throw IOException("Failed to establish connection")
 
         val readChannel = clientSocket?.openReadChannel() ?: throw IOException("Failed to open read channel")
         val writeChannel = clientSocket?.openWriteChannel() ?: throw IOException("Failed to open read channel")
@@ -231,13 +231,14 @@ class FileTransferService : Service() {
         val totalSize = bulkTransfer.files.sumOf { it.fileSize }
         
         // Establish connection once for all files
-        val certificate = appRepository.getLastConnectedCert() ?: return
+        val lastConnectedDevice = appRepository.getLastConnectedDevice()
         clientSocket = socketFactory.tcpClientSocket(
             SocketType.FILE_TRANSFER,
-            bulkTransfer.serverInfo.ipAddress,
+            lastConnectedDevice!!.prefAddress!!,
             bulkTransfer.serverInfo.port,
-            getCertFromString(certificate)
-        ).getOrNull() ?: throw IOException("Failed to establish connection")
+            getCertFromString(lastConnectedDevice.certificate)
+        ) ?: throw IOException("Failed to establish connection")
+
         val readChannel = clientSocket?.openReadChannel() ?: throw IOException("Failed to open read channel")
         val writeChannel = clientSocket?.openWriteChannel() ?: throw IOException("Failed to open read channel")
 

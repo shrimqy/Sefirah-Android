@@ -99,7 +99,7 @@ fun SyncScreen(
                             key.value = rawKey.toString().takeLast(6).padStart(6, '0')
                             val remoteDevice = RemoteDevice(
                                 deviceId = device.deviceId,
-                                ipAddress = device.ipAddress!!,
+                                ipAddresses = device.ipAddresses,
                                 port = device.port!!,
                                 publicKey = device.publicKey,
                                 deviceName = device.deviceName,
@@ -136,7 +136,6 @@ fun SyncScreen(
                     onClick = {
                         viewModel.authenticate(context, selectedDevice.value!!, rootNavController)
                         Log.d("Service", "Connecting to service: ${selectedDevice.value}")
-//                        viewModel.authenticate(context, selectedService.value!!, Base64.encodeToString(hashedSecret, Base64.DEFAULT), rootNavController)
                         showDialog.value = false
                     }
                 ) {

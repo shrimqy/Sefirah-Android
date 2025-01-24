@@ -32,7 +32,7 @@ class SocketFactoryImpl @Inject constructor(
         ipAddress: String,
         port: Int,
         certificate: X509Certificate
-    ): Result<Socket> {
+    ): Socket? {
         return try {
             Log.d("connect", "Connecting to $ipAddress:$port")
             val selectorManager = SelectorManager(Dispatchers.IO)
@@ -43,10 +43,10 @@ class SocketFactoryImpl @Inject constructor(
                 }
 
             Log.d("connect", "Client Connected to $ipAddress")
-            Result.success(socket)
+            socket
         } catch (e: Exception) {
             Log.e("connect", "Failed to connect", e)
-            Result.failure(e)
+            null
         }
     }
 

@@ -9,7 +9,8 @@ import sefirah.domain.model.RemoteDevice
 @Entity
 data class RemoteDeviceEntity (
     @PrimaryKey val deviceId: String,
-    val ipAddress: String,
+    val ipAddresses: List<String> ,
+    val prefAddress: String? = null,
     val port: Int,
     val publicKey: String,
     val deviceName: String,
@@ -22,7 +23,8 @@ data class RemoteDeviceEntity (
 fun RemoteDeviceEntity.toDomain(): RemoteDevice {
     return RemoteDevice(
         deviceId = deviceId,
-        ipAddress = ipAddress,
+        ipAddresses = ipAddresses,
+        prefAddress = prefAddress,
         port = port,
         avatar = avatar,
         publicKey = publicKey,
@@ -40,7 +42,8 @@ fun List<RemoteDeviceEntity>.toDomain(): List<RemoteDevice> {
 fun RemoteDevice.toEntity(): RemoteDeviceEntity {
     return RemoteDeviceEntity(
         deviceId = deviceId,
-        ipAddress = ipAddress,
+        ipAddresses = ipAddresses,
+        prefAddress = prefAddress,
         port = port,
         avatar = avatar,
         publicKey = publicKey,

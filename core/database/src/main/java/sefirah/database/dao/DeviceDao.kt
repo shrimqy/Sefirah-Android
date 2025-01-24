@@ -17,20 +17,11 @@ interface DeviceDao {
     @Query("SELECT * FROM RemoteDeviceEntity")
     fun getAllDevicesFlow(): Flow<List<RemoteDeviceEntity>>
 
-    @Query("SELECT * FROM RemoteDeviceEntity WHERE ipAddress = :ipAddress")
-    fun getDeviceFlow(ipAddress: String): Flow<RemoteDeviceEntity?>
-
-    @Query("SELECT * FROM RemoteDeviceEntity WHERE ipAddress = :ipAddress")
-    fun getDevice(ipAddress: String): RemoteDeviceEntity?
-    
     @Query("SELECT * FROM RemoteDeviceEntity ORDER BY lastConnected DESC LIMIT 1")
     fun getLastConnectedDevice(): RemoteDeviceEntity?
 
     @Query("SELECT * FROM RemoteDeviceEntity ORDER BY lastConnected DESC LIMIT 1")
     fun getLastConnectedDeviceFlow(): Flow<RemoteDeviceEntity?>
-
-    @Query("SELECT ipAddress FROM RemoteDeviceEntity WHERE deviceName = :deviceName")
-    suspend fun getHostAddress(deviceName: String): String?
 
     @Query("DELETE FROM LocalDeviceEntity WHERE deviceName = :deviceName")
     suspend fun removeDevice(deviceName: String)

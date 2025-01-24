@@ -9,7 +9,7 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.SSLServerSocket
 
 interface SocketFactory {
-    suspend fun tcpClientSocket(type: SocketType, ipAddress: String, port: Int, certificate: X509Certificate): Result<Socket>
+    suspend fun tcpClientSocket(type: SocketType, ipAddress: String, port: Int, certificate: X509Certificate): Socket?
     suspend fun tcpServerSocket(port: Int, ipAddress: String): SSLServerSocket
     fun udpSocket(port: Int): BoundDatagramSocket
 }

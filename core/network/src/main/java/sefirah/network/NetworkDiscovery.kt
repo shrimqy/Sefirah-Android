@@ -286,7 +286,7 @@ class NetworkDiscovery @Inject constructor(
                     deviceName = localDevice.deviceName,
                     publicKey = localDevice.publicKey,
                     certificate = certificate.encoded.encodeBase64(),
-                    timestamp = null
+                    timestamp = null,
                 )
 
                 while (isActive) {
@@ -330,7 +330,6 @@ class NetworkDiscovery @Inject constructor(
                         val udpBroadcast = datagram.packet.readUTF8Line()?.let {
                             messageSerializer.deserialize(it) as UdpBroadcast
                         } ?: continue
-
                         if (udpBroadcast.deviceId == localDevice.deviceId) continue
                         updateDiscoveredDevices(udpBroadcast)
                     }
@@ -428,10 +427,6 @@ class NetworkDiscovery @Inject constructor(
             val isStale = device.timestamp?.let { timestamp ->
                 (currentTime - timestamp) > DEVICE_TIMEOUT
             } ?: true
-            
-            if (isStale) {
-                Log.d(TAG, "Removing stale device: ${device.deviceId}")
-            }
             isStale
         }
         

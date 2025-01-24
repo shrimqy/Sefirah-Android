@@ -71,7 +71,7 @@ class DevicesViewModel @Inject constructor(
         } else {
             _deviceDetails.value.filter { device ->
                 device.deviceName.contains(query, ignoreCase = true) ||
-                device.ipAddress.contains(query, ignoreCase = true)
+                device.ipAddresses.contains(query)
             }
         }
     }

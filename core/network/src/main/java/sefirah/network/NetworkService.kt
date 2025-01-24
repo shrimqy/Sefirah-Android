@@ -53,6 +53,7 @@ import sefirah.network.util.MessageSerializer
 import sefirah.network.util.getInstalledApps
 import sefirah.network.NetworkDiscovery.NetworkAction
 import sefirah.notification.NotificationHandler
+import java.security.cert.X509Certificate
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -92,8 +93,9 @@ class NetworkService : Service() {
     private var writeChannel: ByteWriteChannel? = null
     private var readChannel: ByteReadChannel? = null
 
-    var connectedDevice: RemoteDevice? = null
+    private var connectedDevice: RemoteDevice? = null
     private var deviceName: String? = null
+    private var connectedIpAddress: String? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -111,14 +113,27 @@ class NetworkService : Service() {
     }
 
     private fun start(remoteInfo: RemoteDevice) {
+        _connectionState.value = ConnectionState.Connecting
         scope.launch {
             try {
-                if (!initializeConnection(remoteInfo)) return@launch
-                _connectionState.value = ConnectionState.Connecting
+                if (remoteInfo.prefAddress != null) {
+                    if (!initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port, remoteInfo.certificate)) {
+                        stop(false)
+                        return@launch
+                    }
+                }
+                else {
+                    // Try each address until one works
+                    for (ipAddress in remoteInfo.ipAddresses) {
+                        if (initializeConnection(ipAddress, remoteInfo.port, remoteInfo.certificate)) {
+                            break
+                        }
+                    }
+                }
 
                 // Send initial device info for verification
-                sendDeviceInfo(remoteInfo)
-                
+                sendDeviceInfo(remoteInfo.hashedSecret!!)
+
                 // Wait for device info
                 withTimeoutOrNull(60000) { // 30 seconds timeout
                     readChannel?.readUTF8Line()?.let { jsonMessage ->
@@ -128,7 +143,8 @@ class NetworkService : Service() {
                             Log.e(TAG, "Invalid device info received")
                             return@withTimeoutOrNull null
                         }
-                        handleDeviceInfo(deviceInfo)
+                        connectedDevice = remoteInfo
+                        handleDeviceInfo(deviceInfo, remoteInfo, connectedIpAddress!!)
                         return@withTimeoutOrNull Unit
                     }
                 } ?: run {
@@ -152,30 +168,28 @@ class NetworkService : Service() {
         }
     }
 
-    private suspend fun initializeConnection(remoteInfo: RemoteDevice): Boolean {
+    private suspend fun initializeConnection(ipAddress: String, port: Int, certificate: X509Certificate): Boolean {
         try {
-            socket = socketFactory.tcpClientSocket(SocketType.DEFAULT, remoteInfo.ipAddress, remoteInfo.port, remoteInfo.certificate).getOrNull()
+            socket = socketFactory.tcpClientSocket(SocketType.DEFAULT, ipAddress, port, certificate)
             if (socket != null) {
                 writeChannel = socket?.openWriteChannel()
                 readChannel = socket?.openReadChannel()
-                connectedDevice = remoteInfo
+                connectedIpAddress = ipAddress
                 return true
             }
-            stop(false)
             return false
         } catch (e: Exception) {
-            stop(false)
             return false
         }
     }
 
-    private suspend fun sendDeviceInfo(remoteInfo: RemoteDevice) {
+    private suspend fun sendDeviceInfo(hashedSecret: String) {
         val localDevice = appRepository.getLocalDevice()
         sendMessage(DeviceInfo(
             deviceId = localDevice.deviceId,
             publicKey = localDevice.publicKey,
             deviceName = localDevice.deviceName,
-            hashedSecret = remoteInfo.hashedSecret,
+            hashedSecret = hashedSecret,
             avatar = localDevice.wallpaperBase64
         ))
     }

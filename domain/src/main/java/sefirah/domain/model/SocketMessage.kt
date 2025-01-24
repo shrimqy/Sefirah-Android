@@ -196,7 +196,7 @@ data class SftpServerInfo (
 data class UdpBroadcast(
     val deviceId: String,
     val deviceName: String,
-    val ipAddress: String? = null,
+    val ipAddresses: List<String> = emptyList(),
     val port: Int? = null,
     val publicKey: String,
     val certificate: String? = null,
