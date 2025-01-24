@@ -11,18 +11,9 @@ plugins {
 android {
     namespace = "sefirah.network"
 
-    val file = rootProject.file("local.properties")
-    val properties = Properties()
-    properties.load(FileInputStream(file))
-
-    defaultConfig {
-        buildConfigField("String", "certPwd", "\"${properties.getProperty("certPwd")}\"")
-    }
-
     buildFeatures {
         buildConfig = true
     }
-
 
     packaging {
         resources {
