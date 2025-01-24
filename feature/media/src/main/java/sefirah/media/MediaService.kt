@@ -1,15 +1,18 @@
 package sefirah.media
 
+import android.app.Notification
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.media.app.NotificationCompat
+import androidx.media.session.MediaButtonReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import sefirah.common.R
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
 import sefirah.domain.model.MediaAction
@@ -25,13 +28,20 @@ class MediaService @Inject constructor(
     private val notificationCenter: NotificationCenter,
     private val preferencesRepository: PreferencesRepository
 ) : MediaHandler {
-    private val channelName by lazy { context.getString(R.string.notification_media_playback) }
-    private val channelId = "Desktop Media Playback"
-    private val notificationId = channelId.hashCode()
-
     private val mediaSession by lazy {
         MediaSessionCompat(context, MEDIA_SESSION_TAG).apply {
             isActive = true
+            // Create a pending intent for the media button receiver
+            val mediaButtonReceiverIntent = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
+                setClass(context, MediaButtonReceiver::class.java)
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                0,
+                mediaButtonReceiverIntent,
+                PendingIntent.FLAG_IMMUTABLE
+            )
+            setMediaButtonReceiver(pendingIntent)
         }
     }
 
@@ -50,19 +60,21 @@ class MediaService @Inject constructor(
 
                 // TODO: Add seek action
                 setPlaybackState(
-                    playbackData.position?.let {
-                        PlaybackStateCompat.Builder()
-                            .setState(
-                                if (playbackData.isPlaying == true) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-                                PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f
-                            )
-                            .setActions(
-                                PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                            )
-                            .build()
-                    }
+                    PlaybackStateCompat.Builder()
+                        .setState(
+                            if (playbackData.isPlaying == true) 
+                                PlaybackStateCompat.STATE_PLAYING 
+                            else 
+                                PlaybackStateCompat.STATE_PAUSED,
+                            PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                            1f
+                        )
+                        .setActions(
+                            PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                            PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                            PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                        )
+                        .build()
                 )
 
                 setCallback(object : MediaSessionCompat.Callback() {
@@ -98,6 +110,7 @@ class MediaService @Inject constructor(
                 )
                 setSilent(true)
                 setOngoing(true)
+                setCategory(Notification.CATEGORY_TRANSPORT)
             }
         }
 
@@ -122,9 +135,6 @@ class MediaService @Inject constructor(
     companion object {
         private const val TAG = "MediaHandler"
         private const val MEDIA_SESSION_TAG = "DesktopMediaSession"
-        private const val MEDIA_NOTIFICATION_GROUP = "file_transfer_group"
-        private const val SEEK_FORWARD_INCREMENT = 10_000L
-        private const val SEEK_BACKWARD_INCREMENT = 10_000L
     }
 }
 
