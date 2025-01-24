@@ -1,6 +1,8 @@
-<p align="center">
-  <img alt="Files hero image" src="./.github/readme-images/ReadmeHero.png" />
-</p>
+[//]: # (<p align="center">)
+
+[//]: # (  <img alt="Files hero image" src="./.github/readme-images/ReadmeHero.png" />)
+
+[//]: # (</p>)
 
 # Sefirah - Android
 
@@ -20,7 +22,7 @@
 
 ## How to Use
 
-1. **Download and Install the Android App**: [Sekia](https://github.com/shrimqy/Sekia/releases/) (Make sure the version you're downloading is the same as the windows version)
+1. **Download and Install the [Windows app](https://github.com/shrimqy/Sefirah)
 
 2. **Setting Up**:
     - Permissions: Allow the app to post notifications, location access, and notification access (Allow restricted access from App Info only after trying to grant notification access).
@@ -33,8 +35,6 @@
     - To share clipboard from android you will have to manually sent it through the share sheet that shows after you perform a copy action).
 4. **File Transfer**:
     - Use the share sheet from android/windows and select the app to share any files between the devices. 
-5. **Remote Control**:
-   - Click the button next to the connection status button which will give a prompt to cast on your phone, choose the entire screen.
 
 ## Screenshots
 
