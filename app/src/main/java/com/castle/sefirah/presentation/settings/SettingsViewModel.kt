@@ -30,6 +30,7 @@ class SettingsViewModel @Inject constructor(
     private val _preferencesSettings = MutableStateFlow<PreferencesSettings?>(null)
     val preferencesSettings: StateFlow<PreferencesSettings?> = _preferencesSettings
     val context = getApplication<Application>()
+
     // Add permission states
     private val _permissionStates = MutableStateFlow(PermissionStates())
     val permissionStates: StateFlow<PermissionStates> = _permissionStates
@@ -74,7 +75,7 @@ class SettingsViewModel @Inject constructor(
             saveClipboardSyncSettings(true)
         }
         if (!previousStates.notificationListenerGranted && newStates.notificationListenerGranted) {
-            saveReadSensitiveNotificationsSettings(true)
+            saveNotificationSyncSettings(true)
         }
         if (!previousStates.readMediaGranted && newStates.readMediaGranted) {
             saveImageClipboardSettings(true)
@@ -110,11 +111,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun saveReadSensitiveNotificationsSettings(boolean: Boolean) {
-        viewModelScope.launch {
-            preferencesRepository.saveReadSensitiveNotificationsSettings(boolean)
-        }
-    }
+//    fun saveReadSensitiveNotificationsSettings(boolean: Boolean) {
+//        viewModelScope.launch {
+//            preferencesRepository.saveReadSensitiveNotificationsSettings(boolean)
+//        }
+//    }
 
     fun saveNotificationSyncSettings(boolean: Boolean) {
         viewModelScope.launch {

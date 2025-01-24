@@ -90,17 +90,17 @@ class PreferencesDatastore @Inject constructor(
         }
     }
 
-    override suspend fun saveReadSensitiveNotificationsSettings(readSensitiveNotifications: Boolean) {
-        datastore.edit {
-            it[PreferencesKeys.READ_SENSITIVE_NOTIFICATIONS] = readSensitiveNotifications
-        }
-    }
+//    override suspend fun saveReadSensitiveNotificationsSettings(readSensitiveNotifications: Boolean) {
+//        datastore.edit {
+//            it[PreferencesKeys.READ_SENSITIVE_NOTIFICATIONS] = readSensitiveNotifications
+//        }
+//    }
 
-    override fun readReadSensitiveNotificationsSettings(): Flow<Boolean> {
-        return datastore.data.map { preferences ->
-            preferences[PreferencesKeys.READ_SENSITIVE_NOTIFICATIONS] ?: false
-        }
-    }
+//    override fun readReadSensitiveNotificationsSettings(): Flow<Boolean> {
+//        return datastore.data.map { preferences ->
+//            preferences[PreferencesKeys.READ_SENSITIVE_NOTIFICATIONS] ?: false
+//        }
+//    }
 
     override suspend fun saveNotificationSyncSettings(notificationSync: Boolean) {
         datastore.edit {

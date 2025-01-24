@@ -33,8 +33,8 @@ interface PreferencesRepository {
     suspend fun saveImageClipboardSettings(copyImagesToClipboard: Boolean)
     fun readImageClipboardSettings(): Flow<Boolean>
 
-    suspend fun saveReadSensitiveNotificationsSettings(readSensitiveNotifications: Boolean)
-    fun readReadSensitiveNotificationsSettings(): Flow<Boolean>
+//    suspend fun saveReadSensitiveNotificationsSettings(readSensitiveNotifications: Boolean)
+//    fun readReadSensitiveNotificationsSettings(): Flow<Boolean>
 
     suspend fun saveNotificationSyncSettings(notificationSync: Boolean)
     fun readNotificationSyncSettings(): Flow<Boolean>

@@ -100,6 +100,7 @@ internal class PermissionStep : OnboardingStep {
                 .fillMaxSize()
                 .padding(horizontal = MaterialTheme.padding.medium)
         ) {
+            if (viewModel.readAppEntry() == true)
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
