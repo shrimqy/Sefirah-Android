@@ -6,10 +6,11 @@ import androidx.core.app.NotificationCompat.EXTRA_NOTIFICATION_ID
 import sefirah.clipboard.ClipboardChangeActivity
 import sefirah.common.R
 import sefirah.common.notifications.AppNotifications
+import sefirah.domain.model.ConnectionState
 import sefirah.network.NetworkService
 import sefirah.network.NetworkService.Companion.Actions
 
-fun NetworkService.setNotification(isConnected: Boolean, deviceName: String? = null) {
+fun NetworkService.setNotification(connectionState: ConnectionState, deviceName: String?) {
     // Disconnect Intent
     val disconnectIntent = Intent(this, NetworkService::class.java).apply {
         action = Actions.STOP.name
@@ -32,8 +33,13 @@ fun NetworkService.setNotification(isConnected: Boolean, deviceName: String? = n
     val clipboardPendingIntent: PendingIntent =
         PendingIntent.getActivity(this, 0, clipboardIntent, PendingIntent.FLAG_IMMUTABLE)
 
-    val contentText = if (isConnected) "Connected to $deviceName" else "Trying to connect to $deviceName"
-    val actionText = if (isConnected) "Disconnect" else "Stop"
+    val contentText = when (connectionState) {
+        is ConnectionState.Connected -> "Connected to $deviceName"
+        is ConnectionState.Connecting -> "Trying to connect to $deviceName"
+        else -> "Not connected"
+    }
+    
+    val actionText = if (connectionState is ConnectionState.Connected) "Disconnect" else "Stop"
 
     notificationBuilder = notificationCenter.showNotification(
         channelId = AppNotifications.DEVICE_CONNECTION_CHANNEL,
@@ -45,8 +51,16 @@ fun NetworkService.setNotification(isConnected: Boolean, deviceName: String? = n
         setOngoing(true)
         setSilent(true)
         setShowWhen(false)
-        .addAction(R.drawable.ic_launcher_foreground, actionText, disconnectPendingIntent)
-        .addAction(R.drawable.ic_launcher_foreground, getString(R.string.notification_clipboard_action), clipboardPendingIntent)
+
+        // Only add actions if connected or connecting
+        if (connectionState is ConnectionState.Connected || connectionState is ConnectionState.Connecting) {
+            addAction(R.drawable.ic_launcher_foreground, actionText, disconnectPendingIntent)
+            
+            // Only add clipboard action if connected
+            if (connectionState is ConnectionState.Connected) {
+                addAction(R.drawable.ic_launcher_foreground, getString(R.string.notification_clipboard_action), clipboardPendingIntent)
+            }
+        }
     }
     startForeground(AppNotifications.DEVICE_CONNECTION_ID, notificationBuilder.build())
 }

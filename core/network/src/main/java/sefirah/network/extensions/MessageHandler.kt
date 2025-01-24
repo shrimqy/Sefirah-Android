@@ -67,14 +67,16 @@ suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo) {
             deviceId = deviceInfo.deviceId,
             deviceName = deviceInfo.deviceName,
             avatar = deviceInfo.avatar,
-            hashedSecret = connectedDevice.hashedSecret,
-            port = connectedDevice.port,
+            hashedSecret = connectedDevice!!.hashedSecret,
+            port = connectedDevice!!.port,
             lastConnected = System.currentTimeMillis(),
-            ipAddress = connectedDevice.ipAddress,
-            publicKey = connectedDevice.publicKey,
-            certificate = connectedDevice.certificate
-        ).toEntity())
+            ipAddress = connectedDevice!!.ipAddress,
+            publicKey = connectedDevice!!.publicKey,
+            certificate = connectedDevice!!.certificate
+        ).toEntity()
+    )
 }
+
 
 fun NetworkService.handleMediaInfo(playbackData: PlaybackData) {
     CoroutineScope(Dispatchers.IO).launch {

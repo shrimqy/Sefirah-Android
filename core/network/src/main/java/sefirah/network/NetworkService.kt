@@ -92,7 +92,8 @@ class NetworkService : Service() {
     private var writeChannel: ByteWriteChannel? = null
     private var readChannel: ByteReadChannel? = null
 
-    lateinit var connectedDevice: RemoteDevice
+    var connectedDevice: RemoteDevice? = null
+    private var deviceName: String? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -100,7 +101,7 @@ class NetworkService : Service() {
                 val remoteInfo = intent.getParcelableExtra<RemoteDevice>(REMOTE_INFO)
                 if (remoteInfo != null && _connectionState.value == ConnectionState.Disconnected) {
                     _connectionState.value = ConnectionState.Connecting
-                    setNotification(false, remoteInfo.deviceName)
+                    deviceName = remoteInfo.deviceName
                     start(remoteInfo)
                 }
             }
@@ -113,6 +114,8 @@ class NetworkService : Service() {
         scope.launch {
             try {
                 if (!initializeConnection(remoteInfo)) return@launch
+                _connectionState.value = ConnectionState.Connecting
+
                 // Send initial device info for verification
                 sendDeviceInfo(remoteInfo)
                 
@@ -140,7 +143,7 @@ class NetworkService : Service() {
                     sendInstalledApps()
                 }
                 // Setup complete
-                finalizeConnection(remoteInfo.deviceName)
+                finalizeConnection()
             } catch (e: Exception) {
                 Log.e(TAG, "Error in connecting", e)
                 _connectionState.value = ConnectionState.Disconnected
@@ -184,9 +187,8 @@ class NetworkService : Service() {
         }
     }
 
-    private suspend fun finalizeConnection(deviceName: String) {
+    private suspend fun finalizeConnection() {
         networkDiscovery.register(NetworkAction.SAVE_NETWORK)
-        setNotification(true, deviceName)
         sendDeviceStatus()
         notificationHandler.sendActiveNotifications()
         clipboardHandler.start()
@@ -206,7 +208,6 @@ class NetworkService : Service() {
         mediaHandler.release()
         writeChannel?.close()
         socket?.close()
-        setNotification(false, connectedDevice.deviceName)
     }
 
     private val mutex = Mutex() // Mutex to control write access
@@ -289,6 +290,13 @@ class NetworkService : Service() {
         sftpServer.initialize()
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        
+        // Add observer for connection state changes
+        scope.launch {
+            _connectionState.collect { state ->
+                setNotification(state, deviceName)
+            }
+        }
     }
 
     private val batteryReceiver = object : BroadcastReceiver() {
