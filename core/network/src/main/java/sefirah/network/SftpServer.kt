@@ -197,7 +197,8 @@ class SftpServer @Inject constructor(
             }
             val ipAddress = getDeviceIpAddress()
             isRunning = true
-            Log.d("SftpService", "SFTP server started: $ipAddress on port 8668")
+
+            Log.d(TAG, "SFTP server started: $ipAddress on port 8668, Pass: $pwd")
 
             serverInfo = ipAddress?.let {
                 SftpServerInfo(
@@ -209,7 +210,7 @@ class SftpServer @Inject constructor(
             }
             return serverInfo
         } catch (e: Exception) {
-            Log.e("SftpService", "Failed to start SFTP server", e)
+            Log.e(TAG, "Failed to start SFTP server", e)
             throw e
         }
     }
@@ -217,11 +218,12 @@ class SftpServer @Inject constructor(
     fun stop() {
         try {
             if (isRunning){
-                sshd?.stop()
+                sshd?.stop(true)
+                isRunning = false
             }
-            Log.d("SftpService", "SFTP server stopped")
+            Log.d(TAG, "SFTP server stopped")
         } catch (e: Exception) {
-            Log.e("SftpService", "Failed to stop SFTP server", e)
+            Log.e(TAG, "Failed to stop SFTP server", e)
         }
     }
 

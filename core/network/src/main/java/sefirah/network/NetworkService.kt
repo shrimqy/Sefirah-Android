@@ -205,6 +205,7 @@ class NetworkService : Service() {
             networkDiscovery.register(NetworkAction.START_DEVICE_DISCOVERY)
         }
         lastBatteryLevel = null
+        sftpServer.stop()
         mediaHandler.release()
         writeChannel?.close()
         socket?.close()
