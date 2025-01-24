@@ -39,33 +39,27 @@ class MediaService @Inject constructor(
         CoroutineScope(Dispatchers.Main).launch {
             mediaSession.apply {
                 setMetadata(
-                    playbackData.maxSeekTime?.let {maxSeekTime ->
-                        MediaMetadataCompat.Builder()
-                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playbackData.trackTitle)
-                            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, playbackData.artist)
-                            .putBitmap(
-                                MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
-                                playbackData.thumbnail?.let { base64ToBitmap(it) })
-                            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, maxSeekTime)
-                            .build()
-                    }
+                    MediaMetadataCompat.Builder()
+                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playbackData.trackTitle)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, playbackData.artist)
+                        .putBitmap(
+                            MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
+                            playbackData.thumbnail?.let { base64ToBitmap(it) })
+                        .build()
                 )
 
+                // TODO: Add seek action
                 setPlaybackState(
                     playbackData.position?.let {
                         PlaybackStateCompat.Builder()
                             .setState(
                                 if (playbackData.isPlaying == true) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-                                it.toLong(),
-                                1f
+                                PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f
                             )
                             .setActions(
                                 PlaybackStateCompat.ACTION_PLAY_PAUSE or
                                         PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                                        PlaybackStateCompat.ACTION_SEEK_TO or
-                                        PlaybackStateCompat.ACTION_FAST_FORWARD or
-                                        PlaybackStateCompat.ACTION_REWIND
+                                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
                             )
                             .build()
                     }
@@ -87,29 +81,6 @@ class MediaService @Inject constructor(
                     override fun onSkipToPrevious() {
                         handleMediaAction(playbackData, MediaAction.PrevQueue)
                     }
-
-                    override fun onSeekTo(pos: Long) {
-                        handleMediaAction(
-                            playbackData.copy(position = pos),
-                            MediaAction.Seek
-                        )
-                    }
-
-//                    override fun onFastForward() {
-//                        val newPosition = minOf(
-//                            playbackData.position + SEEK_FORWARD_INCREMENT,
-//                            playbackData.maxSeekTime
-//                        )
-//                        onSeekTo(newPosition)
-//                    }
-//
-//                    override fun onRewind() {
-//                        val newPosition = maxOf(
-//                            playbackData.position - SEEK_BACKWARD_INCREMENT,
-//                            playbackData.minSeekTime
-//                        )
-//                        onSeekTo(newPosition)
-//                    }
                 })
             }
 
