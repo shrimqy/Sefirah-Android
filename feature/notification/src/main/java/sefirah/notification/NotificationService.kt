@@ -13,6 +13,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.text.SpannableString
 import android.util.Log
+import androidx.core.os.bundleOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -76,9 +77,9 @@ class NotificationService @Inject constructor(
                 activeNotificationsSend = true
                 val activeNotifications = listener.activeNotifications
                 if (activeNotifications.isNullOrEmpty()) {
-                    Log.d("activeNotification", "No active notifications found.")
+                    Log.d(TAG, "No active notifications found.")
                 } else {
-                    Log.d("activeNotification", "Active notifications found: ${activeNotifications.size}")
+                    Log.d(TAG, "Active notifications found: ${activeNotifications.size}")
                     activeNotifications.forEach { sbn ->
                         sendNotification(sbn, NotificationType.Active)
                         delay(50)
@@ -137,35 +138,35 @@ class NotificationService @Inject constructor(
 
         try {
             clickAction.actionIntent.send()
-            Log.d("NotificationService", "Click action performed successfully")
         } catch (e: PendingIntent.CanceledException) {
-            Log.e("NotificationService", "Error performing click action", e)
+            Log.e(TAG, "Error performing click action", e)
         }
     }
 
 
     override fun performReplyAction(action: ReplyAction) {
-        val activeNotification = listener.activeNotifications.find {
-            it.key == action.notificationKey
+        // Get notification and its first reply action (usually messaging apps only have one)
+        val notification = listener.activeNotifications
+            .find { it.key == action.notificationKey }
+            ?.notification ?: return
+
+        // Most messaging apps put the reply action as the first action with RemoteInput
+        val replyAction = notification.actions?.firstOrNull { 
+            it.remoteInputs?.isNotEmpty() == true 
         } ?: return
 
-        val actions = activeNotification.notification.actions ?: return
-        val replyAction = actions.find { it.remoteInputs?.isNotEmpty() == true } ?: return
-
-        val resultIntent = Intent()
-        val remoteInputs = replyAction.remoteInputs
-
-        val bundle = Bundle()
-        remoteInputs?.forEach { remoteInput ->
-            bundle.putString(remoteInput.resultKey, action.replyText)
-        }
-        RemoteInput.addResultsToIntent(replyAction.remoteInputs, resultIntent, bundle)
-
         try {
-            replyAction.actionIntent.send(listener  , 0, resultIntent)
-            Log.d("NotificationService", "Reply action performed successfully")
+            Intent().apply {
+                RemoteInput.addResultsToIntent(
+                    replyAction.remoteInputs,
+                    this,
+                    bundleOf(action.replyResultKey to action.replyText)
+                )
+            }.also { replyAction.actionIntent.send(listener, 0, it) }
+            
+            Log.d(TAG, "Reply sent: ${action.notificationKey}")
         } catch (e: PendingIntent.CanceledException) {
-            Log.e("NotificationService", "Error performing reply action", e)
+            Log.e(TAG, "Reply failed: ${action.notificationKey}", e)
         }
     }
 
@@ -187,7 +188,7 @@ class NotificationService @Inject constructor(
             val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
             packageManager.getApplicationLabel(applicationInfo).toString()
         } catch (e: PackageManager.NameNotFoundException) {
-            Log.e("NotificationService", "Couldn't resolve name $packageName", e)
+            Log.e(TAG, "Couldn't resolve name $packageName", e)
             null
         }
 
@@ -298,12 +299,12 @@ class NotificationService @Inject constructor(
                         isReplyAction = !isReplyAction.isNullOrEmpty()
                     )
                 } catch (e: Exception) {
-                    Log.e("NotificationService", "Error retrieving action: ${e.localizedMessage}")
+                    Log.e(TAG, "Error retrieving action: ${e.localizedMessage}")
                     null
                 }
             } ?: emptyList()
 
-            Log.d("NotificationService", "$appName $title $text messages: $messages actions: $actions")
+            Log.d(TAG, "$appName $title $text messages: $messages actions: $actions")
 
             val replyResultKey = notification.actions
                 ?.firstNotNullOfOrNull { action ->
@@ -330,7 +331,7 @@ class NotificationService @Inject constructor(
 
             if (notificationMessage.appName == "WhatsApp" && notificationMessage.messages?.isEmpty() == true
                 || notificationMessage.appName == "Spotify" && notificationMessage.timestamp == "1970-01-01 05:30:00") {
-                Log.d("NotificationService", "Duplicate notification, ignoring...")
+                Log.d(TAG, "Duplicate notification, ignoring...")
                 return@launch
             }
 
@@ -338,7 +339,7 @@ class NotificationService @Inject constructor(
 //                Log.d("NotificationService", "${notificationMessage.appName} ${notificationMessage.title} ${notificationMessage.text} ${notificationMessage.tag} ${notificationMessage.groupKey}")
                 networkManager.sendMessage(notificationMessage)
             } catch (e: Exception) {
-                Log.e("NotificationService", "Failed to send notification message", e)
+                Log.e(TAG, "Failed to send notification message", e)
             }
         }
     }
@@ -353,5 +354,7 @@ class NotificationService @Inject constructor(
         val mediaStyleClassName = "android.app.Notification\$MediaStyle"
         return mediaStyleClassName == this.extras.getString(Notification.EXTRA_TEMPLATE)
     }
-
+    companion object {
+        const val TAG = "NotificationService"
+    }
 }
