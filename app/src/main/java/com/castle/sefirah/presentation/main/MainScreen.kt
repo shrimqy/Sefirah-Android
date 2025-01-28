@@ -7,6 +7,11 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -48,7 +53,7 @@ fun MainScreen(
     val navigationItems = remember {
         listOf(
             NavigationItem(homeAnimatedIcon, text = "Home", route = MainRouteScreen.HomeScreen.route),
-            NavigationItem(devicesAnimatedIcon, text = "Devices", route = MainRouteScreen.DevicesScreen.route),
+            NavigationItem(devicesAnimatedIcon, text = "Devices", route = MainRouteScreen.DeviceListScreen.route),
             NavigationItem(settingsAnimatedIcon, text = "Settings", route = MainRouteScreen.SettingsScreen.route)
         )
     }
@@ -78,12 +83,26 @@ fun MainScreen(
         onRefresh = { viewModel.toggleSync(true) }
     ) {
         Scaffold (modifier = Modifier.fillMaxSize(),
+            floatingActionButton = {
+                if (currentRoute == MainRouteScreen.DeviceListScreen.route) {
+                    FloatingActionButton(
+                        onClick = { rootNavController.navigate(SyncRoute.SyncScreen.route) },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Device"
+                        )
+                    }
+                }
+            },
             topBar = {
                 if (isBarVisible) {
                     AppTopBar(
                         items = navigationItems,
                         selectedItem = selectedItem,
-                        onNewDeviceClick = { rootNavController.navigate(route = SyncRoute.SyncScreen.route) },
+                        onAddDeviceClick = {  },
                         onSearchQueryChange = { query -> 
                             searchQuery = query
                         }
