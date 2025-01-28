@@ -10,7 +10,7 @@ import androidx.navigation.compose.composable
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.navigation.transitions.NavigationTransitions
-import com.castle.sefirah.presentation.devices.DevicesScreen
+import com.castle.sefirah.presentation.devices.DeviceScreen
 import com.castle.sefirah.presentation.home.HomeScreen
 import com.castle.sefirah.presentation.settings.SettingsScreen
 
@@ -35,7 +35,7 @@ fun MainNavGraph(
             route = MainRouteScreen.HomeScreen.route,
             enterTransition = {
                 when (initialState.destination.route) {
-                    MainRouteScreen.DevicesScreen.route,
+                    MainRouteScreen.DeviceListScreen.route,
                     MainRouteScreen.SettingsScreen.route ->
                         NavigationTransitions.enterTransition(isEnteringFromRight = false)
                     else -> null
@@ -43,7 +43,7 @@ fun MainNavGraph(
             },
             exitTransition = {
                 when (targetState.destination.route) {
-                    MainRouteScreen.DevicesScreen.route,
+                    MainRouteScreen.DeviceListScreen.route,
                     MainRouteScreen.SettingsScreen.route ->
                         NavigationTransitions.exitTransition(isExitingToRight = false)
                     else -> null
@@ -54,7 +54,7 @@ fun MainNavGraph(
         }
 
         composable(
-            route = MainRouteScreen.DevicesScreen.route,
+            route = MainRouteScreen.DeviceListScreen.route,
             enterTransition = {
                 when (initialState.destination.route) {
                     MainRouteScreen.HomeScreen.route ->
@@ -74,7 +74,7 @@ fun MainNavGraph(
                 }
             }
         ) {
-            DevicesScreen(rootNavController, searchQuery)
+            DeviceScreen(rootNavController, searchQuery)
         }
 
         composable(
@@ -82,7 +82,7 @@ fun MainNavGraph(
             enterTransition = {
                 when (initialState.destination.route) {
                     MainRouteScreen.HomeScreen.route,
-                    MainRouteScreen.DevicesScreen.route ->
+                    MainRouteScreen.DeviceListScreen.route ->
                         NavigationTransitions.enterTransition(isEnteringFromRight = true)
                     else -> null
                 }
@@ -90,7 +90,7 @@ fun MainNavGraph(
             exitTransition = {
                 when (targetState.destination.route) {
                     MainRouteScreen.HomeScreen.route,
-                    MainRouteScreen.DevicesScreen.route ->
+                    MainRouteScreen.DeviceListScreen.route ->
                         NavigationTransitions.exitTransition(isExitingToRight = true)
                     else -> null
                 }

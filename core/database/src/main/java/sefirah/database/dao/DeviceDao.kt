@@ -4,10 +4,14 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import sefirah.database.model.LocalDeviceEntity
 import sefirah.database.model.RemoteDeviceEntity
+import sefirah.database.model.DeviceNetworkCrossRef
+import sefirah.database.model.NetworkEntity
+import sefirah.database.model.DeviceWithNetworks
 
 @Dao
 interface DeviceDao {
@@ -52,4 +56,24 @@ interface DeviceDao {
 
     @Query("UPDATE RemoteDeviceEntity SET ipAddresses = :ipAddresses WHERE deviceId = :deviceId")
     suspend fun updateIpAddresses(deviceId: String, ipAddresses: List<String>)
+
+    @Transaction
+    @Query("SELECT * FROM RemoteDeviceEntity WHERE deviceId = :deviceId")
+    fun getDeviceWithNetworks(deviceId: String): Flow<DeviceWithNetworks?>
+
+    @Transaction
+    @Query("SELECT * FROM RemoteDeviceEntity")
+    fun getAllDevicesWithNetworks(): Flow<List<DeviceWithNetworks>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addNetworkToDevice(crossRef: DeviceNetworkCrossRef)
+
+    @Query("DELETE FROM DeviceNetworkCrossRef WHERE deviceId = :deviceId AND ssid = :ssid")
+    suspend fun removeNetworkFromDevice(deviceId: String, ssid: String)
+
+    @Query("DELETE FROM DeviceNetworkCrossRef WHERE deviceId = :deviceId")
+    suspend fun removeAllNetworksFromDevice(deviceId: String)
+
+    @Query("SELECT n.* FROM NetworkEntity n INNER JOIN DeviceNetworkCrossRef ref ON n.ssid = ref.ssid WHERE ref.deviceId = :deviceId")
+    fun getNetworksForDevice(deviceId: String): Flow<List<NetworkEntity>>
 }

@@ -21,12 +21,12 @@ import com.castle.sefirah.presentation.devices.components.DeviceListCard
 import sefirah.presentation.screens.EmptyScreen
 
 @Composable
-fun DevicesScreen(
+fun DeviceScreen(
     rootNavController: NavHostController,
     searchQuery: String = ""
 ) {
-    val devicesViewModel: DevicesViewModel = hiltViewModel()
-    
+    val devicesViewModel: DeviceViewModel = hiltViewModel()
+
     // Update search query in ViewModel
     LaunchedEffect(searchQuery) {
         devicesViewModel.updateSearchQuery(searchQuery)
@@ -58,14 +58,11 @@ fun DevicesScreen(
                         device = device,
                         syncStatus = syncStatus,
                         onSyncAction = {
-                            // Handle sync action here
-                            if (syncStatus) {
-                                // Perform disconnect action
-                            } else {
-                                // Perform sync action
-                            }
                         },
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        onCardClick = {
+                            rootNavController.navigate(route = "device?deviceId=${device.deviceId}")
+                        }
                     )
                 }
             }

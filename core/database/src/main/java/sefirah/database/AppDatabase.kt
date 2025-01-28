@@ -11,6 +11,7 @@ import sefirah.database.dao.NetworkDao
 import sefirah.database.model.LocalDeviceEntity
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.RemoteDeviceEntity
+import sefirah.database.model.DeviceNetworkCrossRef
 
 interface AppDatabase {
     fun devicesDao(): DeviceDao
@@ -32,7 +33,12 @@ interface AppDatabase {
 
 
 @Database(
-    entities = [ RemoteDeviceEntity::class, LocalDeviceEntity::class, NetworkEntity::class ],
+    entities = [
+        RemoteDeviceEntity::class,
+        NetworkEntity::class,
+        DeviceNetworkCrossRef::class,
+        LocalDeviceEntity::class
+    ],
     version = 1,
     exportSchema = false
 )

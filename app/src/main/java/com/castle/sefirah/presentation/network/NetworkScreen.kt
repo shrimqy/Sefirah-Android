@@ -72,7 +72,7 @@ fun NetworkScreen(rootNavController: NavHostController) {
             
             items(
                 items = networkList.value,
-                key = { it.id }
+                key = { it.ssid }
             ) { network ->
                 NetworkItem(
                     modifier = Modifier.animateItem(),

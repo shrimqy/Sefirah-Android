@@ -17,8 +17,8 @@ interface NetworkDao {
     @Query("SELECT * FROM NetworkEntity")
     fun getAllNetworksFlow(): Flow<List<NetworkEntity>>
 
-    @Query("SELECT * FROM NetworkEntity WHERE id = :networkId")
-    fun getNetwork(networkId: Int): NetworkEntity?
+    @Query("SELECT * FROM NetworkEntity WHERE ssid = :ssid")
+    fun getNetwork(ssid: String): NetworkEntity?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addNetwork(network: NetworkEntity)

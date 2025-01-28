@@ -12,8 +12,8 @@ object Graph {
 
 sealed class MainRouteScreen(var route: String) {
     data object HomeScreen: MainRouteScreen("home")
+    data object DeviceListScreen: DeviceRouteScreen("deviceList")
     data object SettingsScreen: SettingsRouteScreen("settings")
-    data object DevicesScreen: DevicesRouteScreen("devices")
 }
 
 sealed class SyncRoute(var route: String) {
@@ -26,8 +26,8 @@ sealed class SettingsRouteScreen(var route: String) {
     data object PermissionScreen: SettingsRouteScreen("permission")
 }
 
-sealed class DevicesRouteScreen(var route: String) {
-
+sealed class DeviceRouteScreen(var route: String) {
+    data object EditDeviceScreen: DeviceRouteScreen("editDevice")
 }
 
 sealed class OnboardingRoute(var route: String) {

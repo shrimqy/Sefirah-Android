@@ -43,6 +43,7 @@ fun RootNavGraph(startDestination: String) {
         composable(route = Graph.MainScreenGraph) {
             MainScreen(rootNavController = rootNavController)
         }
+        deviceNavGraph(rootNavController)
         settingsNavGraph(rootNavController)
     }
 }

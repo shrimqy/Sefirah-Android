@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import sefirah.database.dao.NetworkDao
 import sefirah.database.AppDatabase
 import sefirah.database.dao.DeviceDao
+import sefirah.database.model.DeviceNetworkCrossRef
 import sefirah.database.model.LocalDeviceEntity
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.RemoteDeviceEntity
@@ -38,7 +39,12 @@ class AppRepository @Inject constructor(
 
     fun getAllNetworksFlow() = networkDao.getAllNetworksFlow()
     suspend fun addNetwork(network: NetworkEntity) = networkDao.addNetwork(network)
-    fun getNetwork(networkId: Int) = networkDao.getNetwork(networkId)
+    fun getNetwork(ssid: String) = networkDao.getNetwork(ssid)
     suspend fun deleteNetwork(network: NetworkEntity) = networkDao.deleteNetwork(network)
     suspend fun updateNetwork(network: NetworkEntity) = networkDao.updateNetwork(network)
+
+    suspend fun addNetworkToDevice(crossRef: DeviceNetworkCrossRef) = deviceDao.addNetworkToDevice(crossRef)
+    suspend fun removeNetworkFromDevice(deviceId: String, ssid: String) = deviceDao.removeNetworkFromDevice(deviceId, ssid)
+    suspend fun removeAllNetworksFromDevice(deviceId: String) = deviceDao.removeAllNetworksFromDevice(deviceId)
+    fun getNetworksForDevice(deviceId: String) = deviceDao.getNetworksForDevice(deviceId)
 }

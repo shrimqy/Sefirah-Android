@@ -1,7 +1,6 @@
 package com.castle.sefirah.presentation.devices
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,9 +18,9 @@ import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
 
 @HiltViewModel
-class DevicesViewModel @Inject constructor(
-    preferencesRepository: PreferencesRepository,
-    appRepository: AppRepository,
+class DeviceViewModel @Inject constructor(
+    private val preferencesRepository: PreferencesRepository,
+    private val appRepository: AppRepository,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -75,4 +74,5 @@ class DevicesViewModel @Inject constructor(
             }
         }
     }
+
 }

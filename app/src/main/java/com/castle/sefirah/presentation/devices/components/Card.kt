@@ -2,7 +2,6 @@ package com.castle.sefirah.presentation.devices.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,37 +36,34 @@ fun DeviceListCard(
     modifier: Modifier = Modifier,
     device: RemoteDevice?,
     syncStatus: Boolean,
+    onCardClick: () -> Unit,
     onSyncAction: () -> Unit,
 ) {
     Card(
-        onClick = { /*TODO: Handle card click */ },
+        onClick = onCardClick,
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(),
-        modifier = modifier
     ) {
-        Box(
-            Modifier.padding(16.dp)) {
+        Box(Modifier.padding(16.dp)) {
             device?.let { device ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Circular profile picture
-                    Image(
-                        painter = rememberAsyncImagePainter(model = base64ToBitmap(device.avatar)),
-                        contentDescription = "Profile Picture",
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
-                    )
-                    Spacer(Modifier.width(16.dp))
+                Column {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier.fillMaxWidth()
                     ) {
+                        // Circular profile picture
+                        Image(
+                            painter = rememberAsyncImagePainter(model = base64ToBitmap(device.avatar)),
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        
                         Column(
-                            verticalArrangement = Arrangement.Center
+                            modifier = Modifier.weight(1f)
                         ) {
                             Text(
                                 text = device.deviceName,
@@ -75,12 +71,21 @@ fun DeviceListCard(
                                 color = MaterialTheme.colorScheme.primary,
                                 style = MaterialTheme.typography.bodyLarge
                             )
+                            
+                            Text(
+                                text = device.prefAddress ?: device.ipAddresses.firstOrNull() ?: "No IP",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            
                             if(syncStatus) {
                                 Text(
-                                    text = "Connected"
+                                    text = "Connected",
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
+
                         IconButton(onClick = onSyncAction) {
                             Icon(
                                 imageVector = if (syncStatus) Icons.Rounded.SyncDisabled else Icons.Rounded.Sync,
