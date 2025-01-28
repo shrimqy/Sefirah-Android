@@ -24,6 +24,8 @@ import sefirah.network.FileTransferService.Companion.ACTION_RECEIVE_FILE
 import sefirah.network.FileTransferService.Companion.EXTRA_BULK_TRANSFER
 import sefirah.network.FileTransferService.Companion.EXTRA_FILE_TRANSFER
 import sefirah.network.NetworkService
+import sefirah.network.NetworkService.Companion.TAG
+import sefirah.network.util.ECDHHelper
 
 suspend fun NetworkService.handleMessage(message: SocketMessage) {
     when (message) {
@@ -61,12 +63,32 @@ fun NetworkService.handleBulkFileTransfer(message: BulkFileTransfer) {
 }
 
 suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo, remoteInfo: RemoteDevice, ipAddress: String) {
+
+    // Verify authentication
+    if (deviceInfo.nonce == null || deviceInfo.proof == null) {
+        Log.e(TAG, "Missing authentication data")
+        stop(false)
+        return
+    }
+
+    val localDevice = appRepository.getLocalDevice()
+
+    val sharedSecret = ECDHHelper.deriveSharedSecret(
+        localDevice.privateKey,
+        remoteInfo.publicKey
+    )
+
+    if (!ECDHHelper.verifyProof(sharedSecret, deviceInfo.nonce!!, deviceInfo.proof!!)) {
+        Log.e(TAG, "Authentication failed")
+        stop(false)
+        return
+    }
+
     appRepository.addDevice(
         RemoteDevice(
             deviceId = deviceInfo.deviceId,
             deviceName = deviceInfo.deviceName,
             avatar = deviceInfo.avatar,
-            hashedSecret = remoteInfo.hashedSecret,
             port = remoteInfo.port,
             lastConnected = System.currentTimeMillis(),
             ipAddresses = remoteInfo.ipAddresses,

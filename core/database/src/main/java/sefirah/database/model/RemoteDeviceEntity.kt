@@ -15,7 +15,6 @@ data class RemoteDeviceEntity (
     val publicKey: String,
     val deviceName: String,
     val avatar: String? = null,
-    var hashedSecret: String? = null,
     var lastConnected: Long? = null,
     val certificate: String
 )
@@ -29,7 +28,6 @@ fun RemoteDeviceEntity.toDomain(): RemoteDevice {
         avatar = avatar,
         publicKey = publicKey,
         deviceName = deviceName,
-        hashedSecret = hashedSecret,
         lastConnected = lastConnected,
         certificate = getCertFromString(certificate)
     )
@@ -48,7 +46,6 @@ fun RemoteDevice.toEntity(): RemoteDeviceEntity {
         avatar = avatar,
         publicKey = publicKey,
         deviceName = deviceName,
-        hashedSecret = hashedSecret,
         lastConnected = lastConnected,
         certificate = Base64.encodeToString(certificate.encoded, Base64.NO_WRAP)
     )

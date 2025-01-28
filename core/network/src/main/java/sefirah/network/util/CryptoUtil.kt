@@ -7,37 +7,29 @@ import android.util.Base64
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x509.BasicConstraints
-import org.bouncycastle.asn1.x509.Extension
-import org.bouncycastle.asn1.x509.KeyUsage
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
-import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.crypto.agreement.ECDHBasicAgreement
 import org.bouncycastle.crypto.digests.SHA256Digest
+import org.bouncycastle.crypto.generators.HKDFBytesGenerator
 import org.bouncycastle.crypto.params.ECDomainParameters
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters
 import org.bouncycastle.crypto.params.ECPublicKeyParameters
+import org.bouncycastle.crypto.params.HKDFParameters
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.File
 import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.SecureRandom
 import java.security.Security
-import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Calendar
-import java.util.Date
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 import javax.security.auth.x500.X500Principal
 
 class CryptoUtils(private val context: Context) {
@@ -67,7 +59,7 @@ class CryptoUtils(private val context: Context) {
             KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
         ).apply {
             setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
-            setCertificateSubject(X500Principal("CN=KumoSeki"))
+            setCertificateSubject(X500Principal("CN=SefirahAndroid"))
             setCertificateSerialNumber(BigInteger.valueOf(System.currentTimeMillis()))
             setCertificateNotBefore(startDate.time)
             setCertificateNotAfter(endDate.time)
@@ -95,17 +87,6 @@ class CryptoUtils(private val context: Context) {
 
             // Create new certificate if it doesn't exist
             return@withContext createECDSACertificate()
-        }
-    }
-
-    fun getPublicCertificate(): X509Certificate? {
-        return try {
-            val keyStore = KeyStore.getInstance("AndroidKeyStore")
-            keyStore.load(null)
-            keyStore.getCertificate(KEY_ALIAS) as? X509Certificate
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get public certificate: ${e.message}")
-            null
         }
     }
 }
@@ -171,9 +152,30 @@ object ECDHHelper {
         sha256.update(trimmedSecret, 0, trimmedSecret.size)
         sha256.doFinal(hashedSecret, 0)
 
-        // Use same byte order as C# BitConverter
-//        val derivedKey = abs(ByteBuffer.wrap(hashedSecret).order(ByteOrder.LITTLE_ENDIAN).int) % 1_000_000
-//        derivedKey.toString().padStart(6, '0')
         return hashedSecret
+    }
+
+    fun generateNonce(): String {
+        val nonce = ByteArray(32)
+        SecureRandom().nextBytes(nonce)
+        return Base64.encodeToString(nonce, Base64.NO_WRAP)
+    }
+
+    fun generateProof(sharedSecret: ByteArray, nonce: String): String {
+        try {
+            val nonceBytes = Base64.decode(nonce, Base64.NO_WRAP)
+            val hmac = Mac.getInstance("HmacSHA256")
+            hmac.init(SecretKeySpec(sharedSecret, "HmacSHA256"))
+            val proof = hmac.doFinal(nonceBytes)
+            return Base64.encodeToString(proof, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            Log.e("EcdhHelper", "Failed to generate proof", e)
+            return ""
+        }
+    }
+
+    fun verifyProof(sharedSecret: ByteArray, nonce: String, proof: String): Boolean {
+        val expectedProof = generateProof(sharedSecret, nonce)
+        return expectedProof == proof
     }
 }

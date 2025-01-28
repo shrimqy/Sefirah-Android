@@ -14,6 +14,5 @@ data class RemoteDevice(
     val deviceName: String,
     val certificate: X509Certificate,
     val avatar: String? = null,
-    var hashedSecret: String? = null,
     var lastConnected: Long? = null,
 ) : Parcelable

@@ -21,11 +21,15 @@ class AppRepository @Inject constructor(
 ){
     fun getAllDevicesFlow() = deviceDao.getAllDevicesFlow()
     suspend fun addDevice(device: RemoteDeviceEntity) = deviceDao.addDevice(device)
-    suspend fun removeDevice(deviceName: String) = deviceDao.removeDevice(deviceName)
+    suspend fun removeDevice(deviceId: String) = deviceDao.removeDevice(deviceId)
     suspend fun updateDevice(device: RemoteDeviceEntity) = deviceDao.updateDevice(device)
+    suspend fun updatePreferredIp(deviceId: String, preferredIp: String) = deviceDao.updatePreferredIp(deviceId, preferredIp)
+    suspend fun updateIpAddresses(deviceId: String, ipAddresses: List<String>) = deviceDao.updateIpAddresses(deviceId, ipAddresses)
     fun getLastConnectedDevice() = deviceDao.getLastConnectedDevice()
 
     fun getLastConnectedDeviceFlow() = deviceDao.getLastConnectedDeviceFlow()
+
+    fun getRemoteDevice(deviceId: String) = deviceDao.getRemoteDevice(deviceId)
 
     suspend fun addLocalDevice(device: LocalDeviceEntity) = deviceDao.addLocalDevice(device)
     suspend fun updateLocalDevice(device: LocalDeviceEntity) = deviceDao.updateLocalDevice(device)

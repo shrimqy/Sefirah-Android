@@ -53,6 +53,7 @@ import sefirah.network.util.MessageSerializer
 import sefirah.network.util.getInstalledApps
 import sefirah.network.NetworkDiscovery.NetworkAction
 import sefirah.notification.NotificationHandler
+import sefirah.network.util.ECDHHelper
 import java.security.cert.X509Certificate
 import javax.inject.Inject
 
@@ -116,11 +117,9 @@ class NetworkService : Service() {
         _connectionState.value = ConnectionState.Connecting
         scope.launch {
             try {
-                if (remoteInfo.prefAddress != null) {
-                    if (!initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port, remoteInfo.certificate)) {
-                        stop(false)
-                        return@launch
-                    }
+                if (remoteInfo.prefAddress != null && !initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port, remoteInfo.certificate))  {
+                    stop(false)
+                    return@launch
                 }
                 else {
                     // Try each address until one works
@@ -132,7 +131,7 @@ class NetworkService : Service() {
                 }
 
                 // Send initial device info for verification
-                sendDeviceInfo(remoteInfo.hashedSecret!!)
+                sendDeviceInfo(remoteInfo)
 
                 // Wait for device info
                 withTimeoutOrNull(60000) { // 30 seconds timeout
@@ -183,14 +182,24 @@ class NetworkService : Service() {
         }
     }
 
-    private suspend fun sendDeviceInfo(hashedSecret: String) {
+    private suspend fun sendDeviceInfo(remoteInfo: RemoteDevice) {
         val localDevice = appRepository.getLocalDevice()
+        
+        // Generate nonce and proof
+        val nonce = ECDHHelper.generateNonce()
+        val sharedSecret = ECDHHelper.deriveSharedSecret(
+            localDevice.privateKey,
+            remoteInfo.publicKey
+        )
+        val proof = ECDHHelper.generateProof(sharedSecret, nonce)
+        
         sendMessage(DeviceInfo(
             deviceId = localDevice.deviceId,
-            publicKey = localDevice.publicKey,
             deviceName = localDevice.deviceName,
-            hashedSecret = hashedSecret,
-            avatar = localDevice.wallpaperBase64
+            publicKey = localDevice.publicKey,
+            avatar = localDevice.wallpaperBase64,
+            nonce = nonce,
+            proof = proof
         ))
     }
 

@@ -17,14 +17,17 @@ interface DeviceDao {
     @Query("SELECT * FROM RemoteDeviceEntity")
     fun getAllDevicesFlow(): Flow<List<RemoteDeviceEntity>>
 
+    @Query("SELECT * FROM RemoteDeviceEntity WHERE deviceId = :deviceId")
+    fun getRemoteDevice(deviceId: String): Flow<RemoteDeviceEntity?>
+
     @Query("SELECT * FROM RemoteDeviceEntity ORDER BY lastConnected DESC LIMIT 1")
     fun getLastConnectedDevice(): RemoteDeviceEntity?
 
     @Query("SELECT * FROM RemoteDeviceEntity ORDER BY lastConnected DESC LIMIT 1")
     fun getLastConnectedDeviceFlow(): Flow<RemoteDeviceEntity?>
 
-    @Query("DELETE FROM LocalDeviceEntity WHERE deviceName = :deviceName")
-    suspend fun removeDevice(deviceName: String)
+    @Query("DELETE FROM REMOTEDEVICEENTITY WHERE deviceId = :deviceId")
+    suspend fun removeDevice(deviceId: String)
 
     @Query("SELECT certificate FROM RemoteDeviceEntity ORDER BY lastConnected DESC LIMIT 1")
     fun getLastConnectedCert(): String?
@@ -43,4 +46,10 @@ interface DeviceDao {
 
     @Query("SELECT * FROM LocalDeviceEntity LIMIT 1")
     suspend fun getLocalDevice(): LocalDeviceEntity
+
+    @Query("UPDATE RemoteDeviceEntity SET prefAddress = :preferredIp WHERE deviceId = :deviceId")
+    suspend fun updatePreferredIp(deviceId: String, preferredIp: String)
+
+    @Query("UPDATE RemoteDeviceEntity SET ipAddresses = :ipAddresses WHERE deviceId = :deviceId")
+    suspend fun updateIpAddresses(deviceId: String, ipAddresses: List<String>)
 }

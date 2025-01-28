@@ -55,7 +55,8 @@ data class DeviceInfo(
     val deviceName: String,
     val avatar: String? = null,
     val publicKey: String? = null,
-    var hashedSecret: String? = null,
+    val nonce: String? = null,
+    val proof: String? = null,
 ) : SocketMessage(), Parcelable
 
 @Serializable
@@ -262,4 +263,11 @@ enum class ScrollDirection {
 enum class KeyboardActionType {
     Tab, Backspace, Enter, Escape, CtrlC, CtrlV, CtrlX, CtrlA
 }
+
+@Serializable
+@SerialName("13")
+data class AuthenticationMessage(
+    val nonce: String,
+    val proof: String
+) : SocketMessage()
 

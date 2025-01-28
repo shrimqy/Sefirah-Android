@@ -11,21 +11,21 @@ import javax.net.ssl.X509TrustManager
 class TrustManager @Inject constructor(
     private val context: Context,
 ) {
+    // Trust all certificates since we're doing our own authentication
+    private val trustAllCerts = object : X509TrustManager {
+        override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
+        override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
+        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+    }
+
     fun getRemoteTrustManager(certificate: X509Certificate): X509TrustManager {
-        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType()).apply {
-            load(null) // Initialize empty keystore
-            setCertificateEntry("remote-cert", certificate)
-        }
-        return createTrustManager(keyStore)
+        return trustAllCerts
     }
 
     // For our server certificate
     fun getLocalTrustManager(): X509TrustManager {
-        val keyStore = KeyStore.getInstance("AndroidKeyStore")
-        keyStore.load(null)
-        return createTrustManager(keyStore)
+        return trustAllCerts
     }
-
 
     // For our server
     fun getLocalKeyManagerFactory(): KeyManagerFactory {
