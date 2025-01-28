@@ -31,17 +31,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import sefirah.common.util.checkLocationPermissions
 import sefirah.data.repository.AppRepository
+import sefirah.database.model.DeviceNetworkCrossRef
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.toDomain
 import sefirah.domain.model.LocalDevice
-import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.UdpBroadcast
+import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.NetworkService.Companion.REMOTE_INFO
 import sefirah.network.util.CryptoUtils
@@ -170,27 +171,26 @@ class NetworkDiscovery @Inject constructor(
 
     fun saveCurrentNetworkAsTrusted(wifiInfo: WifiInfo? = null) {
         if (!checkLocationPermissions(context)) return
-        val networkId: Int?
         val ssid: String?
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && wifiInfo != null) {
-            networkId = wifiInfo.networkId
-            ssid = wifiInfo.ssid
+            ssid = wifiInfo.ssid.removeSurrounding("\"")
         } else {
             val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
             val connectionInfo = wifiManager.connectionInfo
+            wifiManager.dhcpInfo.gateway
             if (connectionInfo.supplicantState != SupplicantState.COMPLETED) return
-            networkId = connectionInfo.networkId
-            ssid = connectionInfo.ssid
+            ssid = connectionInfo.ssid.removeSurrounding("\"")
         }
-        Log.d(TAG, "NetworkId: $networkId, SSID: $ssid")
+        Log.d(TAG, "SSID: $ssid")
         when {
-            ssid.equals(UNKNOWN_SSID, ignoreCase = true) || networkId == -1 -> return
+            ssid.equals(UNKNOWN_SSID, ignoreCase = true) -> return
             ssid.isBlank() -> return
         }
         action = NetworkAction.NONE
         unregister()
         scope.launch {
-            appRepository.addNetwork(NetworkEntity(id = networkId, ssid = ssid.removeSurrounding("\""), isEnabled = true))
+            appRepository.addNetwork(NetworkEntity(ssid = ssid, isEnabled = true))
+            appRepository.addNetworkToDevice(DeviceNetworkCrossRef(deviceId = appRepository.getLastConnectedDevice()!!.deviceId, ssid = ssid))
         }
     }
 
@@ -216,8 +216,8 @@ class NetworkDiscovery @Inject constructor(
     private fun deviceDiscoveryCallback(wifiInfo: WifiInfo?) {
         CoroutineScope(Dispatchers.IO).launch {
             if (wifiInfo != null && wifiInfo.ssid != UNKNOWN_SSID && wifiInfo.networkId != -1) {
-                val knownNetwork = appRepository.getNetwork(wifiInfo.networkId)
-                Log.d(TAG, "Known Network: ${knownNetwork?.id}, pairedDeviceListener: ${pairedDeviceListener?.isActive}, listenerJobs: ${listenerJobs[port]?.isActive}")
+                val knownNetwork = appRepository.getNetwork(wifiInfo.ssid.removeSurrounding("\""))
+                Log.d(TAG, "Known Network: ${knownNetwork?.ssid}, pairedDeviceListener: ${pairedDeviceListener?.isActive}, listenerJobs: ${listenerJobs[port]?.isActive}")
                 if (knownNetwork != null &&
                     (pairedDeviceListener?.isActive == false || pairedDeviceListener == null) &&
                     (listenerJobs[port]?.isActive == false || listenerJobs[port] == null)) {
