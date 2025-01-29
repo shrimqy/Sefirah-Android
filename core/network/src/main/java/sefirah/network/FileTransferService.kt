@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import sefirah.common.R
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
@@ -43,11 +44,14 @@ import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.util.MessageSerializer
+import sefirah.network.util.generateRandomPassword
 import sefirah.network.util.getDeviceIpAddress
 import sefirah.network.util.getFileMetadata
+import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.net.Socket
 import javax.inject.Inject
 import javax.net.ssl.SSLServerSocket
@@ -143,7 +147,8 @@ class FileTransferService : Service() {
         val fileName = getFileMetadata(this, fileUri).fileName
         setupNotification(TransferType.Sending(fileName))
         try {
-            val serverInfo = initializeServer() ?: return
+            val password = generateRandomPassword()
+            val serverInfo = initializeServer(password) ?: return
             fileInputStream = this.contentResolver.openInputStream(fileUri)
             val fileMetadata = getFileMetadata(this, fileUri)
 
@@ -154,10 +159,14 @@ class FileTransferService : Service() {
                 socket = serverSocket?.accept() as? SSLSocket
                     ?: throw IOException("Failed to accept SSL connection")
 
-                val outputStream = socket?.getOutputStream()
-                    ?: throw IOException("Failed to get output stream")
-                val inputStream = socket?.getInputStream()
-                    ?: throw IOException("Failed to get input stream")
+                val outputStream = socket!!.getOutputStream()
+                val inputStream = socket!!.getInputStream()
+
+                val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
+
+                withTimeout(5000) {
+                    if (reader.readLine() != password) throw IOException("Invalid password")
+                }
 
                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                 var bytesRead: Int
@@ -177,18 +186,15 @@ class FileTransferService : Service() {
                     outputStream.flush()
                     socket?.shutdownOutput()
 
-                    // Wait for client confirmation
-                    val reader = inputStream.bufferedReader()
-                    val confirmation = reader.readLine()
-                    Log.d(TAG, confirmation)
-                    if (confirmation == "Complete") {
-                        delay(1000)
-                        Log.d(TAG, "Received client confirmation")
-                        withContext(Dispatchers.Main) {
-                            showCompletedNotification()
+                    withTimeout(5000) {
+                        if (reader.readLine() == "Complete") {
+                            delay(1000)
+                            withContext(Dispatchers.Main) {
+                                showCompletedNotification()
+                            }
+                        } else {
+                            throw IOException("Invalid confirmation received")
                         }
-                    } else {
-                        throw IOException("Invalid confirmation received: $confirmation")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during file transfer", e)
@@ -205,13 +211,15 @@ class FileTransferService : Service() {
         }
     }
 
-    private suspend fun initializeServer(): ServerInfo? {
+    private suspend fun initializeServer(password: String): ServerInfo? {
         val ipAddress = getDeviceIpAddress()
         PORT_RANGE.forEach { port ->
             try {
                 serverSocket = ipAddress?.let { socketFactory.tcpServerSocket(port, it) } ?: return null
                 Log.d(TAG, "Server socket created on ${ipAddress}:${port}, waiting for client to connect")
-                return ServerInfo(ipAddress, port)
+
+
+                return ServerInfo(ipAddress, port, password)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to create server socket on port $port, trying next port", e)
             }
@@ -231,9 +239,11 @@ class FileTransferService : Service() {
             fileTransfer.serverInfo.port,
         ) ?: throw IOException("Failed to establish connection")
 
-        val readChannel = clientSocket?.openReadChannel() ?: throw IOException("Failed to open read channel")
-        val writeChannel = clientSocket?.openWriteChannel() ?: throw IOException("Failed to open read channel")
+        val readChannel = clientSocket!!.openReadChannel()
+        val writeChannel = clientSocket!!.openWriteChannel()
         try {
+            writeChannel.writeStringUtf8(fileTransfer.serverInfo.password)
+            writeChannel.flush()
             val fileUri = receiveFileInternal(
                 readChannel = readChannel,
                 metadata = fileTransfer.fileMetadata
@@ -246,6 +256,7 @@ class FileTransferService : Service() {
             }
         } finally {
             cleanup()
+            stopSelf()
         }
     }
 
@@ -261,10 +272,12 @@ class FileTransferService : Service() {
             bulkTransfer.serverInfo.port,
         ) ?: throw IOException("Failed to establish connection")
 
-        val readChannel = clientSocket?.openReadChannel() ?: throw IOException("Failed to open read channel")
-        val writeChannel = clientSocket?.openWriteChannel() ?: throw IOException("Failed to open read channel")
+        val readChannel = clientSocket!!.openReadChannel()
+        val writeChannel = clientSocket!!.openWriteChannel()
 
         try {
+            writeChannel.writeStringUtf8(bulkTransfer.serverInfo.password)
+            writeChannel.flush()
             bulkTransfer.files.forEachIndexed { index, metadata ->
                 try {
                     setupNotification(TransferType.Receiving(
@@ -301,6 +314,7 @@ class FileTransferService : Service() {
             showBulkTransferCompletedNotification(bulkTransfer.files.size)
         } finally {
             cleanup()
+            stopSelf()
         }
     }
 

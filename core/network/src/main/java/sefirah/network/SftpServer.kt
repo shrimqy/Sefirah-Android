@@ -32,6 +32,7 @@ import org.apache.sshd.sftp.server.SftpSubsystemProxy
 import sefirah.domain.model.SftpServerInfo
 import sefirah.network.util.MediaStoreHelper
 import sefirah.network.util.TrustManager
+import sefirah.network.util.generateRandomPassword
 import sefirah.network.util.getDeviceIpAddress
 import java.nio.channels.Channel
 import java.nio.channels.SeekableByteChannel
@@ -43,8 +44,6 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.FileAttribute
 import java.security.KeyPair
 import java.security.PrivateKey
-import java.security.interfaces.RSAPrivateKey
-import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
 
 class SftpServer @Inject constructor(
@@ -180,7 +179,7 @@ class SftpServer @Inject constructor(
     fun start() : SftpServerInfo? {
         if (isRunning) return serverInfo
 
-        val pwd = regeneratePassword()
+        val pwd = generateRandomPassword()
         try {
             sshd = SshServer.setUpDefaultServer().apply {
                 port = 8668
@@ -225,14 +224,6 @@ class SftpServer @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop SFTP server", e)
         }
-    }
-
-    /**
-     * Generate a random password with 12 characters, including uppercase letters, lowercase letters, numbers, and special characters.
-     */
-    private fun regeneratePassword(): String {
-        val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9') + "!@#$%^&*"
-        return (1..12).map { allowedChars.random() }.joinToString("")
     }
 
     companion object {

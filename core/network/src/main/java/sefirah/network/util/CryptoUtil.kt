@@ -180,3 +180,11 @@ object ECDHHelper {
         return expectedProof == proof
     }
 }
+
+/**
+ * Generate a random password with 12 characters, including uppercase letters, lowercase letters, numbers, and special characters.
+ */
+fun generateRandomPassword(): String {
+    val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9') + "!@#$%^&*"
+    return (1..12).map { allowedChars.random() }.joinToString("")
+}
