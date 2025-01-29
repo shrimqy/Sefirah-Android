@@ -1,6 +1,7 @@
 package sefirah.network.util
 
 import android.content.Context
+import kotlinx.coroutines.runBlocking
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import javax.inject.Inject
@@ -18,20 +19,33 @@ class TrustManager @Inject constructor(
         override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
     }
 
-    fun getRemoteTrustManager(certificate: X509Certificate): X509TrustManager {
+    fun getRemoteTrustManager(): X509TrustManager {
         return trustAllCerts
     }
 
     // For our server certificate
     fun getLocalTrustManager(): X509TrustManager {
-        return trustAllCerts
+        val keyStore = KeyStore.getInstance("AndroidKeyStore")
+        keyStore.load(null)
+        return createTrustManager(keyStore)
     }
 
-    // For our server
+    private fun createKeyStore(): KeyStore {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore")
+        keyStore.load(null)
+        
+        // Use CryptoUtils to create/get the certificate
+        val cryptoUtils = CryptoUtils(context)
+        runBlocking {
+            cryptoUtils.getOrCreateCertificate()
+        }
+
+        return keyStore
+    }
+
     fun getLocalKeyManagerFactory(): KeyManagerFactory {
+        val keyStore = createKeyStore()
         return KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply {
-            val keyStore = KeyStore.getInstance("AndroidKeyStore")
-            keyStore.load(null)
             init(keyStore, null)
         }
     }
@@ -39,6 +53,18 @@ class TrustManager @Inject constructor(
     fun getKeyStore(): KeyStore {
         return KeyStore.getInstance("AndroidKeyStore").apply {
             load(null)
+            
+            if (!containsAlias(CryptoUtils.KEY_ALIAS)) {
+                runBlocking {
+                    // Create certificate and reload
+                    CryptoUtils(context).getOrCreateCertificate()
+                    load(null)
+                }
+                
+                if (!containsAlias(CryptoUtils.KEY_ALIAS)) {
+                    throw IllegalStateException("Failed to initialize SFTP certificate")
+                }
+            }
         }
     }
 

@@ -117,14 +117,14 @@ class NetworkService : Service() {
         _connectionState.value = ConnectionState.Connecting
         scope.launch {
             try {
-                if (remoteInfo.prefAddress != null && !initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port, remoteInfo.certificate))  {
+                if (remoteInfo.prefAddress != null && !initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port))  {
                     stop(false)
                     return@launch
                 }
                 else {
                     // Try each address until one works
                     for (ipAddress in remoteInfo.ipAddresses) {
-                        if (initializeConnection(ipAddress, remoteInfo.port, remoteInfo.certificate)) {
+                        if (initializeConnection(ipAddress, remoteInfo.port)) {
                             break
                         }
                     }
@@ -167,9 +167,9 @@ class NetworkService : Service() {
         }
     }
 
-    private suspend fun initializeConnection(ipAddress: String, port: Int, certificate: X509Certificate): Boolean {
+    private suspend fun initializeConnection(ipAddress: String, port: Int): Boolean {
         try {
-            socket = socketFactory.tcpClientSocket(SocketType.DEFAULT, ipAddress, port, certificate)
+            socket = socketFactory.tcpClientSocket(SocketType.DEFAULT, ipAddress, port)
             if (socket != null) {
                 writeChannel = socket?.openWriteChannel()
                 readChannel = socket?.openReadChannel()

@@ -31,7 +31,6 @@ class SocketFactoryImpl @Inject constructor(
         type: SocketType,
         ipAddress: String,
         port: Int,
-        certificate: X509Certificate
     ): Socket? {
         return try {
             Log.d("connect", "Connecting to $ipAddress:$port")
@@ -39,7 +38,7 @@ class SocketFactoryImpl @Inject constructor(
             val socket = aSocket(selectorManager).tcp()
                 .connect(ipAddress, port)
                 .tls(coroutineContext) {
-                    trustManager = customTrustManager.getRemoteTrustManager(certificate)
+                    trustManager = customTrustManager.getRemoteTrustManager()
                 }
 
             Log.d("connect", "Client Connected to $ipAddress")

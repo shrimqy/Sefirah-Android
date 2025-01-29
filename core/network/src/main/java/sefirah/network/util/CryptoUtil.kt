@@ -9,11 +9,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bouncycastle.crypto.agreement.ECDHBasicAgreement
 import org.bouncycastle.crypto.digests.SHA256Digest
-import org.bouncycastle.crypto.generators.HKDFBytesGenerator
 import org.bouncycastle.crypto.params.ECDomainParameters
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters
 import org.bouncycastle.crypto.params.ECPublicKeyParameters
-import org.bouncycastle.crypto.params.HKDFParameters
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
@@ -36,7 +34,7 @@ class CryptoUtils(private val context: Context) {
     companion object {
         private const val TAG = "CryptoUtils"
         private const val CERT_VALIDITY_YEARS = 10
-        private const val KEY_ALIAS = "Sefirah"
+        const val KEY_ALIAS = "Sefirah"
     }
 
     init {
@@ -63,14 +61,17 @@ class CryptoUtils(private val context: Context) {
             setCertificateSerialNumber(BigInteger.valueOf(System.currentTimeMillis()))
             setCertificateNotBefore(startDate.time)
             setCertificateNotAfter(endDate.time)
-            setDigests(KeyProperties.DIGEST_SHA256)
+            setDigests(
+                KeyProperties.DIGEST_NONE,
+                KeyProperties.DIGEST_SHA256,
+                KeyProperties.DIGEST_SHA512
+            )
             setUserAuthenticationRequired(false)
         }.build()
 
         keyPairGenerator.initialize(parameterSpec)
         keyPairGenerator.generateKeyPair()
 
-        // Get the certificate from AndroidKeyStore
         val keyStore = KeyStore.getInstance("AndroidKeyStore")
         keyStore.load(null)
         return keyStore.getCertificate(KEY_ALIAS) as X509Certificate

@@ -101,7 +101,6 @@ fun SyncScreen(
                                 port = device.port!!,
                                 publicKey = device.publicKey,
                                 deviceName = device.deviceName,
-                                certificate = getCertFromString(device.certificate!!)
                             )
                             DeviceItem(
                                 device = device,

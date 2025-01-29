@@ -94,7 +94,6 @@ suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo, remoteInfo: 
             ipAddresses = remoteInfo.ipAddresses,
             prefAddress = ipAddress,
             publicKey = remoteInfo.publicKey,
-            certificate = remoteInfo.certificate
         ).toEntity()
     )
 }

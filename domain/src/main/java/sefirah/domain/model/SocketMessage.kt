@@ -200,7 +200,6 @@ data class UdpBroadcast(
     val ipAddresses: List<String> = emptyList(),
     val port: Int? = null,
     val publicKey: String,
-    val certificate: String? = null,
     var timestamp: Long?
 ) : SocketMessage()
 

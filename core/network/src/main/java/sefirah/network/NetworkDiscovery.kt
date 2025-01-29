@@ -279,13 +279,10 @@ class NetworkDiscovery @Inject constructor(
         broadcasterJob?.cancel()
         broadcasterJob = scope.launch {
             try {
-                val cryptoUtils = CryptoUtils(context)
-                val certificate = cryptoUtils.getOrCreateCertificate()
                 val udpBroadcast = UdpBroadcast(
                     deviceId = localDevice.deviceId,
                     deviceName = localDevice.deviceName,
                     publicKey = localDevice.publicKey,
-                    certificate = certificate.encoded.encodeBase64(),
                     timestamp = null,
                 )
 

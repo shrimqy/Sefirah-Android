@@ -33,9 +33,6 @@ interface DeviceDao {
     @Query("DELETE FROM REMOTEDEVICEENTITY WHERE deviceId = :deviceId")
     suspend fun removeDevice(deviceId: String)
 
-    @Query("SELECT certificate FROM RemoteDeviceEntity ORDER BY lastConnected DESC LIMIT 1")
-    fun getLastConnectedCert(): String?
-
     @Update
     suspend fun updateDevice(device: RemoteDeviceEntity)
 
