@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import sefirah.clipboard.ClipboardListener
 import sefirah.domain.model.PreferencesSettings
 import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
@@ -51,7 +52,7 @@ class SettingsViewModel @Inject constructor(
             batteryGranted = checkBatteryOptimization(context),
             locationGranted = checkLocationPermissions(context),
             storageGranted = checkStoragePermission(context),
-            accessibilityGranted = isAccessibilityServiceEnabled(context, "${context.packageName}.service.ClipboardListener") ,
+            accessibilityGranted = isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}") ,
             notificationListenerGranted = isNotificationListenerEnabled(context),
             readMediaGranted = checkReadMediaPermission(context)
         )

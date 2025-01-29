@@ -65,12 +65,12 @@ fun openAppSettings(context: Context) {
     context.startActivity(intent)
 }
 
-fun isAccessibilityServiceEnabled(context: Context, accessibilityServiceName: String): Boolean {
+fun isAccessibilityServiceEnabled(context: Context, accessibilityServiceName: String?): Boolean {
     val enabledServices = Settings.Secure.getString(
         context.contentResolver,
         Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
     )
-    return enabledServices?.contains(accessibilityServiceName) == true
+    return accessibilityServiceName?.let { enabledServices?.contains(it) } == true
 }
 
 fun isNotificationListenerEnabled(context: Context): Boolean {
