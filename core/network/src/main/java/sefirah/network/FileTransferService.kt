@@ -102,9 +102,6 @@ class FileTransferService : Service() {
                     } catch (e: Exception) {
                         Log.e(TAG, "File transfer failed", e)
                         updateNotificationForError(e.message ?: "Transfer failed")
-                    } finally {
-                        Log.d(TAG, "Transfer process completed, stopping service")
-                        stopSelf()
                     }
                 }
             }
@@ -159,25 +156,52 @@ class FileTransferService : Service() {
 
                 val outputStream = socket?.getOutputStream()
                     ?: throw IOException("Failed to get output stream")
+                val inputStream = socket?.getInputStream()
+                    ?: throw IOException("Failed to get input stream")
 
                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                 var bytesRead: Int
                 var totalBytesTransferred = 0L
 
-                while (fileInputStream?.read(buffer).also { bytesRead = it ?: -1 } != -1) {
-                    outputStream.write(buffer, 0, bytesRead)
-                    outputStream.flush()
+                try {
+                    // Send the file data
+                    while (fileInputStream?.read(buffer).also { bytesRead = it ?: -1 } != -1) {
+                        outputStream.write(buffer, 0, bytesRead)
+                        outputStream.flush()
 
-                    totalBytesTransferred += bytesRead
-                    updateTransferProgress(totalBytesTransferred, fileMetadata.fileSize)
+                        totalBytesTransferred += bytesRead
+                        updateTransferProgress(totalBytesTransferred, fileMetadata.fileSize)
+                    }
+
+                    // Signal end of file stream
+                    outputStream.flush()
+                    socket?.shutdownOutput()
+
+                    // Wait for client confirmation
+                    val reader = inputStream.bufferedReader()
+                    val confirmation = reader.readLine()
+                    Log.d(TAG, confirmation)
+                    if (confirmation == "Complete") {
+                        delay(1000)
+                        Log.d(TAG, "Received client confirmation")
+                        withContext(Dispatchers.Main) {
+                            showCompletedNotification()
+                        }
+                    } else {
+                        throw IOException("Invalid confirmation received: $confirmation")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error during file transfer", e)
+                    throw IOException("File transfer interrupted", e)
                 }
-                showCompletedNotification()
             }
         } catch (e: Exception) {
+            Log.e(TAG, "File transfer failed", e)
             updateNotificationForError(e.message ?: "Transfer failed")
             throw e
         } finally {
             cleanup()
+            stopSelf()
         }
     }
 
@@ -205,7 +229,6 @@ class FileTransferService : Service() {
             SocketType.FILE_TRANSFER,
             lastConnectedDevice!!.prefAddress!!,
             fileTransfer.serverInfo.port,
-            getCertFromString(lastConnectedDevice.certificate)
         ) ?: throw IOException("Failed to establish connection")
 
         val readChannel = clientSocket?.openReadChannel() ?: throw IOException("Failed to open read channel")
@@ -236,7 +259,6 @@ class FileTransferService : Service() {
             SocketType.FILE_TRANSFER,
             lastConnectedDevice!!.prefAddress!!,
             bulkTransfer.serverInfo.port,
-            getCertFromString(lastConnectedDevice.certificate)
         ) ?: throw IOException("Failed to establish connection")
 
         val readChannel = clientSocket?.openReadChannel() ?: throw IOException("Failed to open read channel")
@@ -423,7 +445,12 @@ class FileTransferService : Service() {
                 }
             }
             is TransferType.Sending -> {
-                // ... existing sending progress code ...
+                val progressText = "Sending: %.1f MB / %.1f MB".format(currentMB, currentTotalMB)
+                
+                notificationCenter.modifyNotification(notificationBuilder, AppNotifications.TRANSFER_PROGRESS_ID) {
+                    setProgress(100, currentProgress, false)
+                    setContentText(progressText)
+                }
             }
         }
     }
