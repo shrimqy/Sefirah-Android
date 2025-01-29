@@ -47,19 +47,7 @@ class HomeViewModel @Inject constructor(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
-    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
-
     val playbackData: StateFlow<PlaybackData?> = playbackRepository.readPlaybackData()
-
-    init {
-        // Monitor connection state
-        appScope.launch {
-            networkManager.connectionState.collectLatest { state ->
-                _connectionState.value = state
-            }
-        }
-    }
 
     // Handle play/pause, next, previous actions
     fun onPlayPause() {

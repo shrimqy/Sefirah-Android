@@ -163,8 +163,7 @@ class NotificationService @Inject constructor(
                     bundleOf(action.replyResultKey to action.replyText)
                 )
             }.also { replyAction.actionIntent.send(listener, 0, it) }
-            
-            Log.d(TAG, "Reply sent: ${action.notificationKey}")
+
         } catch (e: PendingIntent.CanceledException) {
             Log.e(TAG, "Reply failed: ${action.notificationKey}", e)
         }

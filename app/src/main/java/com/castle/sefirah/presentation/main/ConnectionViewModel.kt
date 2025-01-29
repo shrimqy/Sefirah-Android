@@ -115,14 +115,10 @@ class ConnectionViewModel @Inject constructor(
                 when (state) {
                     ConnectionState.Connected -> {
                         _isRefreshing.value = false
+                        connectionStateJob?.cancel()
                     }
                     ConnectionState.Disconnected -> {
                         _isRefreshing.value = false
-                        Toast.makeText(
-                            getApplication(),
-                            "Device unavailable",
-                            Toast.LENGTH_LONG
-                        ).show()
                         connectionStateJob?.cancel()
                     }
                     ConnectionState.Connecting -> {
