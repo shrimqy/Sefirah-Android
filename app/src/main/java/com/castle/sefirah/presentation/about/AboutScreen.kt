@@ -15,9 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
+import com.castle.sefirah.BuildConfig
 import com.castle.sefirah.presentation.settings.components.LogoHeader
 import com.castle.sefirah.presentation.settings.components.TextPreferenceWidget
 import sefirah.common.R
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun AboutScreen(rootNavController: NavController, modifier: Modifier = Modifier) {
@@ -47,22 +50,24 @@ fun AboutScreen(rootNavController: NavController, modifier: Modifier = Modifier)
             item {
                 TextPreferenceWidget(
                     title = stringResource(R.string.version),
-                    subtitle = "0.3.0, Sep 25, 2024",
-                    onPreferenceClick = { uriHandler.openUri("https://github.com/shrimqy/Sekia") },
+                    subtitle = "${BuildConfig.VERSION_NAME} (${SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault()).format(Date(BuildConfig.BUILD_TIME))})",
+                    onPreferenceClick = {
+                        // TODO
+                    },
                 )
             }
 
             item {
                 TextPreferenceWidget(
                     title = stringResource(R.string.whats_new),
-                    onPreferenceClick = { uriHandler.openUri("https://github.com/shrimqy/Sekia/releases") },
+                    onPreferenceClick = { uriHandler.openUri("https://github.com/shrimqy/Sefirah-Android/releases") },
                 )
             }
 
             item {
                 TextPreferenceWidget(
                     title = "Github",
-                    onPreferenceClick = { uriHandler.openUri("https://github.com/shrimqy/Sekia") },
+                    onPreferenceClick = { uriHandler.openUri("https://github.com/shrimqy/Sefirah-Android") },
                 )
             }
         }

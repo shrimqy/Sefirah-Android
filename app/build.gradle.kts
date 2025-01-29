@@ -6,13 +6,19 @@ plugins {
 android {
     namespace = "com.castle.sefirah"
 
+    buildFeatures {
+        buildConfig = true
+    }
+
+
     defaultConfig {
         applicationId = "com.castle.sefirah"
 
         versionCode = 1
         versionName = "0.4.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("Long", "BUILD_TIME", "${System.currentTimeMillis()}L")
     }
 
     dependenciesInfo {
