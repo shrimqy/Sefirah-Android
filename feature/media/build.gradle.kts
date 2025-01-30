@@ -13,4 +13,5 @@ dependencies {
 
     implementation(libs.core.ktx)
     implementation(libs.androidx.media)
+    implementation(libs.androidx.media3.session)
 }

@@ -1,15 +1,13 @@
 package sefirah.media
 
-import android.app.Notification
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
+import android.media.AudioManager
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
+import androidx.media.VolumeProviderCompat
 import androidx.media.app.NotificationCompat
-import androidx.media.session.MediaButtonReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,31 +21,40 @@ import sefirah.presentation.util.base64ToBitmap
 import javax.inject.Inject
 
 class MediaService @Inject constructor(
-    val context: Context,
+    private val context: Context,
     private val networkManager: NetworkManager,
     private val notificationCenter: NotificationCenter,
     private val preferencesRepository: PreferencesRepository
 ) : MediaHandler {
-    private val mediaSession by lazy {
-        MediaSessionCompat(context, MEDIA_SESSION_TAG).apply {
-            isActive = true
-            // Create a pending intent for the media button receiver
-            val mediaButtonReceiverIntent = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
-                setClass(context, MediaButtonReceiver::class.java)
+    private var mediaSession: MediaSessionCompat? = null
+    
+    private fun getOrCreateMediaSession(): MediaSessionCompat {
+        if (mediaSession == null) {
+            mediaSession = MediaSessionCompat(context, MEDIA_SESSION_TAG).also { session ->
+                session.isActive = true
+                // Initialize with default state
+                session.setPlaybackState(
+                    PlaybackStateCompat.Builder()
+                        .setState(
+                            PlaybackStateCompat.STATE_NONE,
+                            PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                            1f
+                        )
+                        .setActions(
+                            PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                            PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                            PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                        )
+                        .build()
+                )
             }
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                0,
-                mediaButtonReceiverIntent,
-                PendingIntent.FLAG_IMMUTABLE
-            )
-            setMediaButtonReceiver(pendingIntent)
         }
+        return mediaSession!!
     }
 
     override fun updateMediaSession(playbackData: PlaybackData) {
         CoroutineScope(Dispatchers.Main).launch {
-            mediaSession.apply {
+            getOrCreateMediaSession().apply {
                 setMetadata(
                     MediaMetadataCompat.Builder()
                         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playbackData.trackTitle)
@@ -62,9 +69,9 @@ class MediaService @Inject constructor(
                 setPlaybackState(
                     PlaybackStateCompat.Builder()
                         .setState(
-                            if (playbackData.isPlaying == true) 
-                                PlaybackStateCompat.STATE_PLAYING 
-                            else 
+                            if (playbackData.isPlaying == true)
+                                PlaybackStateCompat.STATE_PLAYING
+                            else
                                 PlaybackStateCompat.STATE_PAUSED,
                             PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
                             1f
@@ -76,6 +83,21 @@ class MediaService @Inject constructor(
                         )
                         .build()
                 )
+
+                setPlaybackToRemote(object : VolumeProviderCompat(
+                    VOLUME_CONTROL_ABSOLUTE,
+                    getMaxVolume(),
+                    getCurrentVolume(playbackData.volume)
+                ) {
+                    override fun onSetVolumeTo(volume: Int) {
+                        currentVolume = volume
+                        val normalizedVolume = volume.toFloat() / maxVolume
+                        playbackData.volume = normalizedVolume * 100
+                        CoroutineScope(Dispatchers.IO).launch {
+                            handleVolumeAction(playbackData)
+                        }
+                    }
+                })
 
                 setCallback(object : MediaSessionCompat.Callback() {
                     override fun onPlay() {
@@ -105,12 +127,11 @@ class MediaService @Inject constructor(
                 setLargeIcon(playbackData.thumbnail?.let { base64ToBitmap(it) })
                 setStyle(
                     NotificationCompat.MediaStyle()
-                        .setMediaSession(mediaSession.sessionToken)
+                        .setMediaSession(mediaSession?.sessionToken)
                         .setShowActionsInCompactView(0, 1, 2)
                 )
                 setSilent(true)
                 setOngoing(true)
-                setCategory(Notification.CATEGORY_TRANSPORT)
             }
         }
 
@@ -128,8 +149,27 @@ class MediaService @Inject constructor(
         Log.d(TAG, "Action received: $action" + playbackData.trackTitle)
     }
 
+    suspend fun handleVolumeAction(playbackData: PlaybackData) {
+        playbackData.mediaAction = MediaAction.Volume
+        networkManager.sendMessage(PlaybackData(volume = playbackData.volume, appName = playbackData.appName, mediaAction = MediaAction.Volume))
+    }
+
     override fun release() {
-        mediaSession.release()
+        mediaSession?.let {
+            it.isActive = false
+            it.release()
+            mediaSession = null
+        }
+    }
+
+    private fun getMaxVolume(): Int {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        return audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+    }
+
+    private fun getCurrentVolume(remoteVolume: Float?): Int {
+        val maxVolume = getMaxVolume()
+        return (remoteVolume?.times(maxVolume) ?: maxVolume).toInt()
     }
 
     companion object {
