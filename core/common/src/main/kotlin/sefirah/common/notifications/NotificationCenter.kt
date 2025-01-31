@@ -27,7 +27,7 @@ class NotificationCenter @Inject constructor(
         builder: NotificationCompat.Builder.() -> Unit = {}
     ) : NotificationCompat.Builder {
         return NotificationCompat.Builder(context, channelId).apply {
-            setSmallIcon(R.mipmap.ic_launcher_round)
+            setSmallIcon(R.drawable.ic_launcher_foreground)
             priority = NotificationCompat.PRIORITY_DEFAULT
             builder(this)
             manager.notify(notificationId, build())
