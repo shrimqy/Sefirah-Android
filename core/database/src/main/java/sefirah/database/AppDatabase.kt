@@ -8,10 +8,12 @@ import androidx.room.TypeConverters
 import androidx.room.withTransaction
 import sefirah.database.dao.DeviceDao
 import sefirah.database.dao.NetworkDao
+import sefirah.database.model.CustomIpEntity
 import sefirah.database.model.LocalDeviceEntity
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.RemoteDeviceEntity
 import sefirah.database.model.DeviceNetworkCrossRef
+import sefirah.database.model.DeviceCustomIpCrossRef
 
 interface AppDatabase {
     fun devicesDao(): DeviceDao
@@ -37,7 +39,9 @@ interface AppDatabase {
         RemoteDeviceEntity::class,
         NetworkEntity::class,
         DeviceNetworkCrossRef::class,
-        LocalDeviceEntity::class
+        LocalDeviceEntity::class,
+        CustomIpEntity::class,
+        DeviceCustomIpCrossRef::class
     ],
     version = 1,
     exportSchema = false

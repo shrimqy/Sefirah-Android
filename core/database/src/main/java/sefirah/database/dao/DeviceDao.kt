@@ -1,6 +1,7 @@
 package sefirah.database.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -12,6 +13,8 @@ import sefirah.database.model.RemoteDeviceEntity
 import sefirah.database.model.DeviceNetworkCrossRef
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.DeviceWithNetworks
+import sefirah.database.model.CustomIpEntity
+import sefirah.database.model.DeviceCustomIpCrossRef
 
 @Dao
 interface DeviceDao {
@@ -73,4 +76,41 @@ interface DeviceDao {
 
     @Query("SELECT n.* FROM NetworkEntity n INNER JOIN DeviceNetworkCrossRef ref ON n.ssid = ref.ssid WHERE ref.deviceId = :deviceId")
     fun getNetworksForDevice(deviceId: String): Flow<List<NetworkEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addCustomIp(customIp: CustomIpEntity)
+
+    @Delete
+    suspend fun deleteCustomIp(ipEntity: CustomIpEntity)
+
+    @Query("SELECT ipAddress FROM CustomIpEntity")
+    fun getAllCustomIpFlow(): Flow<List<String>>
+
+    @Query("""
+        SELECT c.ipAddress FROM CustomIpEntity c 
+        LEFT JOIN DeviceCustomIpCrossRef ref ON c.ipAddress = ref.ipAddress 
+        WHERE ref.deviceId IS NULL
+    """)
+    suspend fun getUnlinkedCustomIps(): List<String>
+
+    @Query("""
+        SELECT c.ipAddress FROM CustomIpEntity c 
+        INNER JOIN DeviceCustomIpCrossRef ref ON c.ipAddress = ref.ipAddress 
+        INNER JOIN RemoteDeviceEntity d ON ref.deviceId = d.deviceId 
+        WHERE d.deviceId = (
+            SELECT deviceId FROM RemoteDeviceEntity 
+            WHERE lastConnected IS NOT NULL 
+            ORDER BY lastConnected DESC LIMIT 1
+        )
+    """)
+    suspend fun getCustomIpsForLastConnectedDevice(): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun linkCustomIpToDevice(crossRef: DeviceCustomIpCrossRef)
+
+    @Delete
+    suspend fun unlinkCustomIpFromDevice(crossRef: DeviceCustomIpCrossRef)
+
+    @Query("DELETE FROM DeviceCustomIpCrossRef WHERE deviceId = :deviceId")
+    suspend fun unlinkAllCustomIpsFromDevice(deviceId: String)
 }
