@@ -1,9 +1,13 @@
 package com.castle.sefirah.presentation.sync
 
-import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,27 +15,28 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.castle.sefirah.presentation.sync.components.DeviceItem
-import sefirah.common.util.getCertFromString
 import sefirah.domain.model.RemoteDevice
 import sefirah.presentation.components.PullRefresh
 import sefirah.presentation.screens.EmptyScreen
@@ -39,19 +44,20 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
 
-@OptIn(ExperimentalMaterial3Api::class)
+enum class DialogState { NONE, CONNECTION_OPTIONS, MANUAL_IP }
+
 @Composable
 fun SyncScreen(
     modifier: Modifier = Modifier,
     rootNavController: NavHostController,
 ) {
-    val scope = rememberCoroutineScope()
     val viewModel: SyncViewModel = hiltViewModel()
     val discoveredDevices by viewModel.discoveredDevices.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val showDialog = remember { mutableStateOf(false) }
+    val dialogState = remember { mutableStateOf(DialogState.NONE) }
     val selectedDevice = remember { mutableStateOf<RemoteDevice?>(null) }
     val key = remember { mutableStateOf("") }
+    val customIp = remember { mutableStateOf("") }
     val context = LocalContext.current
 
     PullRefresh(
@@ -61,54 +67,60 @@ fun SyncScreen(
     ) {
         Scaffold(
             topBar = {
-                Column {
-                    TopAppBar(
-                        title = { Text(text = "Available Devices") },
-                        navigationIcon = {
-                            IconButton(
-                                onClick = { rootNavController.navigateUp() }
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                            }
+                TopAppBar(
+                    title = { Text(text = "Available Devices") },
+                    navigationIcon = {
+                        IconButton(onClick = { rootNavController.navigateUp() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                         }
-                    )
-                    
-                    Text(
-                        text = "Devices running the Windows app will appear here:",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp)
-                    )
-                }
+                    }
+                )
             }
         ) { contentPadding ->
-            when {
-                discoveredDevices.isEmpty() -> { EmptyScreen(message = "No Devices found") }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.background)
-                            .fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        contentPadding = contentPadding
-                    ) {
-                        items(discoveredDevices) { device ->
-                            val hashedSecret = viewModel.deriveSharedSecretCode(device.publicKey)
-                            val rawKey = abs(ByteBuffer.wrap(hashedSecret).order(ByteOrder.LITTLE_ENDIAN).int)
-                            key.value = rawKey.toString().takeLast(6).padStart(6, '0')
-                            val remoteDevice = RemoteDevice(
-                                deviceId = device.deviceId,
-                                ipAddresses = device.ipAddresses,
-                                port = device.port!!,
-                                publicKey = device.publicKey,
-                                deviceName = device.deviceName,
-                            )
-                            DeviceItem(
-                                device = device,
-                                key = key.value,
-                                onClick = {
-                                    selectedDevice.value = remoteDevice
-                                    showDialog.value = true
-                                })
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+            ) {
+                Text(
+                    text = "Devices running the Windows app will appear here:",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(16.dp)
+                )
+
+                when {
+                    discoveredDevices.isEmpty() -> {
+                        EmptyScreen(message = "No Devices found")
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            items(discoveredDevices) { device ->
+                                val hashedSecret = viewModel.deriveSharedSecretCode(device.publicKey)
+                                val rawKey = abs(ByteBuffer.wrap(hashedSecret).order(ByteOrder.LITTLE_ENDIAN).int)
+                                key.value = rawKey.toString().takeLast(6).padStart(6, '0')
+
+                                val remoteDevice = RemoteDevice(
+                                    deviceId = device.deviceId,
+                                    ipAddresses = device.ipAddresses,
+                                    port = device.port,
+                                    publicKey = device.publicKey,
+                                    deviceName = device.deviceName,
+                                )
+
+                                DeviceItem(
+                                    device = device,
+                                    key = key.value,
+                                    onClick = {
+                                        selectedDevice.value = remoteDevice
+                                        dialogState.value = DialogState.CONNECTION_OPTIONS
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -117,35 +129,135 @@ fun SyncScreen(
     }
 
 
-    if (showDialog.value && selectedDevice.value != null) {
-        AlertDialog(
-            onDismissRequest = { showDialog.value = false },
-            title = { Text("Connect") },
-            text = {
-                Column {
-                    Text("Do you want to connect to ${selectedDevice.value?.deviceName}?")
-                    Text("Key: ${key.value}")
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.authenticate(context, selectedDevice.value!!, rootNavController)
-                        Log.d("Service", "Connecting to service: ${selectedDevice.value}")
-                        showDialog.value = false
+    when (dialogState.value) {
+        DialogState.CONNECTION_OPTIONS -> {
+            AlertDialog(
+                onDismissRequest = { dialogState.value = DialogState.NONE },
+                title = {
+                    Text(
+                        "Connection Options",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
+                text = {
+                    Column {
+                        Text(
+                            "How do you want to connect to ${selectedDevice.value?.deviceName}?",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Key: ${key.value}",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
                     }
-                ) {
-                    Text("Connect")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showDialog.value = false }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
+                },
+                confirmButton = {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            TextButton(
+                                onClick = { dialogState.value = DialogState.MANUAL_IP },
+                            ) {
+                                Text(
+                                    text = "Manual Connect",
+                                )
+                            }
+                            TextButton(
+                                onClick = {
+                                    viewModel.authenticate(
+                                        context,
+                                        selectedDevice.value!!.copy(prefAddress = null),
+                                        rootNavController
+                                    )
+                                    dialogState.value = DialogState.NONE
+                                },
 
+                            ) {
+                                Text(
+                                    text = "Auto Connect",
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Button(
+                            onClick = { dialogState.value = DialogState.NONE },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Close",
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            )
+        }
+
+        DialogState.MANUAL_IP -> {
+            AlertDialog(
+                onDismissRequest = { dialogState.value = DialogState.CONNECTION_OPTIONS },
+                title = { Text("Manual Connection", style = MaterialTheme.typography.titleLarge) },
+                text = {
+                    Column {
+                        Text(
+                            text = "Available IP addresses:",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        discoveredDevices.firstOrNull { it.deviceId == selectedDevice.value?.deviceId }
+                            ?.ipAddresses?.forEach { ip ->
+                                OutlinedCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    onClick = { customIp.value = ip }
+                                ) {
+                                    Text(
+                                        ip,
+                                        modifier = Modifier.padding(16.dp),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            }
+
+                        OutlinedTextField(
+                            value = customIp.value,
+                            onValueChange = { customIp.value = it },
+                            label = { Text("Or enter custom IP") },
+                            placeholder = { Text("192.168.1.100") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            singleLine = true
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            selectedDevice.value = selectedDevice.value?.copy(
+                                prefAddress = customIp.value.ifBlank { null }
+                            )
+                            viewModel.authenticate(context, selectedDevice.value!!, rootNavController)
+                            dialogState.value = DialogState.NONE
+                        }
+                    ) {
+                        Text("Connect")
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { dialogState.value = DialogState.CONNECTION_OPTIONS }
+                    ) {
+                        Text("Back")
+                    }
+                }
+            )
+        }
+
+        DialogState.NONE -> {} // Do nothing
     }
 }

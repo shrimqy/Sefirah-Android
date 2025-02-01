@@ -27,7 +27,7 @@ import sefirah.network.DiscoveredDevice
 @Composable
 fun DeviceItem(
     modifier: Modifier = Modifier,
-    device: UdpBroadcast,
+    device: DiscoveredDevice,
     key: String,
     onClick: () -> Unit
 ) {
