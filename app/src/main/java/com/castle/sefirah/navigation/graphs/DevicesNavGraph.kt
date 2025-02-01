@@ -9,7 +9,8 @@ import androidx.navigation.navigation
 import com.castle.sefirah.navigation.DeviceRouteScreen
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.MainRouteScreen
-import com.castle.sefirah.presentation.devices.EditDeviceScreen
+import com.castle.sefirah.presentation.devices.deviceDetails.EditDeviceScreen
+import com.castle.sefirah.presentation.devices.customDevice.CustomDeviceScreen
 
 fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
     navigation(
@@ -30,6 +31,10 @@ fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
                     onNavigateBack = { rootNavController.navigateUp() }
                 )
             }
+        }
+
+        composable(route = DeviceRouteScreen.CustomDeviceScreen.route) {
+            CustomDeviceScreen(rootNavController)
         }
     }
 }

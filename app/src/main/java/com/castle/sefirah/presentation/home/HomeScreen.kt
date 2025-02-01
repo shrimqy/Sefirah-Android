@@ -1,13 +1,11 @@
 package com.castle.sefirah.presentation.home
 
 import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,12 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.castle.sefirah.navigation.Graph
-import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.presentation.home.components.DeviceCard
 import com.castle.sefirah.presentation.home.components.MediaPlaybackCard
 import com.castle.sefirah.presentation.home.components.VolumeSlider
@@ -45,7 +40,6 @@ fun HomeScreen(
 
     LazyColumn(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.background)
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,

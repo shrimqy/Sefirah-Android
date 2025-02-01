@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.DesktopWindows
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -30,7 +31,7 @@ import sefirah.presentation.R
 fun AppTopBar(
     items: List<NavigationItem>,
     selectedItem: Int,
-    onNewDeviceClick: () -> Unit,
+    onAddDeviceClick: () -> Unit,
     onSearchQueryChange: (String) -> Unit
 ) {
     var isOverflowExpanded by remember { mutableStateOf(false) }
@@ -117,14 +118,14 @@ fun AppTopBar(
                     offset = DpOffset(x = (-9).dp, y = 0.dp)
                 ) {
                     DropdownMenuItem(
-                        text = { Text(text = "Add a New Device") },
+                        text = { Text(text = "Custom device list") },
                         onClick = { 
                             isOverflowExpanded = false
-                            onNewDeviceClick() 
+                            onAddDeviceClick()
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Outlined.Devices,
+                                imageVector = Icons.Outlined.DesktopWindows,
                                 contentDescription = "Import Icon"
                             )
                         }

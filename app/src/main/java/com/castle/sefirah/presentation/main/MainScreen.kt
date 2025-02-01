@@ -27,6 +27,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.castle.sefirah.R
+import com.castle.sefirah.navigation.DeviceRouteScreen
 import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.navigation.SyncRoute
 import com.castle.sefirah.navigation.graphs.MainNavGraph
@@ -102,7 +103,7 @@ fun MainScreen(
                     AppTopBar(
                         items = navigationItems,
                         selectedItem = selectedItem,
-                        onAddDeviceClick = {  },
+                        onAddDeviceClick = { rootNavController.navigate(DeviceRouteScreen.CustomDeviceScreen.route) },
                         onSearchQueryChange = { query -> 
                             searchQuery = query
                         }
