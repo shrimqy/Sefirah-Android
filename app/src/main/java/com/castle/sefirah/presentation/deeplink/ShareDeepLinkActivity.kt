@@ -14,12 +14,20 @@ import sefirah.network.FileTransferService.Companion.ACTION_SEND_FILE
 
 @AndroidEntryPoint
 class ShareDeepLinkActivity: BaseActivity() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Defer intent handling until service is bound
         observeServiceBinding()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Update the intent of the activity
+        setIntent(intent)
+        // If the service is already connected, handle the new intent right away.
+        // Otherwise, the service connection callback in observeServiceBinding() will pick it up.
+        handleIntent(intent)
     }
 
     private fun observeServiceBinding() {
@@ -52,12 +60,13 @@ class ShareDeepLinkActivity: BaseActivity() {
     }
 
     private fun handleFileTransfer(intent: Intent) {
+        Log.d("ShareDeepLink", "Starting file transfer")
         val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
         Log.d("ShareToPc", "Handling file share: $uri")
 
         if (uri != null) {
             val serviceIntent = Intent(applicationContext, FileTransferService::class.java).apply {
-                action = ACTION_SEND_FILE
+                action = FileTransferService.ACTION_SEND_FILE
                 data = uri
             }
             startForegroundService(serviceIntent)
