@@ -10,6 +10,7 @@ import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -29,6 +30,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -46,15 +49,15 @@ import sefirah.domain.repository.PlaybackRepository
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
 import sefirah.media.MediaHandler
+import sefirah.network.NetworkDiscovery.NetworkAction
 import sefirah.network.extensions.handleDeviceInfo
 import sefirah.network.extensions.handleMessage
 import sefirah.network.extensions.setNotification
+import sefirah.network.sftp.SftpServer
+import sefirah.network.util.ECDHHelper
 import sefirah.network.util.MessageSerializer
 import sefirah.network.util.getInstalledApps
-import sefirah.network.NetworkDiscovery.NetworkAction
 import sefirah.notification.NotificationHandler
-import sefirah.network.util.ECDHHelper
-import java.security.cert.X509Certificate
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -117,17 +120,24 @@ class NetworkService : Service() {
         _connectionState.value = ConnectionState.Connecting
         scope.launch {
             try {
-                if (remoteInfo.prefAddress != null && !initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port))  {
-                    stop(false)
-                    return@launch
-                }
-                else {
-                    // Try each address until one works
+                var connected = false
+                if (remoteInfo.prefAddress != null) {
+                    connected = initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port)
+                } else {
                     for (ipAddress in remoteInfo.ipAddresses) {
                         if (initializeConnection(ipAddress, remoteInfo.port)) {
+                            connected = true
                             break
                         }
                     }
+                }
+
+                if (!connected) {
+                    Log.e(TAG, "All connection attempts failed")
+                    _connectionState.value = ConnectionState.Error("Device not reachable")
+                    delay(100)
+                    stop(false)
+                    return@launch
                 }
 
                 // Send initial device info for verification
@@ -136,7 +146,7 @@ class NetworkService : Service() {
                 // Wait for device info
                 withTimeoutOrNull(60000) { // 30 seconds timeout
                     readChannel?.readUTF8Line()?.let { jsonMessage ->
-                        Log.d(TAG, "Raw received data: $jsonMessage")
+//                        Log.d(TAG, "Raw received data: $jsonMessage")
                         val deviceInfo = messageSerializer.deserialize(jsonMessage) as? DeviceInfo
                         if (deviceInfo == null) {
                             Log.e(TAG, "Invalid device info received")
@@ -215,7 +225,9 @@ class NetworkService : Service() {
         sendDeviceStatus()
         notificationHandler.sendActiveNotifications()
         clipboardHandler.start()
-        sftpServer.start()?.let { sendMessage(it) }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && preferencesRepository.readRemoteStorageSettings().first()) {
+            sftpServer.start()?.let { sendMessage(it) }
+        }
         networkDiscovery.unregister()
     }
 
@@ -245,7 +257,7 @@ class NetworkService : Service() {
                         channel.writeStringUtf8("$jsonMessage\n") // Add newline to separate messages
                         channel.flush()
 
-                        Log.d(TAG, "Message sent successfully")
+                        Log.d(TAG, "Message sent")
                     } ?: run {
                         Log.e(TAG, "Write channel is not available")
                     }
@@ -255,6 +267,7 @@ class NetworkService : Service() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send message", e)
+                stop(false)
             }
         }
     }
@@ -264,7 +277,7 @@ class NetworkService : Service() {
             try {
                 Log.d(TAG, "listening started")
                 readChannel?.let { channel ->
-                    while (!channel.isClosedForRead) {
+                    while (!channel.isClosedForRead && socket?.isActive == true) {
                         try {
                             // Read the incoming data as a line
                             val receivedData = channel.readUTF8Line()
