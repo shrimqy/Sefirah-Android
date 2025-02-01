@@ -1,8 +1,15 @@
 package com.castle.sefirah.presentation.about
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.outlined.AttachMoney
+import androidx.compose.material.icons.outlined.Web
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -14,11 +21,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.castle.sefirah.BuildConfig
+import com.castle.sefirah.presentation.about.components.LinkIcon
 import com.castle.sefirah.presentation.settings.components.LogoHeader
 import com.castle.sefirah.presentation.settings.components.TextPreferenceWidget
 import sefirah.common.R
+import sefirah.presentation.icons.CustomIcons
+import sefirah.presentation.icons.Discord
+import sefirah.presentation.icons.Github
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -66,9 +78,37 @@ fun AboutScreen(rootNavController: NavController, modifier: Modifier = Modifier)
 
             item {
                 TextPreferenceWidget(
-                    title = "Github",
-                    onPreferenceClick = { uriHandler.openUri("https://github.com/shrimqy/Sefirah-Android") },
+                    title = stringResource(R.string.windows_app),
+                    onPreferenceClick = { uriHandler.openUri("https://github.com/shrimqy/Sefirah") },
                 )
+            }
+
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    LinkIcon(
+                        label = "Discord",
+                        icon = CustomIcons.Discord,
+                        url = "https://discord.gg/MuvMqv4MES",
+                    )
+
+                    LinkIcon(
+                        label = "GitHub",
+                        icon = CustomIcons.Github,
+                        url = "https://github.com/shrimqy/Sefirah-Android",
+                    )
+
+                    LinkIcon(
+                        label = "Donation",
+                        icon = Icons.Default.AttachMoney,
+                        url = "https://linktr.ee/shrimqy",
+                    )
+                }
             }
         }
     }

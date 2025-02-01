@@ -23,4 +23,5 @@
     <string name="channel_transfer_complete">Transfer Complete</string>
     <string name="channel_device_connection">Device Connection</string>
     <string name="channel_media_playback">Desktop Media Playback</string>
+    <string name="windows_app">Windows app</string>
 </resources>
