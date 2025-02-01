@@ -1,4 +1,4 @@
-package com.castle.sefirah.presentation.devices
+package com.castle.sefirah.presentation.devices.deviceDetails
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -72,8 +72,3 @@ class EditDeviceViewModel @Inject constructor(
         }
     }
 }
-
-data class EditDeviceUiState(
-    val device: RemoteDevice? = null,
-    val selectedIp: String? = null
-)

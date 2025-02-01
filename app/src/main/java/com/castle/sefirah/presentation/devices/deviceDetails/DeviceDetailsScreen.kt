@@ -1,4 +1,4 @@
-package com.castle.sefirah.presentation.devices
+package com.castle.sefirah.presentation.devices.deviceDetails
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
@@ -236,7 +236,7 @@ private fun IpAddressSection(
         "IP Addresses",
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(vertical = 8.dp)
+        modifier = Modifier.padding(8.dp)
     )
     
     Card(
@@ -349,7 +349,7 @@ private fun NetworksSection(
         "Associated Networks",
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(vertical = 8.dp)
+        modifier = Modifier.padding(8.dp)
     )
     
     Card(
@@ -414,7 +414,7 @@ private fun NetworksSection(
 }
 
 @Composable
-private fun AddCustomIpDialog(
+fun AddCustomIpDialog(
     customIp: String,
     onCustomIpChange: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -422,14 +422,12 @@ private fun AddCustomIpDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add IP Address") },
         text = {
             Column {
                 OutlinedTextField(
                     value = customIp,
                     onValueChange = onCustomIpChange,
-                    label = { Text("IP Address") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = { Text("Hostname/Ip Address") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
