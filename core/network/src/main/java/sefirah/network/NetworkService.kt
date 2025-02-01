@@ -31,7 +31,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -88,7 +87,7 @@ class NetworkService : Service() {
     lateinit var notificationBuilder: NotificationCompat.Builder
     private lateinit var connectivityManager: ConnectivityManager
 
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     private var lastBatteryLevel: Int? = null
@@ -105,13 +104,15 @@ class NetworkService : Service() {
         when (intent?.action) {
             Actions.START.name -> {
                 val remoteInfo = intent.getParcelableExtra<RemoteDevice>(REMOTE_INFO)
-                if (remoteInfo != null && _connectionState.value == ConnectionState.Disconnected) {
+                if (remoteInfo != null && _connectionState.value == ConnectionState.Disconnected()) {
                     _connectionState.value = ConnectionState.Connecting
                     deviceName = remoteInfo.deviceName
                     start(remoteInfo)
                 }
             }
-            Actions.STOP.name -> stop(true)
+            Actions.STOP.name -> {
+                stop(true)
+            }
         }
         return START_NOT_STICKY
     }
@@ -158,7 +159,7 @@ class NetworkService : Service() {
                     }
                 } ?: run {
                     Log.e(TAG, "Timeout waiting for device info")
-                    _connectionState.value = ConnectionState.Disconnected
+                    _connectionState.value = ConnectionState.Disconnected()
                     stop(false)
                     return@launch
                 }
@@ -171,7 +172,7 @@ class NetworkService : Service() {
                 finalizeConnection()
             } catch (e: Exception) {
                 Log.e(TAG, "Error in connecting", e)
-                _connectionState.value = ConnectionState.Disconnected
+                _connectionState.value = ConnectionState.Disconnected()
                 stop(false)
             }
         }
@@ -232,12 +233,12 @@ class NetworkService : Service() {
     }
 
     fun stop(forcedStop: Boolean) {
-        _connectionState.value = ConnectionState.Disconnected
         if (forcedStop) {
             networkDiscovery.unregister()
-        }
-        else {
+            _connectionState.value = ConnectionState.Disconnected(true)
+        } else {
             networkDiscovery.register(NetworkAction.START_DEVICE_DISCOVERY)
+            _connectionState.value = ConnectionState.Disconnected()
         }
         lastBatteryLevel = null
         sftpServer.stop()
@@ -267,7 +268,6 @@ class NetworkService : Service() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send message", e)
-                stop(false)
             }
         }
     }
@@ -277,7 +277,7 @@ class NetworkService : Service() {
             try {
                 Log.d(TAG, "listening started")
                 readChannel?.let { channel ->
-                    while (!channel.isClosedForRead && socket?.isActive == true) {
+                    while (!channel.isClosedForRead) {
                         try {
                             // Read the incoming data as a line
                             val receivedData = channel.readUTF8Line()
@@ -370,11 +370,13 @@ class NetworkService : Service() {
     companion object {
         enum class Actions {
             START,
-            STOP
+            STOP,
         }
         const val ACTION_OPEN_MAIN = "android.intent.action.MAIN"
         const val TAG = "NetworkService"
         const val DEVICE_INFO = "device_info"
         const val REMOTE_INFO = "remote_info"
+
+        const val FORCE_STOP = "forceStop"
     }
 }

@@ -42,7 +42,7 @@ class SyncViewModel @Inject constructor(
     private val networkDiscovery: NetworkDiscovery
 ) : ViewModel() {
 
-    private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
 
     val discoveredDevices: StateFlow<List<DiscoveredDevice>> = networkDiscovery.discoveredDevices
     private lateinit var localDevice: LocalDevice
@@ -95,7 +95,7 @@ class SyncViewModel @Inject constructor(
                             }
                             connectionStateJob?.cancel() // Stop collecting after navigation
                         }
-                        ConnectionState.Disconnected -> {
+                        is ConnectionState.Disconnected -> {
                             _isRefreshing.value = false
                             Toast.makeText(
                                 context,

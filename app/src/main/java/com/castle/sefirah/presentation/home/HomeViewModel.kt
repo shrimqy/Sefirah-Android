@@ -71,16 +71,8 @@ class HomeViewModel @Inject constructor(
 
     fun onVolumeChange(volume: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(PlaybackData(volume = volume.toFloat(), appName = playbackData.value?.appName, mediaAction = MediaAction.Volume))
+            sendMessage(PlaybackData(volume = volume.toFloat(), mediaAction = MediaAction.Volume))
         }
-    }
-
-    private fun sendPlaybackData(playbackData: PlaybackData, mediaAction: MediaAction) {
-        playbackData.mediaAction = mediaAction
-        CoroutineScope(Dispatchers.IO).launch {
-            sendMessage(playbackData)
-        }
-        Log.d("MediaSession", "Action received: $mediaAction" + playbackData.trackTitle)
     }
 
     private suspend fun sendMessage(message: SocketMessage) {

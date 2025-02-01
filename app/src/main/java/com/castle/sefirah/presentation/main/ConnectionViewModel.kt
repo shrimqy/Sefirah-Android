@@ -29,6 +29,7 @@ import sefirah.network.NetworkService.Companion.Actions
 import javax.inject.Inject
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
+import sefirah.network.NetworkService.Companion.FORCE_STOP
 
 @HiltViewModel
 class ConnectionViewModel @Inject constructor(
@@ -38,7 +39,7 @@ class ConnectionViewModel @Inject constructor(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -57,7 +58,7 @@ class ConnectionViewModel @Inject constructor(
         appScope.launch {
             appRepository.getLastConnectedDeviceFlow().first()?.let { device->
                 Log.d("ConnectionViewModel", "Device found: ${device.deviceName}")
-                if (_connectionState.value == ConnectionState.Disconnected) {
+                if (_connectionState.value == ConnectionState.Disconnected()) {
                     toggleSync(true)
                 }
             }
@@ -80,7 +81,7 @@ class ConnectionViewModel @Inject constructor(
             _deviceDetails.value?.let { device ->
                 _isRefreshing.value = true
                 when {
-                    syncRequest && _connectionState.value == ConnectionState.Disconnected -> {
+                    syncRequest && _connectionState.value == ConnectionState.Disconnected() -> {
                         startService(Actions.START, device)
                     }
                     syncRequest && _connectionState.value == ConnectionState.Connected -> {
@@ -88,7 +89,8 @@ class ConnectionViewModel @Inject constructor(
                         delay(200)
                         startService(Actions.START, device)
                     }
-                    !syncRequest && _connectionState.value == ConnectionState.Connected -> {
+                    !syncRequest && (_connectionState.value == ConnectionState.Connected
+                            || _connectionState.value == ConnectionState.Connecting) -> {
                         startService(Actions.STOP)
                     }
 
@@ -114,16 +116,18 @@ class ConnectionViewModel @Inject constructor(
             _isRefreshing.value = false
             return
         }
+
         connectionStateJob = appScope.launch {
             connectionState.collect { state ->
                 when (state) {
-                    ConnectionState.Connected -> {
+                    is ConnectionState.Connected -> {
                         _isRefreshing.value = false
                         connectionStateJob?.cancel()
                     }
-                    ConnectionState.Disconnected -> {
+                    is ConnectionState.Disconnected -> {
+                        Log.d("Connection", state.toString())
                         // Only stop refreshing if we initiated a STOP
-                        if (action == Actions.STOP) {
+                        if (action == Actions.STOP || state.forcedDisconnect) {
                             _isRefreshing.value = false
                             connectionStateJob?.cancel()
                         }

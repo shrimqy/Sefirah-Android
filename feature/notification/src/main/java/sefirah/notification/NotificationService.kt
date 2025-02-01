@@ -48,7 +48,7 @@ class NotificationService @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var isConnected : Boolean = false
 
-    private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
     
     private lateinit var listener: NotificationListenerService
 
@@ -59,7 +59,7 @@ class NotificationService @Inject constructor(
         scope.launch {
             networkManager.connectionState.collect { state ->
                 connectionState.value = state
-                if (state == ConnectionState.Disconnected) activeNotificationsSend = false
+                if (state == ConnectionState.Disconnected()) activeNotificationsSend = false
             }
         }
         scope.launch {

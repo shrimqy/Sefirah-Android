@@ -54,7 +54,7 @@ fun HomeScreen(
             ) {
                 DeviceCard(
                     device = deviceDetails,
-                    onSyncAction = { connectionViewModel.toggleSync(connectionState == ConnectionState.Disconnected) },
+                    onSyncAction = { connectionViewModel.toggleSync(connectionState == ConnectionState.Disconnected()) },
                     connectionState = connectionState,
                     navController = rootNavController
                 )

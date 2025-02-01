@@ -92,9 +92,13 @@ fun DeviceCard(
                                     Text(text = "$level%")
                                 }
                             }
-                            Text(
-                                text = if (connectionState == ConnectionState.Connected) "Connected" else "Disconnected",
-                            )
+                            val connectionStateText : String = when (connectionState) {
+                                ConnectionState.Connected -> "Connected"
+                                ConnectionState.Connecting -> "Connecting"
+                                is ConnectionState.Disconnected -> { "Disconnected" }
+                                is ConnectionState.Error -> { "Disconnected"}
+                            }
+                            Text(text = connectionStateText)
                         }
                         IconButton(onClick = onSyncAction) {
                             Icon(

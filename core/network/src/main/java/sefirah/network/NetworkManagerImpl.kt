@@ -27,7 +27,7 @@ class NetworkManagerImpl @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
     override val connectionState: Flow<ConnectionState> = _connectionState.asStateFlow()
 
     private val serviceConnection = object : ServiceConnection {
@@ -43,7 +43,7 @@ class NetworkManagerImpl @Inject constructor(
 
         override fun onServiceDisconnected(name: ComponentName?) {
             networkService = null
-            _connectionState.value = ConnectionState.Disconnected
+            _connectionState.value = ConnectionState.Disconnected()
         }
     }
 
