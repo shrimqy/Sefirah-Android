@@ -8,4 +8,5 @@ data class PreferencesSettings(
     val mediaSession: Boolean,
     val clipboardSync: Boolean,
     val imageClipboard: Boolean,
+    val remoteStorage: Boolean
 )

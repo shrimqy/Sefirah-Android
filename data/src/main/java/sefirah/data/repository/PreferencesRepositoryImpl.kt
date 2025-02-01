@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -32,6 +33,8 @@ class PreferencesDatastore @Inject constructor(
         val APP_ENTRY = booleanPreferencesKey("appEntry")
         val PERMISSION_REQUESTED = stringPreferencesKey("permission_requested")
         val NOTIFICATION_SYNC = booleanPreferencesKey("notificationSync")
+        val REMOTE_STORAGE = booleanPreferencesKey("remoteStorage")
+        val PASSIVE_DISCOVERY = booleanPreferencesKey("passiveDiscovery")
     }
 
     private val datastore = context.dataStore
@@ -102,6 +105,8 @@ class PreferencesDatastore @Inject constructor(
 //        }
 //    }
 
+    
+
     override suspend fun saveNotificationSyncSettings(notificationSync: Boolean) {
         datastore.edit {
             it[PreferencesKeys.NOTIFICATION_SYNC] = notificationSync
@@ -162,6 +167,7 @@ class PreferencesDatastore @Inject constructor(
             val imageClipboard = preferences[PreferencesKeys.IMAGE_CLIPBOARD] ?: true
             val clipboardSync = preferences[PreferencesKeys.CLIPBOARD_SYNC] ?: true
             val mediaSession = preferences[PreferencesKeys.MEDIA_SESSION] ?: true
+            val remoteStorage = preferences[PreferencesKeys.REMOTE_STORAGE] ?: true
             PreferencesSettings(
                 autoDiscovery =  discovery,
                 storageLocation =  storageLocation,
@@ -169,7 +175,9 @@ class PreferencesDatastore @Inject constructor(
                 notificationSync = notificationSync,
                 mediaSession =  mediaSession,
                 clipboardSync =  clipboardSync,
-                imageClipboard =  imageClipboard)
+                imageClipboard =  imageClipboard,
+                remoteStorage = remoteStorage
+            )
         }
     }
 
@@ -186,6 +194,30 @@ class PreferencesDatastore @Inject constructor(
         return datastore.data.map { prefs ->
             val requested = prefs[PreferencesKeys.PERMISSION_REQUESTED] ?: ""
             requested.split(",").contains(permission)
+        }
+    }
+
+    override suspend fun saveRemoteStorageSettings(enabled: Boolean) {
+        datastore.edit {
+            it[PreferencesKeys.REMOTE_STORAGE] = enabled
+        }
+    }
+
+    override fun readRemoteStorageSettings(): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[PreferencesKeys.REMOTE_STORAGE] ?: true
+        }
+    }
+
+    override suspend fun savePassiveDiscovery(enabled: Boolean) {
+        datastore.edit {
+            it[PreferencesKeys.PASSIVE_DISCOVERY] = enabled
+        }
+    }
+
+    override fun readPassiveDiscoverySettings(): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[PreferencesKeys.PASSIVE_DISCOVERY] ?: true
         }
     }
 

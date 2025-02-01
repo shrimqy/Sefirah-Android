@@ -72,21 +72,24 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun handleNewlyGrantedPermissions(previousStates: PermissionStates, newStates: PermissionStates) {
-        if (!previousStates.accessibilityGranted && newStates.accessibilityGranted) {
+        if (!previousStates.accessibilityGranted && newStates.accessibilityGranted)
             saveClipboardSyncSettings(true)
-        }
-        if (!previousStates.notificationListenerGranted && newStates.notificationListenerGranted) {
+
+        if (!previousStates.notificationListenerGranted && newStates.notificationListenerGranted)
             saveNotificationSyncSettings(true)
-        }
-        if (!previousStates.readMediaGranted && newStates.readMediaGranted) {
+
+        if (!previousStates.readMediaGranted && newStates.readMediaGranted)
             saveImageClipboardSettings(true)
-        }
+
+        if (!previousStates.storageGranted && newStates.storageGranted)
+            saveRemoteStorageSettings(true)
     }
 
     private fun handleRevokedPermissions(settings: PreferencesSettings, newStates: PermissionStates) {
         if (!newStates.accessibilityGranted && settings.clipboardSync ||
             !newStates.notificationListenerGranted && settings.notificationSync ||
-            !newStates.readMediaGranted && settings.imageClipboard
+            !newStates.readMediaGranted && settings.imageClipboard ||
+            !newStates.storageGranted && settings.remoteStorage
         ) {
             updatePreferencesBasedOnPermissions(settings)
         }
@@ -94,15 +97,18 @@ class SettingsViewModel @Inject constructor(
 
     private fun updatePreferencesBasedOnPermissions(settings: PreferencesSettings) {
         viewModelScope.launch {
-            if (!_permissionStates.value.accessibilityGranted && settings.clipboardSync) {
+            if (!_permissionStates.value.accessibilityGranted && settings.clipboardSync)
                 preferencesRepository.saveClipboardSyncSettings(false)
-            }
-            if (!_permissionStates.value.notificationListenerGranted && settings.notificationSync) {
+
+            if (!_permissionStates.value.notificationListenerGranted && settings.notificationSync)
                 preferencesRepository.saveNotificationSyncSettings(false)
-            }
-            if (!_permissionStates.value.readMediaGranted && settings.imageClipboard) {
+
+            if (!_permissionStates.value.readMediaGranted && settings.imageClipboard)
                 preferencesRepository.saveImageClipboardSettings(false)
-            }
+
+            if (!_permissionStates.value.storageGranted && settings.remoteStorage)
+                preferencesRepository.saveRemoteStorageSettings(false)
+
         }
     }
 
@@ -156,6 +162,12 @@ class SettingsViewModel @Inject constructor(
     fun savePermissionRequested(permission: String) {
         viewModelScope.launch {
             preferencesRepository.savePermissionRequested(permission)
+        }
+    }
+
+    fun saveRemoteStorageSettings(boolean: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveRemoteStorageSettings(boolean)
         }
     }
 }

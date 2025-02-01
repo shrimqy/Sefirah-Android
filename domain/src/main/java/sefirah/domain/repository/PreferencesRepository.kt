@@ -38,5 +38,11 @@ interface PreferencesRepository {
 
     suspend fun saveNotificationSyncSettings(notificationSync: Boolean)
     fun readNotificationSyncSettings(): Flow<Boolean>
+
+    suspend fun saveRemoteStorageSettings(enabled: Boolean)
+    fun readRemoteStorageSettings(): Flow<Boolean>
+
+    suspend fun savePassiveDiscovery(enabled: Boolean)
+    fun readPassiveDiscoverySettings(): Flow<Boolean>
 }
 

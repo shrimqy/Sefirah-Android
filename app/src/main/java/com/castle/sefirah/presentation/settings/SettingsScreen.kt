@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DesktopWindows
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
@@ -50,14 +51,14 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import com.castle.sefirah.navigation.SettingsRouteScreen
 import com.castle.sefirah.presentation.settings.components.LogoHeader
-import com.castle.sefirah.presentation.settings.components.TextPreferenceWidget
 import com.castle.sefirah.presentation.settings.components.SwitchPreferenceWidget
-import sefirah.common.util.isAccessibilityServiceEnabled
-import sefirah.common.util.isNotificationListenerEnabled
-import sefirah.common.util.openAppSettings
+import com.castle.sefirah.presentation.settings.components.TextPreferenceWidget
 import kotlinx.coroutines.launch
 import sefirah.clipboard.ClipboardListener
 import sefirah.common.util.getReadablePathFromUri
+import sefirah.common.util.isAccessibilityServiceEnabled
+import sefirah.common.util.isNotificationListenerEnabled
+import sefirah.common.util.openAppSettings
 
 @Composable
 fun SettingsScreen(
@@ -234,6 +235,25 @@ fun SettingsScreen(
                 },
                 viewModel = viewModel
             )   
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            item {
+                SwitchPermissionPrefWidget(
+                    title = "Storage access",
+                    subtitle = "Allow Android storage access to Windows",
+                    icon = Icons.Default.Folder,
+                    checked = preferencesSettings?.remoteStorage == true && permissionStates.storageGranted,
+                    permission = Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    onRequest = {
+                        context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                    },
+                    onCheckedChanged = { checked ->
+                        viewModel.saveRemoteStorageSettings(checked)
+                    },
+                    viewModel = viewModel
+                )
+            }
         }
 
         item {

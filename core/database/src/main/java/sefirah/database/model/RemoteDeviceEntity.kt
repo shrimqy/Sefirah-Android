@@ -1,9 +1,7 @@
 package sefirah.database.model
 
-import android.util.Base64
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import sefirah.common.util.getCertFromString
 import sefirah.domain.model.RemoteDevice
 
 @Entity

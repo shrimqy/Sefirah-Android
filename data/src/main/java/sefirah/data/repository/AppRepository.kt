@@ -6,6 +6,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import sefirah.database.dao.NetworkDao
 import sefirah.database.AppDatabase
 import sefirah.database.dao.DeviceDao
+import sefirah.database.model.CustomIpEntity
+import sefirah.database.model.DeviceCustomIpCrossRef
 import sefirah.database.model.DeviceNetworkCrossRef
 import sefirah.database.model.LocalDeviceEntity
 import sefirah.database.model.NetworkEntity
@@ -39,6 +41,7 @@ class AppRepository @Inject constructor(
     fun getAllNetworksFlow() = networkDao.getAllNetworksFlow()
     suspend fun addNetwork(network: NetworkEntity) = networkDao.addNetwork(network)
     fun getNetwork(ssid: String) = networkDao.getNetwork(ssid)
+
     suspend fun deleteNetwork(network: NetworkEntity) = networkDao.deleteNetwork(network)
     suspend fun updateNetwork(network: NetworkEntity) = networkDao.updateNetwork(network)
 
@@ -46,4 +49,26 @@ class AppRepository @Inject constructor(
     suspend fun removeNetworkFromDevice(deviceId: String, ssid: String) = deviceDao.removeNetworkFromDevice(deviceId, ssid)
     suspend fun removeAllNetworksFromDevice(deviceId: String) = deviceDao.removeAllNetworksFromDevice(deviceId)
     fun getNetworksForDevice(deviceId: String) = deviceDao.getNetworksForDevice(deviceId)
+
+    suspend fun addCustomIp(ip: CustomIpEntity) = deviceDao.addCustomIp(ip)
+    suspend fun deleteCustomIp(ip: CustomIpEntity) = deviceDao.deleteCustomIp(ip)
+    fun getAllCustomIpFlow() = deviceDao.getAllCustomIpFlow()
+    
+    suspend fun getUnlinkedCustomIps(): List<String> = deviceDao.getUnlinkedCustomIps()
+    
+    suspend fun getCustomIpsForLastConnectedDevice(): List<String> = 
+        deviceDao.getCustomIpsForLastConnectedDevice()
+    
+    suspend fun linkCustomIpToDevice(deviceId: String, ipAddress: String) = 
+        deviceDao.linkCustomIpToDevice(DeviceCustomIpCrossRef(deviceId, ipAddress))
+    
+    suspend fun unlinkCustomIpFromDevice(deviceId: String, ipAddress: String) = 
+        deviceDao.unlinkCustomIpFromDevice(DeviceCustomIpCrossRef(deviceId, ipAddress))
+    
+    suspend fun unlinkAllCustomIpsFromDevice(deviceId: String) = 
+        deviceDao.unlinkAllCustomIpsFromDevice(deviceId)
+
+    fun isNetworkEnabled(ssid: String): Boolean {
+        return networkDao.isNetworkEnabled(ssid) ?: false
+    }
 }
