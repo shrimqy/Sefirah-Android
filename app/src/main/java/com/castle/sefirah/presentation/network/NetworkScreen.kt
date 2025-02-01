@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +34,7 @@ fun NetworkScreen(rootNavController: NavHostController) {
     val networkList = viewModel.networkList.collectAsState()
     val showDeleteDialog = remember { mutableStateOf(false) }
     val selectedNetwork = remember { mutableStateOf<NetworkEntity?>(null) }
+//    val discoveryPreference = viewModel.discoveryPreference.collectAsState()
 
     Scaffold(
         topBar = {
@@ -61,14 +61,14 @@ fun NetworkScreen(rootNavController: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top,
         ) {
-            item {
-                SwitchPreferenceWidget(
-                    title = "Allow all networks",
-                    checked = true,
-                    onCheckedChanged = { viewModel.updateNetworkPreference(it) },
-                    subtitle = "Udp listener will be active on any connected network [Higher battery usage]",
-                )
-            }
+//            item {
+//                SwitchPreferenceWidget(
+//                    title = "Allow all networks",
+//                    checked = discoveryPreference.value,
+//                    onCheckedChanged = { viewModel.updateNetworkPreference(it) },
+//                    subtitle = "Udp listener will be active on any connected network [Higher battery usage]",
+//                )
+//            }
             
             items(
                 items = networkList.value,

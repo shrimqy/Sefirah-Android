@@ -10,14 +10,19 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import sefirah.data.repository.AppRepository
 import sefirah.database.model.NetworkEntity
+import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
 
 @HiltViewModel
 class NetworkViewModel @Inject constructor(
     private val appRepository: AppRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
     private val _networkList = MutableStateFlow<List<NetworkEntity>>(emptyList())
     val networkList: StateFlow<List<NetworkEntity>> = _networkList
+
+//    private val _discoveryPreference = MutableStateFlow(true)
+//    val discoveryPreference: StateFlow<Boolean> = _discoveryPreference
 
     init {
         viewModelScope.launch {
@@ -25,6 +30,12 @@ class NetworkViewModel @Inject constructor(
                 _networkList.value = device
             }
         }
+
+//        viewModelScope.launch {
+//            preferencesRepository.readPassiveDiscoverySettings().collect { enabled ->
+//                _discoveryPreference.value = enabled
+//            }
+//        }
     }
 
     fun updateNetwork(network: NetworkEntity) {
@@ -41,6 +52,8 @@ class NetworkViewModel @Inject constructor(
     }
 
     fun updateNetworkPreference(preference: Boolean) {
-
+        viewModelScope.launch {
+            preferencesRepository.savePassiveDiscovery(preference)
+        }
     }
 }

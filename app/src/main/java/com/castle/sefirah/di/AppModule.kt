@@ -24,7 +24,7 @@ import sefirah.media.MediaHandler
 import sefirah.media.MediaService
 import sefirah.network.NetworkManagerImpl
 import sefirah.network.NsdService
-import sefirah.network.SftpServer
+import sefirah.network.sftp.SftpServer
 import sefirah.network.SocketFactoryImpl
 import sefirah.network.util.MessageSerializer
 import sefirah.network.util.TrustManager

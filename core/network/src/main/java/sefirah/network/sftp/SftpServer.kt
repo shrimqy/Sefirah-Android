@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
  */
 
-package sefirah.network
+package sefirah.network.sftp
 
 import android.content.Context
 import android.net.Uri
@@ -84,6 +84,7 @@ class SftpServer @Inject constructor(
                 if (SUPPORTS_NATIVEFS) {
                     NativeFileSystemFactory()
                 } else {
+                    // TODO: Configure KDE Connect Saf file system
                     return
                 }
             )
