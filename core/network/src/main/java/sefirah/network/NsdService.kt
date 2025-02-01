@@ -1,6 +1,5 @@
 package sefirah.network
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Context.WIFI_SERVICE
 import android.net.nsd.NsdManager
@@ -9,8 +8,6 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings.Global
-import android.provider.Settings.Secure
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
@@ -23,8 +20,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import sefirah.database.model.toDomain
-import sefirah.domain.model.RemoteDevice
+import sefirah.domain.model.UdpBroadcast
 import java.util.concurrent.Executors
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -69,17 +65,17 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
         }
     }
 
-    @SuppressLint("HardwareIds")
-    fun advertiseService(port: Int) {
-        val deviceName = Global.getString(context.contentResolver, "device_name")
-        currentServiceID = Secure.getString(context.contentResolver, Secure.ANDROID_ID)
+
+    fun advertiseService(broadcast: UdpBroadcast, port: Int) {
+        currentServiceID = broadcast.deviceId
 
         val serviceInfo = NsdServiceInfo().also {
             it.serviceType = SERVICE_TYPE
             it.serviceName = currentServiceID
             it.port = port
         }
-        serviceInfo.setAttribute("deviceName", deviceName);
+        serviceInfo.setAttribute("deviceName", broadcast.deviceName)
+        serviceInfo.setAttribute("publicKey", broadcast.publicKey)
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 stopAdvertisingService()
@@ -256,3 +252,4 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
         private const val SERVICE_TYPE = "_sefirah._udp."
     }
 }
+

@@ -18,7 +18,7 @@ import androidx.work.workDataOf
 import io.ktor.network.sockets.BoundDatagramSocket
 import io.ktor.network.sockets.Datagram
 import io.ktor.network.sockets.InetSocketAddress
-import io.ktor.util.encodeBase64
+import io.ktor.network.sockets.isClosed
 import io.ktor.utils.io.core.buildPacket
 import io.ktor.utils.io.core.readUTF8Line
 import io.ktor.utils.io.streams.writerUTF8
@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -42,10 +43,8 @@ import sefirah.database.model.NetworkEntity
 import sefirah.database.model.toDomain
 import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.UdpBroadcast
-import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.NetworkService.Companion.REMOTE_INFO
-import sefirah.network.util.CryptoUtils
 import sefirah.network.util.MessageSerializer
 import javax.inject.Inject
 
@@ -59,20 +58,20 @@ class NetworkDiscovery @Inject constructor(
 ) {
     private lateinit var connectivityManager: ConnectivityManager
     private var isRegistered = false
-    private var defaultUdpSocket: BoundDatagramSocket? = null
-    private val udpSockets = mutableMapOf<Int, BoundDatagramSocket>()
+    private var udpSocket: BoundDatagramSocket? = null
     private var broadcasterJob: Job? = null
-    private var listenerJobs = mutableMapOf<Int, Job>()
+    private var listenerJob: Job? = null
     private var cleanupJob: Job? = null
     private var pairedDeviceListener: Job? = null
 
     private val scope = CoroutineScope(Dispatchers.IO) + SupervisorJob()
-    private val _discoveredDevices = MutableStateFlow<List<UdpBroadcast>>(emptyList())
+    private val _discoveredDevices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
     val discoveredDevices = _discoveredDevices.asStateFlow()
 
     // Capture the stateflow from the service as the data updates
     private val services: StateFlow<List<NsdServiceInfo>> = nsdService.services
     private var port: Int = 8689
+    private val udpPort: Int = 8689
 
     enum class NetworkAction {
         SAVE_NETWORK,
@@ -82,18 +81,6 @@ class NetworkDiscovery @Inject constructor(
 
     var action = NetworkAction.NONE
 
-    init {
-        for (port in PORT_RANGE) {
-            try {
-                defaultUdpSocket = socketFactory.udpSocket(port)
-                nsdService.advertiseService(port)
-                break
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to create UDP socket on port $port", e)
-            }
-        }
-    }
-
     fun register(networkAction: NetworkAction) {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU && action == NetworkAction.SAVE_NETWORK) saveCurrentNetworkAsTrusted()
         action = networkAction
@@ -101,6 +88,7 @@ class NetworkDiscovery @Inject constructor(
         if (isRegistered) unregister()
 
         connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
         val networkRequest = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
             .build()
@@ -127,6 +115,7 @@ class NetworkDiscovery @Inject constructor(
 
     private val networkCallback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
+
             override fun onCapabilitiesChanged(
                 network: Network,
                 networkCapabilities: NetworkCapabilities,
@@ -138,6 +127,11 @@ class NetworkDiscovery @Inject constructor(
                     NetworkAction.START_DEVICE_DISCOVERY -> deviceDiscoveryCallback(wifiInfo)
                     NetworkAction.NONE -> { /* Do nothing */ }
                 }
+            }
+
+            override fun onLost(network: Network) {
+                Log.d(TAG, "Network Lost")
+                stopDefaultListener()
             }
         }
     } else {
@@ -152,6 +146,11 @@ class NetworkDiscovery @Inject constructor(
                     NetworkAction.NONE -> { /* Do nothing */ }
                 }
             }
+
+            override fun onLost(network: Network) {
+                Log.d(TAG, "Network Lost")
+                stopDefaultListener()
+            }
         }
     }
 
@@ -159,56 +158,49 @@ class NetworkDiscovery @Inject constructor(
         nsdService.startDiscovery()
         scope.launch {
             services.collectLatest { serviceInfoList ->
-                serviceInfoList.forEach { serviceInfo ->
-                    val port = serviceInfo.port
-                    if (port > 0) {
-                        startDeviceListener(port, localDevice)
+                val nsdDevices = serviceInfoList.mapNotNull { serviceInfo ->
+                    try {
+                        createDiscoveredDevice(serviceInfo)?.takeIf {
+                            it.deviceId.isNotBlank() && 
+                            it.publicKey.isNotBlank() && 
+                            it.ipAddresses.isNotEmpty()
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing service info", e)
+                        null
+                    }
+                }
+
+                _discoveredDevices.update { currentList ->
+                    // Merge NSD devices with existing UDP devices
+                    val udpDevices = currentList.filter { it.source == DiscoverySource.UDP }
+                    val merged = (udpDevices + nsdDevices)
+                        .distinctBy { it.deviceId }
+                        .sortedByDescending { it.timestamp }
+                    
+                    merged.filter { device ->
+                        device.deviceId != localDevice.deviceId && 
+                        device.publicKey.isNotBlank()
                     }
                 }
             }
         }
     }
 
-    fun saveCurrentNetworkAsTrusted(wifiInfo: WifiInfo? = null) {
-        if (!checkLocationPermissions(context)) return
-        val ssid: String?
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && wifiInfo != null) {
-            ssid = wifiInfo.ssid.removeSurrounding("\"")
-        } else {
-            val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            val connectionInfo = wifiManager.connectionInfo
-            wifiManager.dhcpInfo.gateway
-            if (connectionInfo.supplicantState != SupplicantState.COMPLETED) return
-            ssid = connectionInfo.ssid.removeSurrounding("\"")
-        }
-        Log.d(TAG, "SSID: $ssid")
-        when {
-            ssid.equals(UNKNOWN_SSID, ignoreCase = true) -> return
-            ssid.isBlank() -> return
-        }
-        action = NetworkAction.NONE
-        unregister()
-        scope.launch {
-            appRepository.addNetwork(NetworkEntity(ssid = ssid, isEnabled = true))
-            appRepository.addNetworkToDevice(DeviceNetworkCrossRef(deviceId = appRepository.getLastConnectedDevice()!!.deviceId, ssid = ssid))
-        }
-    }
-
     fun startDiscovery() {
         scope.launch {
+            Log.d(TAG, "Starting discovery")
             val localDevice = appRepository.getLocalDevice().toDomain()
             startBroadcasting(localDevice)
-            
+            startNSDDiscovery(localDevice)
             // Start listening on default port
-            defaultUdpSocket?.let { socket ->
+            udpSocket?.let { socket ->
                 val defaultPort = (socket.localAddress as? InetSocketAddress)?.port
                 if (defaultPort != null) {
-                    startDeviceListener(defaultPort, localDevice)
+                    startDeviceListener(localDevice)
                 }
             }
-            
-            // Start NSD discovery and listen for services
-            startNSDDiscovery(localDevice)
+
             startCleanupJob()
         }
     }
@@ -216,11 +208,11 @@ class NetworkDiscovery @Inject constructor(
     private fun deviceDiscoveryCallback(wifiInfo: WifiInfo?) {
         CoroutineScope(Dispatchers.IO).launch {
             if (wifiInfo != null && wifiInfo.ssid != UNKNOWN_SSID && wifiInfo.networkId != -1) {
-                val knownNetwork = appRepository.getNetwork(wifiInfo.ssid.removeSurrounding("\""))
-                Log.d(TAG, "Known Network: ${knownNetwork?.ssid}, pairedDeviceListener: ${pairedDeviceListener?.isActive}, listenerJobs: ${listenerJobs[port]?.isActive}")
-                if (knownNetwork != null &&
+                val knownNetwork = appRepository.isNetworkEnabled(wifiInfo.ssid.removeSurrounding("\""))
+                Log.d(TAG, "is Network Enabled: ${knownNetwork}, pairedDeviceListener: ${pairedDeviceListener?.isActive}, listenerJobs: ${listenerJob?.isActive}")
+                if (knownNetwork &&
                     (pairedDeviceListener?.isActive == false || pairedDeviceListener == null) &&
-                    (listenerJobs[port]?.isActive == false || listenerJobs[port] == null)) {
+                    listenerJob?.isActive == false || listenerJob == null) {
                     Log.d(TAG, "Starting paired device listener on port $port")
                     startPairedDeviceListener()
                 }
@@ -229,34 +221,22 @@ class NetworkDiscovery @Inject constructor(
     }
 
     private fun startPairedDeviceListener() {
-        // Always try to create a new socket if we don't have one
-        if (defaultUdpSocket == null) {
-            for (port in PORT_RANGE) {
-                try {
-                    defaultUdpSocket = socketFactory.udpSocket(port)
-                    // Also advertise the service with this port
-                    nsdService.advertiseService(port)
-                    Log.d(TAG, "Created new UDP socket on port $port")
-                    break
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to create UDP socket on port $port", e)
-                }
+        if (udpSocket == null) {
+            try {
+                udpSocket = socketFactory.udpSocket(udpPort)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create UDP socket on port $port", e)
+                return
             }
-        }
-
-        if (defaultUdpSocket == null) {
-            Log.e(TAG, "Failed to create default UDP socket")
-            return
         }
 
         pairedDeviceListener = scope.launch {
             try {
                 val localDevice = appRepository.getLocalDevice().toDomain()
                 val lastConnectedDevice = appRepository.getLastConnectedDevice() ?: return@launch
-                action = NetworkAction.NONE
-                unregister()
+
                 while (isActive) {
-                    val datagram = defaultUdpSocket?.receive() ?: continue
+                    val datagram = udpSocket?.receive() ?: continue
                     val udpBroadcast = datagram.packet.readUTF8Line()?.let {
                         messageSerializer.deserialize(it) as UdpBroadcast
                     } ?: continue
@@ -266,6 +246,7 @@ class NetworkDiscovery @Inject constructor(
                     if (udpBroadcast.deviceId == lastConnectedDevice.deviceId) {
                         Log.d(TAG, "Paired device discovered: ${udpBroadcast.deviceId}")
                         initiateConnection(lastConnectedDevice.deviceId)
+                        unregister()
                         break
                     }
                 }
@@ -276,8 +257,18 @@ class NetworkDiscovery @Inject constructor(
     }
 
     private fun startBroadcasting(localDevice: LocalDevice) {
-        broadcasterJob?.cancel()
+        if (udpSocket == null) {
+            try {
+                udpSocket = socketFactory.udpSocket(udpPort)
+                Log.d(TAG, "UDP socket created successfully on port $udpPort")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create UDP socket on port $udpPort", e)
+                return
+            }
+        }
+        
         broadcasterJob = scope.launch {
+            Log.d(TAG, "Broadcaster started")
             try {
                 val udpBroadcast = UdpBroadcast(
                     deviceId = localDevice.deviceId,
@@ -285,50 +276,76 @@ class NetworkDiscovery @Inject constructor(
                     publicKey = localDevice.publicKey,
                     timestamp = null,
                 )
+                nsdService.advertiseService(udpBroadcast, port)
+
+                val broadcastList = appRepository.getAllCustomIpFlow().first().toMutableList().also {
+                    it.add("255.255.255.255")
+                    Log.d(TAG, "Broadcasting to ${it.size} targets")
+                }
 
                 while (isActive) {
                     udpBroadcast.timestamp = System.currentTimeMillis()
                     val serializedMessage = messageSerializer.serialize(udpBroadcast)
-                    val bytePacket = buildPacket {
-                        writerUTF8().write(serializedMessage ?: "")
+
+                    broadcastList.forEach { ipAddress ->
+                        try {
+                            if (udpSocket?.isClosed == true) {
+                                Log.w(TAG, "Recreating closed socket")
+                                udpSocket = socketFactory.udpSocket(udpPort)
+                            }
+
+                            val bytePacket = buildPacket {
+                                writerUTF8().write(serializedMessage)
+                            }
+
+                            udpSocket?.send(Datagram(
+                                bytePacket,
+                                InetSocketAddress(ipAddress, 8689)
+                            ))
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to $ipAddress: ${e.message?.take(30)}")
+                        }
                     }
-                    defaultUdpSocket?.send(Datagram(
-                        bytePacket,
-                        InetSocketAddress("255.255.255.255", 8689)
-                    ))
                     delay(1000)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error in broadcasting", e)
+                Log.e(TAG, "Broadcaster failed: ${e.message}")
+            } finally {
+                Log.d(TAG, "Broadcaster stopped")
             }
         }
     }
 
-    private fun startDeviceListener(port: Int, localDevice: LocalDevice) {
-        // Check if we already have a listener job for this port
-        if (listenerJobs.containsKey(port) && listenerJobs[port]?.isActive == true) {
-            Log.d(TAG, "Listener already exists and is active for port $port")
-            return
-        }
-
+    private fun startDeviceListener(localDevice: LocalDevice) {
         try {
-            // Use existing socket if it's the default port, otherwise create new one
-            val socket = if (defaultUdpSocket?.localAddress is InetSocketAddress && 
-                (defaultUdpSocket?.localAddress as InetSocketAddress).port == port) {
-                defaultUdpSocket
-            } else {
-                socketFactory.udpSocket(port).also { udpSockets[port] = it }
+            if (udpSocket == null) {
+                try {
+                    udpSocket = socketFactory.udpSocket(udpPort)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to create UDP socket on port $port", e)
+                    return
+                }
             }
-            
-            listenerJobs[port] = scope.launch {
+
+            listenerJob = scope.launch {
                 try {
                     while (isActive) {
-                        val datagram = socket?.receive() ?: continue
+                        val datagram = udpSocket!!.receive()
                         val udpBroadcast = datagram.packet.readUTF8Line()?.let {
                             messageSerializer.deserialize(it) as UdpBroadcast
                         } ?: continue
                         if (udpBroadcast.deviceId == localDevice.deviceId) continue
-                        updateDiscoveredDevices(udpBroadcast)
+                        
+                        val discoveredDevice = DiscoveredDevice(
+                            deviceId = udpBroadcast.deviceId,
+                            deviceName = udpBroadcast.deviceName,
+                            publicKey = udpBroadcast.publicKey,
+                            port = udpBroadcast.port!!,
+                            ipAddresses = udpBroadcast.ipAddresses,
+                            timestamp = System.currentTimeMillis(),
+                            source = DiscoverySource.UDP
+                        )
+                        updateDiscoveredDevices(discoveredDevice)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in device listener on port $port", e)
@@ -364,77 +381,84 @@ class NetworkDiscovery @Inject constructor(
     }
 
     fun stopDiscovery() {
+        action = NetworkAction.NONE
         broadcasterJob?.cancel()
-        listenerJobs.values.forEach { it.cancel() }
+        broadcasterJob = null
+        listenerJob?.cancel()
         cleanupJob?.cancel()
         nsdService.stopDiscovery()
         nsdService.stopAdvertisingService()
-        // Close all sockets
+
         try {
-            defaultUdpSocket?.close()
-            defaultUdpSocket = null
+            udpSocket?.close()
+            udpSocket = null
         } catch (e: Exception) {
-            Log.e(TAG, "Error closing default UDP socket", e)
+            Log.e(TAG, "Error closing UDP socket", e)
         }
 
-        udpSockets.values.forEach { socket ->
-            try {
-                socket.close()
-            } catch (e: Exception) {
-                Log.e(TAG, "Error closing UDP socket", e)
-            }
-        }
-        udpSockets.clear()
-        listenerJobs.clear()
         _discoveredDevices.value = emptyList()
     }
 
     private fun stopDefaultListener() {
         try {
-            defaultUdpSocket?.close()
-            defaultUdpSocket = null
+            udpSocket?.close()
+            udpSocket = null
             nsdService.stopAdvertisingService()
-            // Remove the listener job for the default socket
-            listenerJobs[PORT_RANGE.first]?.cancel()
-            listenerJobs.remove(PORT_RANGE.first)
+            listenerJob?.cancel()
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping default listener", e)
+            Log.e(TAG, "Error stopping listener", e)
         }
     }
 
-    private fun updateDiscoveredDevices(newDevice: UdpBroadcast) {
-        val currentDevices = _discoveredDevices.value.toMutableList()
-        
-        // Update existing device or add new one
-        val existingDeviceIndex = currentDevices.indexOfFirst { it.deviceId == newDevice.deviceId }
-        if (existingDeviceIndex != -1) {
-            currentDevices[existingDeviceIndex] = newDevice
-        } else {
-            currentDevices.add(newDevice)
+    private fun updateDiscoveredDevices(newDevice: DiscoveredDevice) {
+        _discoveredDevices.update { currentList ->
+            val existing = currentList.find { it.deviceId == newDevice.deviceId }
+            when {
+                existing?.source == DiscoverySource.NSD -> currentList
+                else -> currentList.filterNot { it.deviceId == newDevice.deviceId } + newDevice
+            }
         }
-        
-        _discoveredDevices.value = currentDevices
     }
 
     private fun cleanupStaleDevices() {
         val currentTime = System.currentTimeMillis()
-        val currentDevices = _discoveredDevices.value.toMutableList()
-        
-        currentDevices.removeAll { device ->
-            val isStale = device.timestamp?.let { timestamp ->
-                (currentTime - timestamp) > DEVICE_TIMEOUT
-            } ?: true
-            isStale
+        _discoveredDevices.update { currentList ->
+            currentList.filterNot { device ->
+                device.source == DiscoverySource.UDP && 
+                (currentTime - device.timestamp) > DEVICE_TIMEOUT
+            }
         }
-        
-        _discoveredDevices.value = currentDevices
+    }
+
+    fun saveCurrentNetworkAsTrusted(wifiInfo: WifiInfo? = null) {
+        if (!checkLocationPermissions(context)) return
+        val ssid: String?
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && wifiInfo != null) {
+            ssid = wifiInfo.ssid.removeSurrounding("\"")
+        } else {
+            val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val connectionInfo = wifiManager.connectionInfo
+            wifiManager.dhcpInfo.gateway
+            if (connectionInfo.supplicantState != SupplicantState.COMPLETED) return
+            ssid = connectionInfo.ssid.removeSurrounding("\"")
+        }
+        Log.d(TAG, "SSID: $ssid")
+        when {
+            ssid.equals(UNKNOWN_SSID, ignoreCase = true) -> return
+            ssid.isBlank() -> return
+        }
+        action = NetworkAction.NONE
+        unregister()
+        scope.launch {
+            appRepository.addNetwork(NetworkEntity(ssid = ssid, isEnabled = true))
+            appRepository.addNetworkToDevice(DeviceNetworkCrossRef(deviceId = appRepository.getLastConnectedDevice()!!.deviceId, ssid = ssid))
+        }
     }
 
     companion object {
         private const val TAG = "NetworkDiscovery"
         private const val NETWORK_WORKER_NAME = "network_connection_worker"
         private const val UNKNOWN_SSID = "<unknown ssid>"
-        private val PORT_RANGE = 8689..8690
         private const val DEVICE_TIMEOUT = 3000L // 3 seconds timeout
     }
 }
