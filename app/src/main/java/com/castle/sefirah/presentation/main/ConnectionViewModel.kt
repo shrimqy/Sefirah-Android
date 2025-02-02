@@ -74,7 +74,8 @@ class ConnectionViewModel @Inject constructor(
             _deviceDetails.value?.let { device ->
                 _isRefreshing.value = true
                 when {
-                    syncRequest && _connectionState.value == ConnectionState.Disconnected() -> {
+                    syncRequest && _connectionState.value.isDisconnected -> {
+                        _connectionState.value = ConnectionState.Disconnected()
                         startService(Actions.START, device)
                     }
                     syncRequest && _connectionState.value == ConnectionState.Connected -> {
