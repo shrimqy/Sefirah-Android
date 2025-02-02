@@ -1,0 +1,16 @@
+v1.0.0:
+
+Note: Casting/Mirroring has been removed for now.
+
+Features:
+
+* Android storage in Windows Explorer.
+* Auto clipboard sync (enable accessibility permissions).
+* Notification filtering & actions.
+* Receive images & bulk transfers from Windows clipboard.
+* Add/change device IP.
+* Other:
+
+* Android 15 support.
+* New onboarding & UI.
+* Improved security, device discovery & stability.
