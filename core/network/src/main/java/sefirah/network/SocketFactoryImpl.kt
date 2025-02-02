@@ -15,7 +15,6 @@ import sefirah.domain.repository.SocketFactory
 import sefirah.network.util.TrustManager
 import java.net.InetAddress
 import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import javax.inject.Inject
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLServerSocket

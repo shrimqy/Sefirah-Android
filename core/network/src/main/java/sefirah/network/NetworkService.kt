@@ -16,6 +16,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
 import io.ktor.network.sockets.Socket
+import io.ktor.network.sockets.isClosed
 import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.ByteReadChannel
@@ -195,7 +196,7 @@ class NetworkService : Service() {
 
     private suspend fun sendDeviceInfo(remoteInfo: RemoteDevice) {
         val localDevice = appRepository.getLocalDevice()
-        
+
         // Generate nonce and proof
         val nonce = ECDHHelper.generateNonce()
         val sharedSecret = ECDHHelper.deriveSharedSecret(
@@ -203,7 +204,7 @@ class NetworkService : Service() {
             remoteInfo.publicKey
         )
         val proof = ECDHHelper.generateProof(sharedSecret, nonce)
-        
+
         sendMessage(DeviceInfo(
             deviceId = localDevice.deviceId,
             deviceName = localDevice.deviceName,
@@ -252,7 +253,7 @@ class NetworkService : Service() {
         // Only one coroutine at a time can acquire the lock and send the message
         mutex.withLock {
             try {
-                if (_connectionState.value == ConnectionState.Connected || _connectionState.value == ConnectionState.Connecting) {
+                if (socket?.isClosed == false) {
                     writeChannel?.let { channel ->
                         val jsonMessage = messageSerializer.serialize(message)
                         channel.writeStringUtf8("$jsonMessage\n") // Add newline to separate messages
@@ -293,6 +294,8 @@ class NetworkService : Service() {
                             break
                         }
                     }
+                } ?: run {
+                   stop(false)
                 }
             } catch (e: Exception) {
                 Log.d(TAG, "Session error")
@@ -327,7 +330,7 @@ class NetworkService : Service() {
         sftpServer.initialize()
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        
+
         // Add observer for connection state changes
         scope.launch {
             _connectionState.collect { state ->
@@ -353,15 +356,14 @@ class NetworkService : Service() {
                 registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
                     ?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
 
-        val wifiManager = getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val wifi = wifiManager.isWifiEnabled
+//        val wifiManager = getSystemService(Context.WIFI_SERVICE) as WifiManager
+//        val wifi = wifiManager.isWifiEnabled
 
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val bluetooth = bluetoothManager.adapter.isEnabled
 
         return DeviceStatus(
             batteryStatus = batteryStatus,
-            wifiStatus = wifi,
             bluetoothStatus = bluetooth,
             chargingStatus = isCharging
         )
@@ -372,11 +374,8 @@ class NetworkService : Service() {
             START,
             STOP,
         }
-        const val ACTION_OPEN_MAIN = "android.intent.action.MAIN"
-        const val TAG = "NetworkService"
-        const val DEVICE_INFO = "device_info"
-        const val REMOTE_INFO = "remote_info"
 
-        const val FORCE_STOP = "forceStop"
+        const val TAG = "NetworkService"
+        const val REMOTE_INFO = "remote_info"
     }
 }

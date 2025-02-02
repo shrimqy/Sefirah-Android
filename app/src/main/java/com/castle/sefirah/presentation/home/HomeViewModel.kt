@@ -39,11 +39,8 @@ import kotlinx.coroutines.sync.withLock
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val preferencesRepository: PreferencesRepository,
     playbackRepository: PlaybackRepository,
     private val networkManager: NetworkManager,
-    private val appScope: AppCoroutineScope,
-    private val appRepository: AppRepository,
     application: Application
 ) : AndroidViewModel(application) {
 

@@ -5,10 +5,8 @@ import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import com.komu.sekia.di.AppCoroutineScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -27,9 +25,6 @@ import sefirah.domain.repository.NetworkManager
 import sefirah.network.NetworkService
 import sefirah.network.NetworkService.Companion.Actions
 import javax.inject.Inject
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
-import sefirah.network.NetworkService.Companion.FORCE_STOP
 
 @HiltViewModel
 class ConnectionViewModel @Inject constructor(
@@ -56,8 +51,7 @@ class ConnectionViewModel @Inject constructor(
         }
 
         appScope.launch {
-            appRepository.getLastConnectedDeviceFlow().first()?.let { device->
-                Log.d("ConnectionViewModel", "Device found: ${device.deviceName}")
+            appRepository.getLastConnectedDeviceFlow().first()?.let {
                 if (_connectionState.value == ConnectionState.Disconnected()) {
                     toggleSync(true)
                 }
@@ -67,7 +61,6 @@ class ConnectionViewModel @Inject constructor(
         appScope.launch {
             appRepository.getLastConnectedDeviceFlow().collectLatest { device ->
                 if (device != null) {
-                    Log.d("ConnectionViewModel", "Device found: ${device.deviceName}")
                     _deviceDetails.value = device.toDomain()
                 } else {
                     _deviceDetails.value = null

@@ -35,7 +35,6 @@ fun HomeScreen(
     val viewModel: HomeViewModel = hiltViewModel()
     val deviceDetails by connectionViewModel.deviceDetails.collectAsState()
     val connectionState by connectionViewModel.connectionState.collectAsState()
-    val context = LocalContext.current
     val playbackData by viewModel.playbackData.collectAsState()
 
     LazyColumn(

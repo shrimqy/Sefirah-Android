@@ -100,23 +100,24 @@ internal class PermissionStep : OnboardingStep {
                 .fillMaxSize()
                 .padding(horizontal = MaterialTheme.padding.medium)
         ) {
-            if (viewModel.readAppEntry() == true)
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SettingsSuggest,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(bottom = MaterialTheme.padding.small)
-                        .size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Required Permissions",
-                    style = MaterialTheme.typography.headlineSmall,
-                )
+            if (viewModel.readAppEntry() == true) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SettingsSuggest,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(bottom = MaterialTheme.padding.small)
+                            .size(48.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Required Permissions",
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                }
             }
 
             ElevatedCard(

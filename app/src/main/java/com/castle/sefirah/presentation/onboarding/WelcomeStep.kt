@@ -74,7 +74,7 @@ internal class WelcomeStep : OnboardingStep {
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Let's get you started, you'll need to first download and install the Windows companion app through the Microsoft App Store: ",
+                        text = "Let's get you started, firstly go through the instructions in github to download and install the Windows companion app from Window App's Github: ",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -84,14 +84,14 @@ internal class WelcomeStep : OnboardingStep {
                     FilledTonalButton(
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW).apply {
-                                data = Uri.parse("https://github.com/shrimqy/sefirah")
+                                data = Uri.parse("https://github.com/shrimqy/Sefirah")
                             }
                             context.startActivity(intent)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Download Windows App",
+                            text = "Windows",
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
@@ -99,7 +99,7 @@ internal class WelcomeStep : OnboardingStep {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Once that's done, you can check out the GitHub page for more information about the app:",
+                        text = "Once that's done, you can check out the Android App's GitHub page for more information:",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -109,14 +109,14 @@ internal class WelcomeStep : OnboardingStep {
                     FilledTonalButton(
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW).apply {
-                                data = Uri.parse("https://github.com/shrimqy/Sekia")
+                                data = Uri.parse("https://github.com/shrimqy/Sefirah-Android")
                             }
                             context.startActivity(intent)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Visit GitHub",
+                            text = "Android",
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
