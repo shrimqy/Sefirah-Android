@@ -15,7 +15,7 @@ android {
         applicationId = "com.castle.sefirah"
 
         versionCode = 1
-        versionName = "0.4.0"
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("Long", "BUILD_TIME", "${System.currentTimeMillis()}L")
@@ -33,6 +33,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     buildFeatures {
@@ -80,6 +81,7 @@ dependencies {
 
     implementation(libs.androidx.media)
     implementation(libs.androidx.hilt.work)
+    implementation(libs.play.services.dtdi)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
