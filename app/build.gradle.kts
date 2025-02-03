@@ -81,7 +81,6 @@ dependencies {
 
     implementation(libs.androidx.media)
     implementation(libs.androidx.hilt.work)
-    implementation(libs.play.services.dtdi)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
