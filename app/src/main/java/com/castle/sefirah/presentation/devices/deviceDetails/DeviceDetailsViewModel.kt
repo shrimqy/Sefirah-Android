@@ -71,4 +71,15 @@ class EditDeviceViewModel @Inject constructor(
             appRepository.removeNetworkFromDevice(deviceId, ssid)
         }
     }
+
+    fun removeIp(ip: String) {
+        viewModelScope.launch {
+            _device.value?.let { device ->
+                val updatedIps = device.ipAddresses.toMutableList().apply {
+                    remove(ip)
+                }
+                appRepository.updateIpAddresses(deviceId = device.deviceId, ipAddresses = updatedIps)
+            }
+        }
+    }
 }

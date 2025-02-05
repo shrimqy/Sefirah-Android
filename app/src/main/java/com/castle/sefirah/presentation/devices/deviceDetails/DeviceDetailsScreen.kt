@@ -93,12 +93,15 @@ fun EditDeviceScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { DeviceHeader(device = device) }
-            item { IpAddressSection(
-                device = device,
-                selectedIp = device?.prefAddress,
-                onIpSelected = viewModel::setPreferredIp,
-                onAddCustomIpClick = { showCustomIpDialog = true }
-            ) }
+            item {
+                IpAddressSection(
+                    device = device,
+                    selectedIp = device?.prefAddress,
+                    onIpSelected = viewModel::setPreferredIp,
+                    onAddCustomIpClick = { showCustomIpDialog = true },
+                    onRemoveIp = viewModel::removeIp
+                )
+            }
             item { NetworksSection(viewModel = viewModel) }
         }
     }
@@ -230,7 +233,8 @@ private fun IpAddressSection(
     device: RemoteDeviceEntity?,
     selectedIp: String?,
     onIpSelected: (String) -> Unit,
-    onAddCustomIpClick: () -> Unit
+    onAddCustomIpClick: () -> Unit,
+    onRemoveIp: (String) -> Unit
 ) {
     Text(
         "IP Addresses",
@@ -252,7 +256,8 @@ private fun IpAddressSection(
                 IpAddressItem(
                     ip = ip,
                     isSelected = isSelected,
-                    onSelect = { onIpSelected(ip) }
+                    onSelect = { onIpSelected(ip) },
+                    onRemove = { onRemoveIp(ip) }
                 )
             }
 
@@ -281,7 +286,8 @@ private fun IpAddressSection(
 private fun IpAddressItem(
     ip: String,
     isSelected: Boolean,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    onRemove: () -> Unit
 ) {
     Surface(
         modifier = Modifier
@@ -308,13 +314,12 @@ private fun IpAddressItem(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Lan,
-                    contentDescription = null,
-                    tint = if (isSelected) 
-                        MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                RadioButton(
+                    selected = isSelected,
+                    onClick = onSelect,
+                    colors = RadioButtonDefaults.colors(
+                        selectedColor = MaterialTheme.colorScheme.primary
+                    )
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
@@ -328,13 +333,17 @@ private fun IpAddressItem(
                     modifier = Modifier.weight(1f).animateContentSize()
                 )
             }
-            RadioButton(
-                selected = isSelected,
-                onClick = onSelect,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = MaterialTheme.colorScheme.primary
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Remove IP",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
                 )
-            )
+            }
         }
     }
 }
