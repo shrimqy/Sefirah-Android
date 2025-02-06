@@ -8,8 +8,12 @@ import io.ktor.network.sockets.InetSocketAddress
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.tls.tls
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import sefirah.domain.model.SocketType
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.util.TrustManager
@@ -18,33 +22,32 @@ import java.security.SecureRandom
 import javax.inject.Inject
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLServerSocket
-import kotlin.coroutines.coroutineContext
 
 
 class SocketFactoryImpl @Inject constructor(
     val context: Context,
     private val customTrustManager: TrustManager,
-): SocketFactory {
+) : SocketFactory {
+    private val selectorManager = SelectorManager(Dispatchers.IO)
+    private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override suspend fun tcpClientSocket(
         type: SocketType,
         ipAddress: String,
         port: Int,
     ): Socket? {
-        return try {
-            Log.d("connect", "Connecting to $ipAddress:$port")
-            val selectorManager = SelectorManager(Dispatchers.IO)
-            val socket = aSocket(selectorManager).tcp()
-                .connect(ipAddress, port)
-                .tls(coroutineContext) {
-                    trustManager = customTrustManager.getRemoteTrustManager()
-                }
-
-            Log.d("connect", "Client Connected to $ipAddress")
-            socket
-        } catch (e: Exception) {
-            Log.e("connect", "Failed to connect", e)
-            null
+        return coroutineScope {
+            try {
+                Log.d("SocketFactory", "Connecting to $ipAddress:$port")
+                withTimeoutOrNull(3000L) {
+                    aSocket(selectorManager).tcp().connect(ipAddress, port).tls(connectionScope.coroutineContext) {
+                        trustManager = customTrustManager.getRemoteTrustManager()
+                    }
+                }.also { Log.d("SocketFactory", "socket: ${it?.remoteAddress}") }
+            } catch (e: Exception) {
+                Log.e("SocketFactory", "Connection failed", e)
+                null
+            }
         }
     }
 

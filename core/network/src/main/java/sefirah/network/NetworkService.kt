@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
-import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Binder
 import android.os.Build
@@ -119,8 +118,8 @@ class NetworkService : Service() {
     }
 
     private fun start(remoteInfo: RemoteDevice) {
-        _connectionState.value = ConnectionState.Connecting
         scope.launch {
+            _connectionState.value = ConnectionState.Connecting
             try {
                 var connected = false
                 if (remoteInfo.prefAddress != null) {
