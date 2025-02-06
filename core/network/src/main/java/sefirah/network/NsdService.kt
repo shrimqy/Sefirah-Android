@@ -26,7 +26,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class NsdService @Inject constructor(@ApplicationContext private val context: Context) {
+class NsdService @Inject constructor(val context: Context) {
 
     private val nsdManager by lazy { 
         context.getSystemService(Context.NSD_SERVICE) as NsdManager 
@@ -41,10 +41,16 @@ class NsdService @Inject constructor(@ApplicationContext private val context: Co
     private val executor = Executors.newSingleThreadExecutor()
 
     init {
-        val wifiManager = context.getSystemService(WIFI_SERVICE) as WifiManager
-        multicastLock = wifiManager.createMulticastLock("SefiraMulticastLock")
-        multicastLock?.setReferenceCounted(true)
-        multicastLock?.acquire()
+        try {
+            val wifiManager = context.getSystemService(WIFI_SERVICE) as? WifiManager
+            multicastLock = (wifiManager?.createMulticastLock("SefirahMulticastLock")?.apply {
+                setReferenceCounted(true)
+                acquire()
+            } ?: Log.e(TAG, "Failed to acquire multicast lock - WifiManager unavailable")) as WifiManager.MulticastLock?
+        } catch (e: Exception) {
+            Log.e(TAG, "Error acquiring multicast lock", e)
+            throw e
+        }
     }
 
     private val registrationListener = object : NsdManager.RegistrationListener {
