@@ -1,6 +1,7 @@
 package sefirah.domain.model
 
-data class PreferencesSettings(
+data class PreferencesSettings( 
+    val language: String,
     val autoDiscovery: Boolean,
     val storageLocation: String,
     val readSensitiveNotifications: Boolean,

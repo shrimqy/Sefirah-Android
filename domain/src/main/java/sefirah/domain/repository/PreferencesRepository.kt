@@ -9,8 +9,12 @@ interface PreferencesRepository {
     suspend fun readAppEntry(): Flow<Boolean>
     suspend fun saveAppEntry()
 
+    suspend fun saveLanguage(language: String)
+    fun readLanguage(): Flow<String>
+
     suspend fun saveSynStatus(syncStatus: Boolean)
     fun readSyncStatus(): Flow<Boolean>
+
 
     suspend fun saveLastConnected(hostAddress: String)
     fun readLastConnected(): Flow<String?>
