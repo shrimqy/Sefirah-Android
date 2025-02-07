@@ -1,27 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <!-- App -->
     <string name="app_name" translatable="false">Sefirah</string>
-    <string name="notification_device_connection">Device Connection Status</string>
     <string name="version">Version</string>
-    <string name="about">About</string>
-    <string name="whats_new">What\&apos;s new</string>
-    <string name="notification_media_playback">Desktop Media Playback</string>
-    <string name="notification_clipboard_action">Send Clipboard</string>\
-    <string name="notification_file_transfer">File Transfer</string>
-    <string name="notification_file_transfer_error">File Transfer Error</string>
-    <string name="cancel">Cancel</string>
-    <string name="notification_file_transfer_progress">Ongoing file transfer</string>
-    <string name="notification_file_transfer_complete">Completed file transfer</string>
+    <string name="windows_app">Windows app</string>
+    <string name="share_deep_link">Share to Desktop</string>
 
-    <!-- Notification Groups -->
+    <!-- Notifications -->
+    <!-- Groups -->
     <string name="group_file_transfer">File Transfer</string>
     <string name="group_network">Network</string>
     <string name="group_media">Media</string>
 
-    <!-- Notification Channels -->
+    <!-- Channels -->
     <string name="channel_transfer_progress">Transfer Progress</string>
     <string name="channel_transfer_complete">Transfer Complete</string>
     <string name="channel_device_connection">Device Connection</string>
     <string name="channel_media_playback">Desktop Media Playback</string>
-    <string name="windows_app">Windows app</string>
+
+    <!-- Notification Content -->
+    <string name="notification_media_playback">Desktop Media Playback</string>
+    <string name="notification_clipboard_action">Send Clipboard</string>
+    <string name="notification_file_transfer">File Transfer</string>
+    <string name="notification_file_transfer_error">File Transfer Error</string>
+    <string name="notification_file_transfer_progress">Ongoing file transfer</string>
+    <string name="notification_file_transfer_complete">Completed file transfer</string>
+    <string name="notification_device_connection">Device Connection Status</string>
+
+    <!-- Screen Names -->
+    <string name="home">Home</string>
+    <string name="devices">Devices</string>
+    <string name="settings">Settings</string>
+    <string name="about">About</string>
+    <string name="notifications">Notifications</string>
+
+    <!-- Common UI Elements -->
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="next">Next</string>
+    <string name="finish">Finish</string>
+    <string name="add">Add</string>
+    <string name="back_button">Back</string>
+    <string name="connect_button">Connect</string>
+    <string name="grant">Grant</string>
+
+    <!-- Permissions -->
+    <string name="required_permissions">Required Permissions</string>
+    <string name="notification_permission_rationale">For connection status updates</string>
+    <string name="location_permission">Location Permission</string>
+    <string name="location_permission_rationale">Required for WiFi network discovery</string>
+    <string name="media_access">Media Access</string>
+    <string name="media_access_rationale">Required for accessing the media files</string>
+    <string name="background_battery_usage">Background Battery Usage</string>
+    <string name="background_battery_usage_rationale">Allow the app to maintain stable connections by disabling battery optimizations</string>
+    <string name="storage_access">Storage Access</string>
+    <string name="storage_access_rationale">Required for remote Android storage access feature</string>
+    <string name="accessibility_service">Accessibility Service</string>
+    <string name="accessibility_service_rationale">Required for detecting clipboard</string>
+    <string name="notification_access">Notification Access</string>
+    <string name="notification_access_rationale">Required for notification synchronization</string>
+
+    <!-- Device Management -->
+    <string name="status_connecting">Connecting</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connected">Connected</string>
+    <string name="add_device">Add Device</string>
+    <string name="no_device">No devices found</string>
+    <string name="device_details">Device Details</string>
+    <string name="last_connected">Last connected</string>
+    <string name="ip_addresses">Ip addresses</string>
+    <string name="no_ip">No address configured</string>
+
+    <!-- Onboarding & Welcome -->
+    <string name="welcome">Welcome</string>
+    <string name="welcome_instructions">Let\'s get you started, firstly go through the instructions in github to download and install the Windows</string>
+    <string name="welcome_instructions_2">Once that\'s done, you can check out the Android App\'s GitHub page for more information:</string>
+    <string name="android_app_button">Android App</string>
+    <string name="windows_app_button">Windows App</string>
+
+    <!-- Preferences -->
+    <string name="clipboard_sync_preference">Sync clipboard with desktop</string>
+    <string name="clipboard_sync_subtitle">[Requires accessibility service permission] Detects clipboard changes and syncs them to desktop</string>
+    <string name="image_clipboard_preference">Add received Images to clipboard</string>
+    <string name="image_clipboard_subtitle">Copies the receiving image files to your clipboard</string>
+    <string name="notification_sync_preference">Sync notifications</string>
+    <string name="notification_sync_subtitle">Reads notifications from apps and syncs them to desktop</string>
+    <string name="media_session_preference">Show Desktop media playback as Media Session</string>
+    <string name="media_session_subtitle">Media playback will be shown in the notification bar</string>
+    <string name="auto_device_discovery_preference">Auto device discovery</string>
+    <string name="auto_device_discovery_subtitle">Listen for paired devices when connected to a familiar network</string>
+    <string name="storage_access_preference">Storage access</string>
+    <string name="storage_access_subtitle">Allows Windows to access your Android storage</string>
+    <string name="permissions_preference">App Permissions</string>
+    <string name="network_preference">Network settings</string>
+    <string name="network_subtitle">Configure connection preferences</string>
+    <string name="storage_location_preference">Storage location</string>
+
+    <!-- Dialogs -->
+    <string name="delete_dialog">Do you want to delete</string>
+    <string name="connection_options">Connection Options</string>
+    <string name="connection_options_subtitle">How do you want to connect to</string>
+    <string name="manual_connection">Manual Connection</string>
+    <string name="available_ip_addresses">Available IP addresses:</string>
+    <string name="custom_ip_placeholder">Or enter custom IP</string>
+    <string name="custom_ip_text_label">Hostname/Ip Address</string>
+    <string name="ip_example">Example: 192.168.1.100</string>
+
+    <!-- Network -->
+    <string name="networks">Network</string>
+    <string name="associated_networks">Associated Networks</string>
+    <string name="no_associated_network">No associated network</string>
+
+    <!-- Storage -->
+    <string name="choose_storage_location">Choose Storage Location</string>
+    <string name="storage_location_description">Select a folder where the app will store received files. Downloads will be used as default.</string>
+    <string name="select_folder_button">Select a folder</string>
+    <string name="selected_folder_label">Selected folder</string>
+
+    <!-- Hyperlinks -->
+    <string name="help">Help</string>
+    <string name="whats_new">What\&apos;s new</string>
+
+    <!-- Media Playback -->
+    <string name="no_media_playback">No active media playback</string>
+
+    <!-- Sync Screen -->
+    <string name="available_devices">Available Devices</string>
+    <string name="sync_screen_subtitle">Devices running the Windows app will appear here:</string>
+    <string name="key">Key</string>
+    <string name="manual_connect">Manual Connect</string>
+    <string name="auto_connect">Auto Connect</string>
 </resources>
