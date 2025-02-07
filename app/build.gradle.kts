@@ -17,8 +17,6 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        buildConfigField("Long", "BUILD_TIME", "${System.currentTimeMillis()}L")
     }
 
     dependenciesInfo {
