@@ -1,11 +1,9 @@
 package com.castle.sefirah.presentation.onboarding
 
 import androidx.compose.runtime.Composable
+import com.castle.sefirah.presentation.settings.SettingsViewModel
 
 internal interface OnboardingStep {
-
-    val isComplete: Boolean
-
     @Composable
-    fun Content()
+    fun Content(viewModel: SettingsViewModel)
 }

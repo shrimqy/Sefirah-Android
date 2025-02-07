@@ -11,6 +11,16 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.content.getSystemService
 
+data class PermissionStates(
+    val notificationGranted: Boolean = false,
+    val batteryGranted: Boolean = false,
+    val locationGranted: Boolean = false,
+    val storageGranted: Boolean = false,
+    val accessibilityGranted: Boolean = false,
+    val notificationListenerGranted: Boolean = false,
+    val readMediaGranted: Boolean = false,
+    val readSensitiveNotificationsGranted: Boolean = false
+)
 
 fun checkNotificationPermission(context: Context): Boolean {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

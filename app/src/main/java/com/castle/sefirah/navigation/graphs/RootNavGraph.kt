@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.castle.sefirah.navigation.Graph
+import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.navigation.OnboardingRoute
 import com.castle.sefirah.navigation.SyncRoute
 import com.castle.sefirah.navigation.transitions.NavigationTransitions
@@ -29,13 +30,14 @@ fun RootNavGraph(startDestination: String) {
         composable(route = OnboardingRoute.OnboardingScreen.route) {
             OnboardingScreen(
                 onComplete = {
-                // Navigate to main screen or sync screen after onboarding
-                rootNavController.navigate(Graph.MainScreenGraph) {
-                    popUpTo(OnboardingRoute.OnboardingScreen.route) {
-                        inclusive = true
+                    // Navigate to main screen and clear the back stack
+                    rootNavController.navigate(Graph.MainScreenGraph) {
+                        popUpTo(Graph.RootGraph) {
+                            inclusive = true
+                        }
                     }
                 }
-            })
+            )
         }
         composable(route = SyncRoute.SyncScreen.route) {
             SyncScreen(rootNavController = rootNavController)

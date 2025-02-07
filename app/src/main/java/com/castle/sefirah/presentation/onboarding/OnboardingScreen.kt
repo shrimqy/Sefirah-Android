@@ -19,22 +19,27 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.castle.sefirah.presentation.onboarding.components.PageIndicator
+import com.castle.sefirah.presentation.settings.SettingsViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import sefirah.common.R
 
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
 ) {
-
     val steps = remember {
         listOf(
             WelcomeStep(),
@@ -43,7 +48,10 @@ fun OnboardingScreen(
         )
     }
 
-    val viewModel : OnboardingViewModel = hiltViewModel()
+    val viewModel : SettingsViewModel = hiltViewModel()
+
+    val permissionStates by viewModel.permissionStates.collectAsState()
+
 
     val pagerState = rememberPagerState(initialPage = 0) {
         steps.size
@@ -62,9 +70,9 @@ fun OnboardingScreen(
     val buttonState = remember {
         derivedStateOf {
             when(pagerState.currentPage) {
-                0 -> "Next"
-                1 -> "Next"
-                2 -> "Finish"
+                0 -> nextText
+                1 -> nextText
+                2 -> finishText
                 else -> ""
             }
         }
@@ -73,7 +81,7 @@ fun OnboardingScreen(
     val buttonEnabled = remember {
         derivedStateOf {
             when(pagerState.currentPage) {
-                steps.size - 1 -> steps[pagerState.currentPage].isComplete
+                steps.size - 1 -> permissionStates.notificationGranted
                 else -> true
             }
         }
@@ -137,7 +145,7 @@ fun OnboardingScreen(
                 .fillMaxSize(),
         ) {
             HorizontalPager(state = pagerState) {index ->
-                steps[index].Content()
+                steps[index].Content(viewModel)
             }
         }
     }

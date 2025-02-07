@@ -13,14 +13,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavController
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.presentation.onboarding.PermissionStep
-import sefirah.common.R
+import com.castle.sefirah.presentation.settings.SettingsViewModel
 
 @Composable
-fun PermissionScreen(rootNavController: NavController, modifier: Modifier = Modifier) {
+fun PermissionScreen(rootNavController: NavHostController) {
+    val backStackState = rootNavController.currentBackStackEntryAsState().value
+    val backStackEntry = remember(key1 = backStackState) { rootNavController.getBackStackEntry(Graph.MainScreenGraph) }
+    val settingsViewModel: SettingsViewModel = hiltViewModel(backStackEntry)
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -43,7 +50,7 @@ fun PermissionScreen(rootNavController: NavController, modifier: Modifier = Modi
                 .padding(paddingValues)
                 .fillMaxSize(),
         ) {
-            PermissionStep().Content()
+            PermissionStep().Content(settingsViewModel)
         }
     }
 }

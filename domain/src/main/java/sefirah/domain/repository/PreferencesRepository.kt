@@ -6,7 +6,7 @@ import sefirah.domain.model.PreferencesSettings
 interface PreferencesRepository {
     fun preferenceSettings(): Flow<PreferencesSettings>
 
-    suspend fun readAppEntry(): Flow<Boolean>
+    suspend fun readAppEntry(): Boolean
     suspend fun saveAppEntry()
 
     suspend fun saveLanguage(language: String)

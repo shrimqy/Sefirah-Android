@@ -11,6 +11,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import sefirah.domain.model.PreferencesSettings
 import sefirah.domain.repository.PreferencesRepository
@@ -22,12 +23,11 @@ class PreferencesDatastore @Inject constructor(
 
     private val datastore = context.dataStore
 
-    override suspend fun readAppEntry(): Flow<Boolean> {
-        return datastore.data.map { status->
-            status[APP_ENTRY] ?: false
-        }
+    override suspend fun readAppEntry(): Boolean {
+        return datastore.data.map { preferences ->
+            preferences[APP_ENTRY] ?: false
+        }.first()
     }
-
 
     override suspend fun saveAppEntry() {
         APP_ENTRY.update(true)

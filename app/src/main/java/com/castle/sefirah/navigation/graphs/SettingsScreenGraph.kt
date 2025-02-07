@@ -19,12 +19,11 @@ fun NavGraphBuilder.settingsNavGraph(rootNavController: NavHostController) {
         composable(route = SettingsRouteScreen.NetworkScreen.route) {
             NetworkScreen(rootNavController)
         }
-
         composable(route = SettingsRouteScreen.AboutScreen.route) {
             AboutScreen(rootNavController)
         }
         composable(route = SettingsRouteScreen.PermissionScreen.route) {
-            PermissionScreen(rootNavController)
+            PermissionScreen(rootNavController,)
         }
     }
 }

@@ -50,36 +50,24 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import sefirah.clipboard.ClipboardListener
-import sefirah.common.util.isAccessibilityServiceEnabled
+import com.castle.sefirah.presentation.settings.SettingsViewModel
+import sefirah.common.R
 import sefirah.common.util.openAppSettings
 import sefirah.presentation.components.padding
 
 internal class PermissionStep : OnboardingStep {
-
-    private var notificationGranted by mutableStateOf(false)
-    private var batteryGranted by mutableStateOf(false)
-    private var locationGranted by mutableStateOf(false)
-    private var storageGranted by mutableStateOf(false)
-    private var accessibilityGranted by mutableStateOf(false)
-    private var notificationListenerGranted by mutableStateOf(false)
-    private var readMediaGranted by mutableStateOf(false)
-
-    override val isComplete: Boolean
-        get() = (notificationGranted && storageGranted) &&
-                (notificationListenerGranted || readMediaGranted || batteryGranted || locationGranted || accessibilityGranted)
-
-
     @Composable
-    override fun Content() {
-        val viewModel: OnboardingViewModel = hiltViewModel()
+    override fun Content(viewModel: SettingsViewModel) {
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
 
+        val permissionStates by viewModel.permissionStates.collectAsState()
+
+        // Update permissions on resume
         DisposableEffect(lifecycleOwner.lifecycle) {
             val observer = object : DefaultLifecycleObserver {
                 override fun onResume(owner: LifecycleOwner) {
-                    checkAllPermissions(context)
+                    viewModel.updatePermissionStates()
                 }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
@@ -95,7 +83,7 @@ internal class PermissionStep : OnboardingStep {
                 .fillMaxSize()
                 .padding(horizontal = MaterialTheme.padding.medium)
         ) {
-            if (viewModel.readAppEntry() == true) {
+            if (!viewModel.appEntryValue) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -126,14 +114,15 @@ internal class PermissionStep : OnboardingStep {
                             onResult = { /* handled in onResume */ }
                         )
                         PermissionItem(
-                            title = "Notifications",
-                            subtitle = "For connection status updates",
                             title = stringResource(R.string.notifications),
                             subtitle = stringResource(R.string.notification_permission_rationale),
                             permission = Manifest.permission.POST_NOTIFICATIONS,
-                            granted = notificationGranted,
-                            onRequest = { permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS) }
+                            granted = permissionStates.notificationGranted,
+                            onRequest = { permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                            viewModel = viewModel
                         )
+
+
                     }
 
                     // Location Permission
@@ -155,13 +144,13 @@ internal class PermissionStep : OnboardingStep {
                     )
 
                     PermissionItem(
-                        title = "Location Permission",
-                        subtitle = "Required for WiFi network discovery",
                         title = stringResource(R.string.location_permission),
                         subtitle = stringResource(R.string.location_permission_rationale),
                         permission = Manifest.permission.ACCESS_FINE_LOCATION,
-                        granted = locationGranted,
+                        granted = permissionStates.locationGranted,
                         onRequest = {
+
+
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                                 // First request foreground permissions
                                 foregroundLocationRequester.launch(
@@ -179,25 +168,28 @@ internal class PermissionStep : OnboardingStep {
                                     )
                                 )
                             }
-                        }
+                        },
+                        viewModel = viewModel
                     )
+
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         val mediaPermissionRequester = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.RequestPermission(),
                             onResult = { /* handled in onResume */ }
                         )
-                        
+
                         PermissionItem(
-                            title = "Media Access",
-                            subtitle = "Required for accessing the media files",
                             title = stringResource(R.string.media_access),
                             subtitle = stringResource(R.string.media_access_rationale),
                             permission = Manifest.permission.READ_MEDIA_IMAGES,
-                            granted = readMediaGranted,
-                            onRequest = { 
+                            granted = permissionStates.readMediaGranted,
+                            onRequest = {
                                 mediaPermissionRequester.launch(Manifest.permission.READ_MEDIA_IMAGES)
-                            }
+                            },
+                            viewModel = viewModel
+
+
                         )
                     }
 
@@ -205,29 +197,29 @@ internal class PermissionStep : OnboardingStep {
 
                     // Battery Optimization
                     PermissionItem(
-                        title = "Background Battery Usage",
-                        subtitle = "Allow the app to maintain stable connections by disabling battery optimizations",
-                        granted = batteryGranted,
                         title = stringResource(R.string.background_battery_usage),
                         subtitle = stringResource(R.string.background_battery_usage_rationale),
+                        granted = permissionStates.batteryGranted,
                         onRequest = {
+
                             @SuppressLint("BatteryLife")
                             val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                                 data = Uri.parse("package:${context.packageName}")
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                        viewModel = viewModel
                     )
+
 
 
                     // Storage Permission
                     PermissionItem(
-                        title = "Storage Access",
-                        subtitle = "Required for managing files on your device",
-                        granted = storageGranted,
                         title = stringResource(R.string.storage_access),
                         subtitle = stringResource(R.string.storage_access_rationale),
+                        granted = permissionStates.storageGranted,
                         onRequest = {
+
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
                             } else {
@@ -237,112 +229,37 @@ internal class PermissionStep : OnboardingStep {
                                 }
                                 context.startActivity(intent)
                             }
-                        }
+                        },
+                        viewModel = viewModel
                     )
+
 
                     // Accessibility Service
                     PermissionItem(
-                        title = "Accessibility Service",
-                        subtitle = "Required for detecting clipboard",
-                        granted = accessibilityGranted,
                         title = stringResource(R.string.accessibility_service),
                         subtitle = stringResource(R.string.accessibility_service_rationale),
+                        granted = permissionStates.accessibilityGranted,
                         onRequest = {
+
                             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        }
+                        },
+                        viewModel = viewModel
                     )
 
                     // Notification Listener
                     PermissionItem(
-                        title = "Notification Access",
-                        subtitle = "Required for notification synchronization",
-                        granted = notificationListenerGranted,
                         title = stringResource(R.string.notification_access),
                         subtitle = stringResource(R.string.notification_access_rationale),
+                        granted = permissionStates.notificationListenerGranted,
                         onRequest = {
                             context.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
-                        }
+                        },
+                        viewModel = viewModel
                     )
+
                 }
             }
         }
-    }
-
-
-    private fun openAppSettings(context: Context) {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.fromParts("package", context.packageName, null)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    }
-
-    private fun checkAllPermissions(context: Context) {
-        // Check Notification Permission (Android 13+)
-        notificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
-                    PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
-
-        // Check Battery Optimization
-        batteryGranted = context.getSystemService<PowerManager>()!!
-            .isIgnoringBatteryOptimizations(context.packageName)
-
-        // Check Location Permissions
-        val hasFineLocation = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED
-        val hasBackgroundLocation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
-                    PackageManager.PERMISSION_GRANTED
-        } else {
-            true // Background location permission not required for Android 9 and below
-        }
-        locationGranted = hasFineLocation && hasBackgroundLocation
-
-        // Check Storage Permission
-        storageGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
-                    PackageManager.PERMISSION_GRANTED
-        }
-
-//         Check Accessibility Service
-        accessibilityGranted = isAccessibilityServiceEnabled(
-            context,
-            "${context.packageName}/${ClipboardListener::class.java.canonicalName}"
-        )
-
-        // Check Notification Listener
-        notificationListenerGranted = isNotificationListenerEnabled(context)
-
-        // Add this new permission check
-        readMediaGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) ==
-                    PackageManager.PERMISSION_GRANTED
-        } else {
-            // For older versions, we already have storage permission
-            storageGranted
-        }
-    }
-
-    private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        val accessibilityServiceName = "${context.packageName}/${ClipboardListener::class.java.canonicalName}"
-        val enabledServices = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        )
-        return enabledServices?.contains(accessibilityServiceName) == true
-    }
-
-    private fun isNotificationListenerEnabled(context: Context): Boolean {
-        val flat = Settings.Secure.getString(
-            context.contentResolver,
-            "enabled_notification_listeners"
-        )
-        return flat?.contains(context.packageName) == true
     }
 }
 
@@ -353,7 +270,7 @@ fun PermissionItem(
     permission: String? = null,
     granted: Boolean,
     onRequest: () -> Unit,
-    viewModel: OnboardingViewModel = hiltViewModel()
+    viewModel: SettingsViewModel
 ) {
     val context = LocalContext.current
     val activity = context as Activity
