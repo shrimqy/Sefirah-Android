@@ -14,20 +14,27 @@ fun getInstalledApps(packageManager: PackageManager): List<ApplicationInfo> {
 
     for (packageInfo in packageInfos) {
         val packageName = packageInfo.packageName
+        
+        // Skip system apps
+        val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0) {
+            continue
+        }
 
-        // Check if the app has POST_NOTIFICATIONS permission
-        val hasPostNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        // For Android 13+, check POST_NOTIFICATIONS permission
+        // For older versions, just check if it has a launch intent
+        val shouldIncludeApp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             packageManager.checkPermission(
                 android.Manifest.permission.POST_NOTIFICATIONS,
                 packageName
             ) == PackageManager.PERMISSION_GRANTED
         } else {
-            TODO("VERSION.SDK_INT < TIRAMISU")
+            // Include app if it can be launched
+            packageManager.getLaunchIntentForPackage(packageName) != null
         }
 
-        if (hasPostNotificationPermission) {
+        if (shouldIncludeApp) {
             val appName = try {
-                val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
                 packageManager.getApplicationLabel(applicationInfo).toString()
             } catch (e: PackageManager.NameNotFoundException) {
                 "Unknown App"
@@ -37,19 +44,15 @@ fun getInstalledApps(packageManager: PackageManager): List<ApplicationInfo> {
             val appIcon = try {
                 val appIconDrawable = packageManager.getApplicationIcon(packageName)
                 if (appIconDrawable is BitmapDrawable) {
-                    val appIconBitmap = appIconDrawable.bitmap
-                    bitmapToBase64(appIconBitmap)
+                    bitmapToBase64(appIconDrawable.bitmap)
                 } else {
-                    // Convert to Bitmap if it's not already a BitmapDrawable
-                    val appIconBitmap = drawableToBitmap(appIconDrawable)
-                    bitmapToBase64(appIconBitmap)
+                    bitmapToBase64(drawableToBitmap(appIconDrawable))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 null
             }
 
-            // Add to the list of apps with notification access
             appsWithPermission.add(ApplicationInfo(packageName, appName, appIcon))
         }
     }
