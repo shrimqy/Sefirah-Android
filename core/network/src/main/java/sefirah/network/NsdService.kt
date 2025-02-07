@@ -8,12 +8,12 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.ext.SdkExtensions
 import android.util.Log
-import androidx.annotation.RequiresApi
+import androidx.annotation.RequiresExtension
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -28,8 +28,8 @@ import javax.inject.Singleton
 @Singleton
 class NsdService @Inject constructor(val context: Context) {
 
-    private val nsdManager by lazy { 
-        context.getSystemService(Context.NSD_SERVICE) as NsdManager 
+    private val nsdManager by lazy {
+        context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
     private val _services = MutableStateFlow<List<NsdServiceInfo>>(emptyList())
     val services: StateFlow<List<NsdServiceInfo>> = _services
@@ -117,7 +117,8 @@ class NsdService @Inject constructor(val context: Context) {
             Log.d(TAG, "Service found: $service")
             if (service.serviceType == SERVICE_TYPE) {
                 try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && SdkExtensions.getExtensionVersion(
+                            Build.VERSION_CODES.TIRAMISU) >= 7) {
                         // Unregister previous ServiceInfoCallback if registered
                         try {
                             nsdManager.unregisterServiceInfoCallback(serviceInfoCallback)
@@ -180,7 +181,7 @@ class NsdService @Inject constructor(val context: Context) {
 
         override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
             Log.d(TAG, "Service resolved: $serviceInfo")
-            
+
             try {
                 _services.value = (_services.value + serviceInfo).distinctBy { it.serviceName }
             } catch (e: Exception) {
@@ -190,34 +191,36 @@ class NsdService @Inject constructor(val context: Context) {
     }
 
     // ServiceInfoCallback for API level 34+
-    private val serviceInfoCallback = @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    object : NsdManager.ServiceInfoCallback {
-        private var currentMonitoredService: NsdServiceInfo? = null
+    private val serviceInfoCallback by lazy {
+        @RequiresExtension(extension = Build.VERSION_CODES.TIRAMISU, version = 7)
+        object : NsdManager.ServiceInfoCallback {
+            private var currentMonitoredService: NsdServiceInfo? = null
 
-        override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {
-            Log.e(TAG, "ServiceInfoCallback registration failed: $errorCode")
-        }
-
-        override fun onServiceUpdated(serviceInfo: NsdServiceInfo) {
-            Log.d(TAG, "Service updated: $serviceInfo")
-            currentMonitoredService = serviceInfo  // Store the current service
-            try {
-                _services.value = (_services.value + serviceInfo).distinctBy { it.serviceName }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse service info: ${e.message}")
+            override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {
+                Log.e(TAG, "ServiceInfoCallback registration failed: $errorCode")
             }
-        }
 
-        override fun onServiceLost() {
-            Log.e(TAG, "Service lost")
-            currentMonitoredService?.let { lostService ->
-                _services.value = _services.value.filter { it.serviceName != lostService.serviceName }
+            override fun onServiceUpdated(serviceInfo: NsdServiceInfo) {
+                Log.d(TAG, "Service updated: $serviceInfo")
+                currentMonitoredService = serviceInfo  // Store the current service
+                try {
+                    _services.value = (_services.value + serviceInfo).distinctBy { it.serviceName }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to parse service info: ${e.message}")
+                }
             }
-        }
 
-        override fun onServiceInfoCallbackUnregistered() {
-            Log.d(TAG, "ServiceInfoCallback unregistered")
-            currentMonitoredService = null
+            override fun onServiceLost() {
+                Log.e(TAG, "Service lost")
+                currentMonitoredService?.let { lostService ->
+                    _services.value = _services.value.filter { it.serviceName != lostService.serviceName }
+                }
+            }
+
+            override fun onServiceInfoCallbackUnregistered() {
+                Log.d(TAG, "ServiceInfoCallback unregistered")
+                currentMonitoredService = null
+            }
         }
     }
 

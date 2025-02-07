@@ -34,6 +34,7 @@ import sefirah.network.util.MediaStoreHelper
 import sefirah.network.util.TrustManager
 import sefirah.network.util.generateRandomPassword
 import sefirah.network.util.getDeviceIpAddress
+import java.net.URI
 import java.nio.channels.Channel
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.CopyOption
@@ -244,7 +245,13 @@ class SftpServer @Inject constructor(
             // Android has no user home folder, so we need to set it to something.
             // `System.getProperty("user.home")` is not available on Android,
             // but it exists in SSHD Core's `org.apache.sshd.common.util.io.PathUtils.LazyDefaultUserHomeFolderHolder`.
-            PathUtils.setUserHomeFolderResolver { Path.of("/") }
+            PathUtils.setUserHomeFolderResolver {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    Path.of("/")
+                } else {
+                    Paths.get("/")
+                }
+            }
         }
     }
 }
