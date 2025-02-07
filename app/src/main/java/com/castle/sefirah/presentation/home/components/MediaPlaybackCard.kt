@@ -28,10 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import sefirah.domain.model.PlaybackData
+import sefirah.common.R
 import sefirah.presentation.util.base64ToBitmap
 
 @Composable
@@ -170,6 +172,6 @@ fun EmptyPlaybackHolder() {
             .height(170.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = "No Media Playback")
+        Text(text = stringResource(R.string.no_media_playback))
     }
 }

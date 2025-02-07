@@ -72,7 +72,6 @@ fun HomeScreen(
         }
 
         item(key = "volume_slider") {
-            Log.d("playback", playbackData.toString())
             playbackData?.volume?.let { volume -> VolumeSlider(volume = volume, onVolumeChange = { viewModel.onVolumeChange(it) }) }
         }
     }

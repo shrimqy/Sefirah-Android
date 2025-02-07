@@ -25,11 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import sefirah.domain.model.RemoteDevice
 import sefirah.presentation.util.base64ToBitmap
+import sefirah.common.R
 
 @Composable
 fun DeviceListCard(
@@ -73,14 +75,14 @@ fun DeviceListCard(
                             )
                             
                             Text(
-                                text = device.prefAddress ?: device.ipAddresses.firstOrNull() ?: "No IP",
+                                text = device.prefAddress ?: device.ipAddresses.firstOrNull() ?: stringResource(R.string.no_ip),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             
                             if(syncStatus) {
                                 Text(
-                                    text = "Connected",
+                                    text = stringResource(R.string.status_connected),
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }

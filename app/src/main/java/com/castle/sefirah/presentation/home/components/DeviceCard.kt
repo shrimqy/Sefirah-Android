@@ -29,10 +29,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import sefirah.common.R
 import com.castle.sefirah.navigation.SyncRoute
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.RemoteDevice
@@ -93,17 +95,17 @@ fun DeviceCard(
                                 }
                             }
                             val connectionStateText : String = when (connectionState) {
-                                ConnectionState.Connected -> "Connected"
-                                ConnectionState.Connecting -> "Connecting"
-                                is ConnectionState.Disconnected -> { "Disconnected" }
-                                is ConnectionState.Error -> { "Disconnected"}
+                                ConnectionState.Connected -> stringResource(R.string.status_connected)
+                                ConnectionState.Connecting -> stringResource(R.string.status_connecting)
+                                is ConnectionState.Disconnected -> { stringResource(R.string.status_disconnected) }
+                                is ConnectionState.Error -> { stringResource(R.string.status_disconnected) }
                             }
                             Text(text = connectionStateText)
                         }
                         IconButton(onClick = onSyncAction) {
                             Icon(
                                 imageVector = if (connectionState == ConnectionState.Connected) Icons.Rounded.SyncDisabled else Icons.Rounded.Sync,
-                                contentDescription = if (connectionState == ConnectionState.Connected) "Disconnect" else "Sync",
+                                contentDescription = if (connectionState == ConnectionState.Connected) "Stop sync" else "Start sync",
                                 tint = MaterialTheme.colorScheme.surfaceTint,
                             )
                         }
@@ -131,7 +133,7 @@ fun EmptyPlaceholder(navController: NavController) {
                     navController.navigate(route = SyncRoute.SyncScreen.route)
                 },
             ) {
-                Text("Add Device")
+                Text(stringResource(R.string.add_device))
             }
         }
     }

@@ -60,13 +60,12 @@ class ShareDeepLinkActivity: BaseActivity() {
     }
 
     private fun handleFileTransfer(intent: Intent) {
-        Log.d("ShareDeepLink", "Starting file transfer")
         val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
         Log.d("ShareToPc", "Handling file share: $uri")
 
         if (uri != null) {
             val serviceIntent = Intent(applicationContext, FileTransferService::class.java).apply {
-                action = FileTransferService.ACTION_SEND_FILE
+                action = ACTION_SEND_FILE
                 data = uri
             }
             startForegroundService(serviceIntent)

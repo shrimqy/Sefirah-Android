@@ -59,6 +59,8 @@ import sefirah.common.util.getReadablePathFromUri
 import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
 import sefirah.common.util.openAppSettings
+import sefirah.common.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun SettingsScreen(
@@ -126,12 +128,13 @@ fun SettingsScreen(
 
         item {
             SwitchPermissionPrefWidget(
-                title = "Sync clipboard with desktop",
-                subtitle = "[Requires accessibility service permission] Detects clipboard changes and syncs them to desktop",
+                title = stringResource(R.string.clipboard_sync_preference),
+                subtitle = stringResource(R.string.clipboard_sync_subtitle),
                 icon = Icons.Filled.ContentCopy,
                 checked = preferencesSettings?.clipboardSync == true && permissionStates.accessibilityGranted,
                 permission = null,
                 onRequest = {
+
                     if(!isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}") ) {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     }
@@ -145,13 +148,14 @@ fun SettingsScreen(
 
         item {
             SwitchPermissionPrefWidget(
-                title = "Add received Images to clipboard",
-                subtitle = "Allow app to access your images",
+                title = stringResource(R.string.image_clipboard_preference),
+                subtitle = stringResource(R.string.image_clipboard_subtitle),
                 icon = Icons.Filled.ContentPaste,
                 checked = preferencesSettings?.imageClipboard == true && permissionStates.readMediaGranted,
                 permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     Manifest.permission.READ_MEDIA_IMAGES
                 } else null,
+
                 onRequest = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         mediaPermissionRequester.launch(Manifest.permission.READ_MEDIA_IMAGES)
@@ -166,12 +170,13 @@ fun SettingsScreen(
 
         item {
             SwitchPermissionPrefWidget(
-                title = "Sync notifications",
-                subtitle = "Reads notifications from apps and syncs them to desktop",
+                title = stringResource(R.string.notification_sync_preference),
+                subtitle = stringResource(R.string.notification_sync_subtitle),
                 icon = Icons.Filled.Notifications,
                 checked = preferencesSettings?.notificationSync == true && permissionStates.notificationListenerGranted,
                 permission = null,
                 onRequest = {
+
                     if (!isNotificationListenerEnabled(context)) {
                         context.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
                     }
@@ -185,10 +190,11 @@ fun SettingsScreen(
 
         item {
             SwitchPermissionPrefWidget(
-                title = "Show Desktop media playback as Media Session",
-                subtitle = "Media playback will be shown in the notification bar",
+                title = stringResource(R.string.media_session_preference),
+                subtitle = stringResource(R.string.media_session_subtitle),
                 icon = Icons.Filled.PlayArrow,
                 checked = preferencesSettings?.mediaSession == true && permissionStates.notificationGranted,
+
                 permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     Manifest.permission.POST_NOTIFICATIONS
                 } else null,
@@ -206,12 +212,13 @@ fun SettingsScreen(
 
         item {
             SwitchPermissionPrefWidget(
-                title = "Auto device discovery",
-                subtitle = "Listen for paired devices when connected to a familiar network",
+                title = stringResource(R.string.auto_device_discovery_preference),
+                subtitle = stringResource(R.string.auto_device_discovery_subtitle),
                 icon = Icons.Default.DesktopWindows,
                 checked = preferencesSettings?.autoDiscovery == true && permissionStates.locationGranted,
                 permission = Manifest.permission.ACCESS_FINE_LOCATION,
                 onCheckedChanged = { checked ->
+
                     viewModel.saveAutoDiscoverySettings(checked)
                 },
                 onRequest = {
@@ -240,12 +247,13 @@ fun SettingsScreen(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             item {
                 SwitchPermissionPrefWidget(
-                    title = "Storage access",
-                    subtitle = "Allow Android storage access to Windows",
+                    title = stringResource(R.string.storage_access_preference),
+                    subtitle = stringResource(R.string.storage_access_subtitle),
                     icon = Icons.Default.Folder,
                     checked = preferencesSettings?.remoteStorage == true && permissionStates.storageGranted,
                     permission = Manifest.permission.WRITE_EXTERNAL_STORAGE,
                     onRequest = {
+
                         context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
                     },
                     onCheckedChanged = { checked ->
@@ -258,30 +266,33 @@ fun SettingsScreen(
 
         item {
             TextPreferenceWidget(
-                title = "Network",
-                subtitle = "Network preferences for device discovery",
+                title = stringResource(R.string.network_preference),
+                subtitle = stringResource(R.string.network_subtitle),
                 icon = Icons.Default.Wifi,
                 onPreferenceClick = {
                     rootNavController.navigate(SettingsRouteScreen.NetworkScreen.route)
                 }
             )   
+
         }
 
         item {
             TextPreferenceWidget(
-                title = "Permissions",
+                title = stringResource(R.string.permissions_preference),
                 icon = Icons.Default.SettingsSuggest,
                 onPreferenceClick = {
                     rootNavController.navigate(SettingsRouteScreen.PermissionScreen.route)
                 }
             )
+
         }
 
         item {
             TextPreferenceWidget(
-                title = "Storage location",
+                title = stringResource(R.string.storage_location_preference),
                 subtitle = getReadablePathFromUri(context, storageLocation),
                 icon = Icons.Default.Storage,
+
                 onPreferenceClick = {
                     try {
                         pickStorageLocation.launch(null)
@@ -297,22 +308,24 @@ fun SettingsScreen(
 
         item {
             TextPreferenceWidget(
-                title = "About",
+                title = stringResource(R.string.about),
                 icon = Icons.Default.Info,
                 onPreferenceClick = {
                     rootNavController.navigate(SettingsRouteScreen.AboutScreen.route)
                 }
             )
+
         }
 
         item {
             TextPreferenceWidget(
-                title = "Help",
+                title = stringResource(R.string.help),
                 icon = Icons.AutoMirrored.Filled.Help,
                 onPreferenceClick = {
                     uriHandler.openUri("https://github.com/shrimqy/Sekia/blob/master/README.MD")
                 }
             )
+
         }
     }
 }

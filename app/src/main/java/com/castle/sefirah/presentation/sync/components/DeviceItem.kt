@@ -23,6 +23,9 @@ import com.castle.sefirah.presentation.settings.components.PrefsHorizontalPaddin
 import com.castle.sefirah.presentation.settings.components.PrefsVerticalPadding
 import com.castle.sefirah.presentation.settings.components.highlightBackground
 import sefirah.network.DiscoveredDevice
+import sefirah.common.R
+import androidx.compose.ui.res.stringResource
+
 
 @Composable
 fun DeviceItem(
@@ -61,10 +64,11 @@ fun DeviceItem(
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = "Key: $key",
+                text = "${stringResource(R.string.key)}: $key",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
         }
     }
 

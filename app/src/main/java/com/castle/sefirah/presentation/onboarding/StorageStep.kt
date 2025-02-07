@@ -20,27 +20,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.castle.sefirah.presentation.settings.SettingsViewModel
 import com.castle.sefirah.presentation.settings.storageLocationPicker
+import sefirah.common.R
 import sefirah.common.util.getReadablePathFromUri
 import sefirah.presentation.components.padding
 
 internal class StorageStep : OnboardingStep {
-    private var _isComplete by mutableStateOf(false)
-    override val isComplete: Boolean get() = _isComplete
-
     @Composable
-    override fun Content() {
+    override fun Content(viewModel: SettingsViewModel) {
         val context = LocalContext.current
-        val viewModel: SettingsViewModel = hiltViewModel()
         val preferencesSettings by viewModel.preferencesSettings.collectAsState()
         val pickStorageLocation = storageLocationPicker(viewModel)
         val storageLocation = preferencesSettings?.storageLocation ?: "/storage/emulated/0/Downloads"
@@ -65,9 +60,10 @@ internal class StorageStep : OnboardingStep {
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(
-                    text = "Choose Storage Location",
+                    text = stringResource(R.string.choose_storage_location),
                     style = MaterialTheme.typography.headlineSmall,
                 )
+
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -79,18 +75,20 @@ internal class StorageStep : OnboardingStep {
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Select a folder where the app will store received files. Downloads will be used as default.",
+                        text = stringResource(R.string.storage_location_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Selected folder: ${getReadablePathFromUri(context, storageLocation)}",
+                        text = "${stringResource(R.string.selected_folder_label)}: ${getReadablePathFromUri(context, storageLocation)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
@@ -104,7 +102,7 @@ internal class StorageStep : OnboardingStep {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Select a folder",
+                            text = stringResource(R.string.select_folder_button),
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }

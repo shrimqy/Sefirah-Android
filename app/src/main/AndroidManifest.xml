@@ -47,7 +47,7 @@
         <activity 
             android:name=".presentation.deeplink.ShareDeepLinkActivity"
             android:exported="true"
-            android:label="Share to Desktop"
+            android:label="@string/share_deep_link"
             android:launchMode="singleTask"
             android:theme="@style/TranslucentTheme.Dark"
             android:excludeFromRecents="true">

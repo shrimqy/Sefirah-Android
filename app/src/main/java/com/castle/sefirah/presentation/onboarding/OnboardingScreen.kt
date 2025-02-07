@@ -56,6 +56,9 @@ fun OnboardingScreen(
         }
     }
 
+    val nextText = stringResource(R.string.next)
+    val finishText = stringResource(R.string.finish)
+    
     val buttonState = remember {
         derivedStateOf {
             when(pagerState.currentPage) {

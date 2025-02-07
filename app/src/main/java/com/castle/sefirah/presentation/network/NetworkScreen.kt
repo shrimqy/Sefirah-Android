@@ -22,11 +22,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.castle.sefirah.presentation.network.components.BaseNetworkItem
-import com.castle.sefirah.presentation.settings.components.SwitchPreferenceWidget
 import sefirah.database.model.NetworkEntity
+import sefirah.common.R
 
 @Composable
 fun NetworkScreen(rootNavController: NavHostController) {
@@ -42,7 +43,7 @@ fun NetworkScreen(rootNavController: NavHostController) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 ),
-                title = { Text("Network") },
+                title = { Text(stringResource(R.string.networks)) },
                 navigationIcon = {
                     IconButton(
                         onClick = { rootNavController.navigateUp() }
@@ -125,19 +126,19 @@ fun DeleteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        text = { Text("Do you want to delete \"${network.ssid}\"?") },
+        text = { Text("${stringResource(R.string.delete_dialog)} \"${network.ssid}\"?") },
         confirmButton = {
             Button(
                 onClick = onConfirm
             ) {
-                Text("Delete")
+                Text(stringResource(R.string.delete))
             }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

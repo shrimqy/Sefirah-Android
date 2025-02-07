@@ -26,6 +26,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import sefirah.common.R as CommonR
 import com.castle.sefirah.R
 import com.castle.sefirah.navigation.DeviceRouteScreen
 import com.castle.sefirah.navigation.MainRouteScreen
@@ -38,6 +39,8 @@ import sefirah.presentation.components.AppTopBar
 import sefirah.presentation.components.NavBar
 import sefirah.presentation.components.NavigationItem
 import sefirah.presentation.components.PullRefresh
+import androidx.compose.ui.res.stringResource
+
 
 @OptIn(ExperimentalAnimationGraphicsApi::class)
 @Composable
@@ -48,16 +51,22 @@ fun MainScreen(
     val backStackState = homeNavController.currentBackStackEntryAsState().value
     val viewModel: ConnectionViewModel = hiltViewModel()
 
+    val homeText = stringResource(CommonR.string.home)
+    val devicesText = stringResource(CommonR.string.devices)
+    val settingsText = stringResource(CommonR.string.settings)
+
     val homeAnimatedIcon = AnimatedImageVector.animatedVectorResource(R.drawable.ic_home)
     val devicesAnimatedIcon = AnimatedImageVector.animatedVectorResource(R.drawable.ic_devices)
     val settingsAnimatedIcon = AnimatedImageVector.animatedVectorResource(R.drawable.ic_settings)
+
     val navigationItems = remember {
         listOf(
-            NavigationItem(homeAnimatedIcon, text = "Home", route = MainRouteScreen.HomeScreen.route),
-            NavigationItem(devicesAnimatedIcon, text = "Devices", route = MainRouteScreen.DeviceListScreen.route),
-            NavigationItem(settingsAnimatedIcon, text = "Settings", route = MainRouteScreen.SettingsScreen.route)
+            NavigationItem(homeAnimatedIcon, text = homeText, route = MainRouteScreen.HomeScreen.route),
+            NavigationItem(devicesAnimatedIcon, text = devicesText, route = MainRouteScreen.DeviceListScreen.route),
+            NavigationItem(settingsAnimatedIcon, text = settingsText, route = MainRouteScreen.SettingsScreen.route)
         )
     }
+
 
 
     val currentRoute = backStackState?.destination?.route

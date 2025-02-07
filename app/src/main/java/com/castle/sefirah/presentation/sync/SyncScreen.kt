@@ -43,10 +43,13 @@ import sefirah.presentation.screens.EmptyScreen
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
+import sefirah.common.R
+import androidx.compose.ui.res.stringResource
 
 enum class DialogState { NONE, CONNECTION_OPTIONS, MANUAL_IP }
 
 @Composable
+
 fun SyncScreen(
     modifier: Modifier = Modifier,
     rootNavController: NavHostController,
@@ -68,9 +71,10 @@ fun SyncScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(text = "Available Devices") },
+                    title = { Text(text = stringResource(R.string.available_devices)) },
                     navigationIcon = {
                         IconButton(onClick = { rootNavController.navigateUp() }) {
+
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                         }
                     }
@@ -83,15 +87,17 @@ fun SyncScreen(
                     .padding(contentPadding)
             ) {
                 Text(
-                    text = "Devices running the Windows app will appear here:",
+                    text = stringResource(R.string.sync_screen_subtitle),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(16.dp)
                 )
 
+
                 when {
                     discoveredDevices.isEmpty() -> {
-                        EmptyScreen(message = "No Devices found")
+                        EmptyScreen(message = stringResource(R.string.no_device))
                     }
+
                     else -> {
                         LazyColumn(
                             modifier = Modifier
@@ -135,21 +141,25 @@ fun SyncScreen(
                 onDismissRequest = { dialogState.value = DialogState.NONE },
                 title = {
                     Text(
-                        "Connection Options",
+                        stringResource(R.string.connection_options),
                         style = MaterialTheme.typography.titleLarge
                     )
+
                 },
                 text = {
                     Column {
                         Text(
-                            "How do you want to connect to ${selectedDevice.value?.deviceName}?",
+                            stringResource(R.string.connection_options_subtitle, selectedDevice.value!!.deviceName),
                             style = MaterialTheme.typography.bodyMedium
                         )
+
+
                         Text(
-                            "Key: ${key.value}",
+                            "${stringResource(R.string.key)}: ${key.value}",
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                             modifier = Modifier.padding(top = 8.dp)
                         )
+
                     }
                 },
                 confirmButton = {
@@ -162,9 +172,10 @@ fun SyncScreen(
                                 onClick = { dialogState.value = DialogState.MANUAL_IP },
                             ) {
                                 Text(
-                                    text = "Manual Connect",
+                                    text = stringResource(R.string.manual_connect),
                                 )
                             }
+
                             TextButton(
                                 onClick = {
                                     viewModel.authenticate(
@@ -177,20 +188,22 @@ fun SyncScreen(
 
                             ) {
                                 Text(
-                                    text = "Auto Connect",
+                                    text = stringResource(R.string.auto_connect),
                                 )
                             }
                         }
+
                         Spacer(modifier = Modifier.height(4.dp))
                         Button(
                             onClick = { dialogState.value = DialogState.NONE },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "Close",
+                                text = stringResource(R.string.cancel),
                                 maxLines = 1
                             )
                         }
+
                     }
                 }
             )
@@ -199,13 +212,15 @@ fun SyncScreen(
         DialogState.MANUAL_IP -> {
             AlertDialog(
                 onDismissRequest = { dialogState.value = DialogState.CONNECTION_OPTIONS },
-                title = { Text("Manual Connection", style = MaterialTheme.typography.titleLarge) },
+                title = { Text(stringResource(R.string.manual_connection), style = MaterialTheme.typography.titleLarge) },
                 text = {
                     Column {
                         Text(
-                            text = "Available IP addresses:",
+
+                            text = stringResource(R.string.available_ip_addresses),
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(bottom = 8.dp)
+
                         )
                         discoveredDevices.firstOrNull { it.deviceId == selectedDevice.value?.deviceId }
                             ?.ipAddresses?.forEach { ip ->
@@ -226,10 +241,11 @@ fun SyncScreen(
                         OutlinedTextField(
                             value = customIp.value,
                             onValueChange = { customIp.value = it },
-                            label = { Text("Or enter custom IP") },
+                            label = { Text(stringResource(R.string.custom_ip_placeholder)) },
                             placeholder = { Text("192.168.1.100") },
                             modifier = Modifier
                                 .fillMaxWidth()
+
                                 .padding(top = 8.dp),
                             singleLine = true
                         )
@@ -245,17 +261,19 @@ fun SyncScreen(
                             dialogState.value = DialogState.NONE
                         }
                     ) {
-                        Text("Connect")
+                        Text(stringResource(R.string.connect_button))
                     }
                 },
+
                 dismissButton = {
                     Button(
                         onClick = { dialogState.value = DialogState.CONNECTION_OPTIONS }
                     ) {
-                        Text("Back")
+                        Text(stringResource(R.string.back_button))
                     }
                 }
             )
+
         }
 
         DialogState.NONE -> {} // Do nothing

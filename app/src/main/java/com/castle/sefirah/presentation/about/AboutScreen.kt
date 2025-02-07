@@ -8,8 +8,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.outlined.AttachMoney
-import androidx.compose.material.icons.outlined.Web
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,8 +29,6 @@ import sefirah.common.R
 import sefirah.presentation.icons.CustomIcons
 import sefirah.presentation.icons.Discord
 import sefirah.presentation.icons.Github
-import java.text.SimpleDateFormat
-import java.util.*
 
 @Composable
 fun AboutScreen(rootNavController: NavController, modifier: Modifier = Modifier) {
@@ -62,7 +58,7 @@ fun AboutScreen(rootNavController: NavController, modifier: Modifier = Modifier)
             item {
                 TextPreferenceWidget(
                     title = stringResource(R.string.version),
-                    subtitle = "${BuildConfig.VERSION_NAME} (${SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault()).format(Date(BuildConfig.BUILD_TIME))})",
+                    subtitle = BuildConfig.VERSION_NAME,
                     onPreferenceClick = {
                         // TODO
                     },

@@ -3,13 +3,10 @@ package com.castle.sefirah.presentation.onboarding
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
-import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -38,18 +35,16 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
-import androidx.core.content.getSystemService
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -114,7 +109,7 @@ internal class PermissionStep : OnboardingStep {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Required Permissions",
+                        text = stringResource(R.string.required_permissions),
                         style = MaterialTheme.typography.headlineSmall,
                     )
                 }
@@ -133,6 +128,8 @@ internal class PermissionStep : OnboardingStep {
                         PermissionItem(
                             title = "Notifications",
                             subtitle = "For connection status updates",
+                            title = stringResource(R.string.notifications),
+                            subtitle = stringResource(R.string.notification_permission_rationale),
                             permission = Manifest.permission.POST_NOTIFICATIONS,
                             granted = notificationGranted,
                             onRequest = { permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS) }
@@ -160,6 +157,8 @@ internal class PermissionStep : OnboardingStep {
                     PermissionItem(
                         title = "Location Permission",
                         subtitle = "Required for WiFi network discovery",
+                        title = stringResource(R.string.location_permission),
+                        subtitle = stringResource(R.string.location_permission_rationale),
                         permission = Manifest.permission.ACCESS_FINE_LOCATION,
                         granted = locationGranted,
                         onRequest = {
@@ -192,6 +191,8 @@ internal class PermissionStep : OnboardingStep {
                         PermissionItem(
                             title = "Media Access",
                             subtitle = "Required for accessing the media files",
+                            title = stringResource(R.string.media_access),
+                            subtitle = stringResource(R.string.media_access_rationale),
                             permission = Manifest.permission.READ_MEDIA_IMAGES,
                             granted = readMediaGranted,
                             onRequest = { 
@@ -207,6 +208,8 @@ internal class PermissionStep : OnboardingStep {
                         title = "Background Battery Usage",
                         subtitle = "Allow the app to maintain stable connections by disabling battery optimizations",
                         granted = batteryGranted,
+                        title = stringResource(R.string.background_battery_usage),
+                        subtitle = stringResource(R.string.background_battery_usage_rationale),
                         onRequest = {
                             @SuppressLint("BatteryLife")
                             val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
@@ -222,6 +225,8 @@ internal class PermissionStep : OnboardingStep {
                         title = "Storage Access",
                         subtitle = "Required for managing files on your device",
                         granted = storageGranted,
+                        title = stringResource(R.string.storage_access),
+                        subtitle = stringResource(R.string.storage_access_rationale),
                         onRequest = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
@@ -240,6 +245,8 @@ internal class PermissionStep : OnboardingStep {
                         title = "Accessibility Service",
                         subtitle = "Required for detecting clipboard",
                         granted = accessibilityGranted,
+                        title = stringResource(R.string.accessibility_service),
+                        subtitle = stringResource(R.string.accessibility_service_rationale),
                         onRequest = {
                             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                         }
@@ -250,6 +257,8 @@ internal class PermissionStep : OnboardingStep {
                         title = "Notification Access",
                         subtitle = "Required for notification synchronization",
                         granted = notificationListenerGranted,
+                        title = stringResource(R.string.notification_access),
+                        subtitle = stringResource(R.string.notification_access_rationale),
                         onRequest = {
                             context.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
                         }
@@ -419,7 +428,7 @@ fun PermissionItem(
                         }
                     }
                 ) {
-                    Text(if (showSettings) "Settings" else "Grant")
+                    Text(if (showSettings) stringResource(R.string.settings) else stringResource(R.string.grant))
                 }
             }
         },

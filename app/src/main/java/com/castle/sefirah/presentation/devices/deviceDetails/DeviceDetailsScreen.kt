@@ -2,6 +2,7 @@ package com.castle.sefirah.presentation.devices.deviceDetails
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
+import sefirah.common.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,13 +18,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Lan
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -51,8 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -129,7 +128,7 @@ private fun EditDeviceTopBar(
     onDeleteDevice: () -> Unit
 ) {
     TopAppBar(
-        title = { Text("Device Details") },
+        title = { Text(stringResource(R.string.device_details)) },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -221,7 +220,7 @@ private fun LastConnectedInfo(timestamp: Long) {
         )
         Spacer(Modifier.width(4.dp))
         Text(
-            text = "Last connected: ${convertTimestampToDate(timestamp)}",
+            text = "${stringResource(R.string.last_connected)}: ${convertTimestampToDate(timestamp)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline
         )
@@ -237,7 +236,7 @@ private fun IpAddressSection(
     onRemoveIp: (String) -> Unit
 ) {
     Text(
-        "IP Addresses",
+        stringResource(R.string.ip_addresses),
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(8.dp)
@@ -296,8 +295,8 @@ private fun IpAddressItem(
             .clip(MaterialTheme.shapes.small)
             .border(
                 width = 1.dp,
-                color = if (isSelected) MaterialTheme.colorScheme.primary 
-                       else MaterialTheme.colorScheme.surfaceVariant,
+                color = if (isSelected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surfaceVariant,
                 shape = MaterialTheme.shapes.small
             )
             .clickable(onClick = onSelect),
@@ -330,7 +329,9 @@ private fun IpAddressItem(
                     else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).animateContentSize()
+                    modifier = Modifier
+                        .weight(1f)
+                        .animateContentSize()
                 )
             }
             IconButton(
@@ -355,7 +356,7 @@ private fun NetworksSection(
     val associatedNetworks by viewModel.associatedNetworks.collectAsState()
     
     Text(
-        "Associated Networks",
+        stringResource(R.string.associated_networks),
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(8.dp)
@@ -373,7 +374,7 @@ private fun NetworksSection(
                 ListItem(
                     headlineContent = {
                         Text(
-                            text = "No networks associated",
+                            text = stringResource(R.string.no_associated_network),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -436,12 +437,12 @@ fun AddCustomIpDialog(
                 OutlinedTextField(
                     value = customIp,
                     onValueChange = onCustomIpChange,
-                    label = { Text("Hostname/Ip Address") },
+                    label = { Text(stringResource(R.string.custom_ip_text_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    "Example: 192.168.1.100",
+                    stringResource(R.string.ip_example),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
@@ -452,12 +453,12 @@ fun AddCustomIpDialog(
             TextButton(
                 enabled = customIp.isNotBlank(),
                 onClick = onConfirm
-            ) { Text("Add") }
+            ) { Text(stringResource(R.string.add)) }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismiss
-            ) { Text("Cancel") }
+            ) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
