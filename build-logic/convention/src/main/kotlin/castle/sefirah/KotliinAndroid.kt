@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.dependencies
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinBaseExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
@@ -20,11 +21,15 @@ internal fun Project.configureKotlinAndroid(commonExtension: CommonExtension<*, 
         compileOptions {
             sourceCompatibility = AndroidConfig.JavaVersion
             targetCompatibility = AndroidConfig.JavaVersion
-            isCoreLibraryDesugaringEnabled = false
+            isCoreLibraryDesugaringEnabled = true
         }
     }
 
     configureKotlin<KotlinAndroidProjectExtension>()
+
+    dependencies {
+        add("coreLibraryDesugaring", libs.getLibrary("android.desugarJdkLibs"))
+    }
 }
 
 internal fun Project.configureKotlinJvm() {
@@ -49,6 +54,8 @@ private inline fun <reified T : KotlinBaseExtension> Project.configureKotlin() =
 //        apiVersion = KotlinVersion.KOTLIN_2_0
         jvmTarget = AndroidConfig.JvmTarget
         freeCompilerArgs = listOf(
+            "-java-parameters",
+            "-Xjvm-default=all",
             "-opt-in=kotlin.RequiresOptIn",
             // Enable experimental coroutines APIs, including Flow
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
