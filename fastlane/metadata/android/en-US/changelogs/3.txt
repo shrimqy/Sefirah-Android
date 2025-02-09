@@ -1,0 +1,5 @@
+v1.0.2:
+- Change hardcoded strings with stringResource for translations.
+- Fix Android compatibility crashes.
+- Fix and Improve App list retrieval, which was causing crashes.
+- Implement shared state management and navigation fixes.
