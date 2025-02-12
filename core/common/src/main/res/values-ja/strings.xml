@@ -40,13 +40,13 @@
   <string name="grant">許可</string>
   <!-- Permissions -->
   <string name="required_permissions">必要な権限</string>
-  <string name="notification_permission_rationale">接続状態を更新</string>
+  <string name="notification_permission_rationale">接続状態の更新で必要です</string>
   <string name="location_permission">位置情報のアクセス</string>
   <string name="location_permission_rationale">Wi-Fi ネットワークの検出で必要です</string>
   <string name="media_access">メディアのアクセス</string>
   <string name="media_access_rationale">メディアファイルにアクセスするために必要です</string>
   <string name="background_battery_usage">バッテリーの最適化を無効化</string>
-  <string name="background_battery_usage_rationale">バッテリーの最適化を無効化してアプリが安定した接続を維持できるようにします</string>
+  <string name="background_battery_usage_rationale">バッテリーの最適化を無効化してアプリが安定した接続を維持します</string>
   <string name="storage_access">ストレージのアクセス</string>
   <string name="storage_access_rationale">Android ストレージのリモートアクセス機能で必要です</string>
   <string name="accessibility_service">ユーザー補助サービス</string>
@@ -54,9 +54,9 @@
   <string name="notification_access">通知のアクセス</string>
   <string name="notification_access_rationale">通知の同期で必要です</string>
   <!-- Device Management -->
-  <string name="status_connecting">接続中</string>
-  <string name="status_disconnected">切断</string>
-  <string name="status_connected">接続</string>
+  <string name="status_connecting">接続しています</string>
+  <string name="status_disconnected">切断しました</string>
+  <string name="status_connected">接続中</string>
   <string name="add_device">デバイスを追加</string>
   <string name="no_device">デバイスがありません</string>
   <string name="device_details">デバイスの詳細</string>
@@ -76,15 +76,15 @@
   <string name="image_clipboard_subtitle">受信した画像ファイルをクリップボードにコピーします</string>
   <string name="notification_sync_preference">通知を同期</string>
   <string name="notification_sync_subtitle">アプリからの通知を読み取ってデスクトップに同期します</string>
-  <string name="media_session_preference">デスクトップメディアの再生をメディアセッションとして表示</string>
-  <string name="media_session_subtitle">メディアの再生は通知上に表示されます</string>
+  <string name="media_session_preference">デスクトップメディアの再生をメディアセッションで表示</string>
+  <string name="media_session_subtitle">メディアの再生を通知に表示します</string>
   <string name="auto_device_discovery_preference">デバイスの自動検出</string>
   <string name="auto_device_discovery_subtitle">使用しているネットワークの接続時にペアリングされたデバイスを自動で検出します</string>
   <string name="storage_access_preference">ストレージのアクセス</string>
   <string name="storage_access_subtitle">Windows で Android のストレージにアクセスできるようにします</string>
   <string name="permissions_preference">アプリの権限</string>
   <string name="network_preference">ネットワーク設定</string>
-  <string name="network_subtitle">接続設定を構成</string>
+  <string name="network_subtitle">接続設定を構成します</string>
   <string name="storage_location_preference">ファイルの保存先</string>
   <!-- Dialogs -->
   <string name="delete_dialog">削除しますか</string>
@@ -101,7 +101,7 @@
   <string name="no_associated_network">関連したネットワークはありません</string>
   <!-- Storage -->
   <string name="choose_storage_location">ファイルの保存先を選択してください</string>
-  <string name="storage_location_description">アプリが受信したファイルを保存するフォルダを選択します。「Downloads」フォルダがデフォルトで指定されます。</string>
+  <string name="storage_location_description">アプリが受信したファイルを保存するフォルダを選択します。デフォルトは「Downloads」フォルダが指定されます。</string>
   <string name="select_folder_button">フォルダを選択</string>
   <string name="selected_folder_label">選択済みのフォルダ</string>
   <!-- Hyperlinks -->
