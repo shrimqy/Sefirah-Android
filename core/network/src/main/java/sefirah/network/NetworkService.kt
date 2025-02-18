@@ -1,11 +1,13 @@
 package sefirah.network
 
+import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.os.BatteryManager
 import android.os.Binder
@@ -34,6 +36,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.notifications.NotificationCenter
@@ -90,8 +93,6 @@ class NetworkService : Service() {
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    private var lastBatteryLevel: Int? = null
-
     private var socket: Socket? = null
     private var writeChannel: ByteWriteChannel? = null
     private var readChannel: ByteReadChannel? = null
@@ -99,6 +100,8 @@ class NetworkService : Service() {
     private var connectedDevice: RemoteDevice? = null
     private var deviceName: String? = null
     private var connectedIpAddress: String? = null
+
+    private var deviceStatus: DeviceStatus? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -240,7 +243,7 @@ class NetworkService : Service() {
             networkDiscovery.register(NetworkAction.START_DEVICE_DISCOVERY)
             _connectionState.value = ConnectionState.Disconnected()
         }
-        lastBatteryLevel = null
+        deviceStatus = null
         sftpServer.stop()
         mediaHandler.release()
         writeChannel?.close()
@@ -311,15 +314,14 @@ class NetworkService : Service() {
     private fun sendDeviceStatus() {
         scope.launch {
             try {
-                val deviceStatus = getDeviceStatus()
-                val currentBatteryLevel = deviceStatus.batteryStatus
-                // Only send the status if the battery level has changed
-                if (currentBatteryLevel != lastBatteryLevel) {
-                    lastBatteryLevel = currentBatteryLevel
-                    sendMessage(deviceStatus)
+                val currentDeviceStatus = getDeviceStatus()
+                // Send status if any field has changed
+                if (currentDeviceStatus != deviceStatus) {
+                    deviceStatus = currentDeviceStatus
+                    sendMessage(currentDeviceStatus)
                 }
             } catch (e: Exception) {
-                Log.e("WebSocketService", "Failed to send device status", e)
+                Log.e(TAG, "Failed to send device status", e)
             }
         }
     }
@@ -328,6 +330,16 @@ class NetworkService : Service() {
         super.onCreate()
         sftpServer.initialize()
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        
+        // Replace the previous interruption filter registration with this combined one
+        val intentFilter = IntentFilter().apply {
+            NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED
+            AudioManager.RINGER_MODE_CHANGED_ACTION
+        }
+        registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED))
+        registerReceiver(interruptionFilterReceiver, IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
+        registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED))
+
         connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
 
         // Add observer for connection state changes
@@ -339,6 +351,14 @@ class NetworkService : Service() {
     }
 
     private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (_connectionState.value == ConnectionState.Connected) {
+                sendDeviceStatus()
+            }
+        }
+    }
+
+    private val interruptionFilterReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (_connectionState.value == ConnectionState.Connected) {
                 sendDeviceStatus()
@@ -361,10 +381,24 @@ class NetworkService : Service() {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val bluetooth = bluetoothManager.adapter.isEnabled
 
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+        // Get DND state
+        val isDndEnabled = notificationManager.currentInterruptionFilter != 
+            NotificationManager.INTERRUPTION_FILTER_ALL
+
+        val ringerMode = audioManager.ringerMode
+        // RINGER_MODE_SILENT = 0
+        // RINGER_MODE_VIBRATE = 1
+        // RINGER_MODE_NORMAL = 2
+
         return DeviceStatus(
             batteryStatus = batteryStatus,
             bluetoothStatus = bluetooth,
-            chargingStatus = isCharging
+            chargingStatus = isCharging,
+            isDndEnabled = isDndEnabled,
+            ringerMode = ringerMode
         )
     }
 
@@ -376,5 +410,15 @@ class NetworkService : Service() {
 
         const val TAG = "NetworkService"
         const val REMOTE_INFO = "remote_info"
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(batteryReceiver)
+        unregisterReceiver(interruptionFilterReceiver)
+        sftpServer.stop()
+        mediaHandler.release()
+        writeChannel?.close()
+        socket?.close()
     }
 }
