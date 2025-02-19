@@ -59,6 +59,9 @@
     <string name="accessibility_service_rationale">Required for detecting clipboard</string>
     <string name="notification_access">Notification Access</string>
     <string name="notification_access_rationale">Required for notification synchronization</string>
+    <string name="accessibility_settings">Accessibility settings</string>
+    <string name="app_info">App info</string>
+    <string name="accessibility_rationale">Due to security restrictions, you\'ll need to: \n 1. Try to enable the accessibility service \n 2. Go to App Info \n 3. Open the overflow menu (3 dots) \n 4. Allow restricted settings \n 5. Go back and try to enable the accessibility service again</string>
 
     <!-- Device Management -->
     <string name="status_connecting">Connecting</string>

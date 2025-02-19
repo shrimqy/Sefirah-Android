@@ -10,6 +10,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.SettingsSuggest
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,6 +38,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -62,6 +66,12 @@ internal class PermissionStep : OnboardingStep {
         val lifecycleOwner = LocalLifecycleOwner.current
 
         val permissionStates by viewModel.permissionStates.collectAsState()
+
+        // for accessibility service
+        var showRationaleDialog by remember { mutableStateOf(false) }
+
+        // Add separate state for accessibility rationale
+        var showAccessibilityRationaleDialog by remember { mutableStateOf(false) }
 
         // Update permissions on resume
         DisposableEffect(lifecycleOwner.lifecycle) {
@@ -240,8 +250,7 @@ internal class PermissionStep : OnboardingStep {
                         subtitle = stringResource(R.string.accessibility_service_rationale),
                         granted = permissionStates.accessibilityGranted,
                         onRequest = {
-
-                            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            showAccessibilityRationaleDialog = true
                         },
                         viewModel = viewModel
                     )
@@ -252,12 +261,56 @@ internal class PermissionStep : OnboardingStep {
                         subtitle = stringResource(R.string.notification_access_rationale),
                         granted = permissionStates.notificationListenerGranted,
                         onRequest = {
-                            context.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+                            showRationaleDialog = true
                         },
                         viewModel = viewModel
                     )
 
                 }
+            }
+
+            // Accessibility Rationale Dialog
+            if (showAccessibilityRationaleDialog) {
+                AlertDialog(
+                    onDismissRequest = { showAccessibilityRationaleDialog = false },
+                    text = {
+                        Text(stringResource(R.string.accessibility_rationale))
+                    },
+                    confirmButton = {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                TextButton(
+                                    onClick = { openAppSettings(context) },
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.app_info),
+                                    )
+                                }
+                                TextButton(
+                                    onClick = {
+                                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                    }
+                                ) {
+                                    Text(stringResource(R.string.accessibility_settings))
+                                }
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        Button(
+                            onClick = { showAccessibilityRationaleDialog = false },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stringResource(R.string.done),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                )
             }
         }
     }
