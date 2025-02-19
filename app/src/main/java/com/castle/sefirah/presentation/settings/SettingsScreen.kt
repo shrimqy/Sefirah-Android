@@ -194,7 +194,6 @@ fun SettingsScreen(
                 subtitle = stringResource(R.string.media_session_subtitle),
                 icon = Icons.Filled.PlayArrow,
                 checked = preferencesSettings?.mediaSession == true && permissionStates.notificationGranted,
-
                 permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     Manifest.permission.POST_NOTIFICATIONS
                 } else null,
@@ -218,7 +217,6 @@ fun SettingsScreen(
                 checked = preferencesSettings?.autoDiscovery == true && permissionStates.locationGranted,
                 permission = Manifest.permission.ACCESS_FINE_LOCATION,
                 onCheckedChanged = { checked ->
-
                     viewModel.saveAutoDiscoverySettings(checked)
                 },
                 onRequest = {
@@ -251,10 +249,13 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.storage_access_subtitle),
                     icon = Icons.Default.Folder,
                     checked = preferencesSettings?.remoteStorage == true && permissionStates.storageGranted,
-                    permission = Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    permission = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    } else null,
                     onRequest = {
-
-                        context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                        if (!permissionStates.storageGranted) {
+                            context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                        }
                     },
                     onCheckedChanged = { checked ->
                         viewModel.saveRemoteStorageSettings(checked)
@@ -292,7 +293,6 @@ fun SettingsScreen(
                 title = stringResource(R.string.storage_location_preference),
                 subtitle = getReadablePathFromUri(context, storageLocation),
                 icon = Icons.Default.Storage,
-
                 onPreferenceClick = {
                     try {
                         pickStorageLocation.launch(null)

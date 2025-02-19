@@ -6,8 +6,7 @@
     <string name="windows_app">Windows app</string>
     <string name="share_deep_link">Share to Desktop</string>
 
-    <!-- Notifications -->
-    <!-- Groups -->
+    <!-- Notifications Groups-->
     <string name="group_file_transfer">File Transfer</string>
     <string name="group_network">Network</string>
     <string name="group_media">Media</string>
@@ -19,8 +18,13 @@
     <string name="channel_media_playback">Desktop Media Playback</string>
 
     <!-- Notification Content -->
-    <string name="notification_media_playback">Desktop Media Playback</string>
+    <string name="notification_status_connecting">Connecting to %s</string>
+    <string name="notification_status_disconnected">Not connected</string>
+    <string name="notification_status_connected">Connected to %s</string>
+    <string name="notification_disconnect_action">Disconnect</string>
+    <string name="notification_stop_action">Stop</string>
     <string name="notification_clipboard_action">Send Clipboard</string>
+    <string name="notification_media_playback">Desktop Media Playback</string>
     <string name="notification_file_transfer">File Transfer</string>
     <string name="notification_file_transfer_error">File Transfer Error</string>
     <string name="notification_file_transfer_progress">Ongoing file transfer</string>
@@ -31,8 +35,10 @@
     <string name="home">Home</string>
     <string name="devices">Devices</string>
     <string name="settings">Settings</string>
+    <string name="device_details">Device Details</string>
     <string name="about">About</string>
-    <string name="notifications">Notifications</string>
+    <string name="permission">Permissions</string>
+    <string name="network">Network</string>
 
     <!-- Common UI Elements -->
     <string name="cancel">Cancel</string>
@@ -43,9 +49,12 @@
     <string name="back_button">Back</string>
     <string name="connect_button">Connect</string>
     <string name="grant">Grant</string>
+    <string name="proceed">Proceed</string>
+    <string name="done">Done</string>
 
     <!-- Permissions -->
     <string name="required_permissions">Required Permissions</string>
+    <string name="notifications">Notifications</string>
     <string name="notification_permission_rationale">For connection status updates</string>
     <string name="location_permission">Location Permission</string>
     <string name="location_permission_rationale">Required for WiFi network discovery</string>
@@ -69,10 +78,11 @@
     <string name="status_connected">Connected</string>
     <string name="add_device">Add Device</string>
     <string name="no_device">No devices found</string>
-    <string name="device_details">Device Details</string>
     <string name="last_connected">Last connected</string>
     <string name="ip_addresses">Ip addresses</string>
     <string name="no_ip">No address configured</string>
+    <string name="add_custom_ip_button">Add Custom IP Address</string>
+    <string name="custom_device_list">Custom device list</string>
 
     <!-- Onboarding & Welcome -->
     <string name="welcome">Welcome</string>
@@ -110,7 +120,6 @@
     <string name="ip_example">Example: 192.168.1.100</string>
 
     <!-- Network -->
-    <string name="networks">Network</string>
     <string name="associated_networks">Associated Networks</string>
     <string name="no_associated_network">No associated network</string>
 

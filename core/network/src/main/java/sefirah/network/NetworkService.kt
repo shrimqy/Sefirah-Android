@@ -185,13 +185,27 @@ class NetworkService : Service() {
         try {
             socket = socketFactory.tcpClientSocket(SocketType.DEFAULT, ipAddress, port)
             if (socket != null) {
-                writeChannel = socket?.openWriteChannel()
-                readChannel = socket?.openReadChannel()
-                connectedIpAddress = ipAddress
-                return true
+                try {
+                    writeChannel = socket?.openWriteChannel()
+                    readChannel = socket?.openReadChannel()
+                    connectedIpAddress = ipAddress
+                    return true
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to open channels", e)
+                    withContext(Dispatchers.IO) {
+                        socket?.close()
+                        socket = null
+                    }
+                    return false
+                }
             }
             return false
         } catch (e: Exception) {
+            Log.e(TAG, "Connection failed", e)
+            withContext(Dispatchers.IO) {
+                socket?.close()
+                socket = null
+            }
             return false
         }
     }

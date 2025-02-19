@@ -275,7 +275,7 @@ private fun IpAddressSection(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("Add IP Address")
+                Text(stringResource(R.string.add_custom_ip_button))
             }
         }
     }

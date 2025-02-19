@@ -34,12 +34,16 @@ fun NetworkService.setNotification(connectionState: ConnectionState, deviceName:
         PendingIntent.getActivity(this, 0, clipboardIntent, PendingIntent.FLAG_IMMUTABLE)
 
     val contentText = when (connectionState) {
-        is ConnectionState.Connected -> "Connected to $deviceName"
-        is ConnectionState.Connecting -> "Trying to connect to $deviceName"
-        else -> "Not connected"
+        is ConnectionState.Connected -> getString(R.string.notification_status_connected, deviceName)
+        is ConnectionState.Connecting -> getString(R.string.notification_status_connecting, deviceName)
+        else -> getString(R.string.notification_status_disconnected)
     }
     
-    val actionText = if (connectionState is ConnectionState.Connected) "Disconnect" else "Stop"
+    val actionText = if (connectionState is ConnectionState.Connected) {
+        getString(R.string.notification_disconnect_action)
+    } else {
+        getString(R.string.notification_stop_action)
+    }
 
     notificationBuilder = notificationCenter.showNotification(
         channelId = AppNotifications.DEVICE_CONNECTION_CHANNEL,

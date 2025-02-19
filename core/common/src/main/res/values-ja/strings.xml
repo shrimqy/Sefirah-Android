@@ -5,8 +5,7 @@
   <string name="version">バージョン</string>
   <string name="windows_app">Windows アプリ</string>
   <string name="share_deep_link">デスクトップに共有</string>
-  <!-- Notifications -->
-  <!-- Groups -->
+  <!-- Notifications Groups-->
   <string name="group_file_transfer">ファイル転送</string>
   <string name="group_network">ネットワーク</string>
   <string name="group_media">メディア</string>
@@ -16,8 +15,13 @@
   <string name="channel_device_connection">デバイスの接続</string>
   <string name="channel_media_playback">デスクトップメディアを再生</string>
   <!-- Notification Content -->
-  <string name="notification_media_playback">デスクトップメディアを再生</string>
+  <string name="notification_status_connecting">Connecting to %s</string>
+  <string name="notification_status_disconnected">Not connected</string>
+  <string name="notification_status_connected">Connected to %s</string>
+  <string name="notification_disconnect_action">Disconnect</string>
+  <string name="notification_stop_action">Stop</string>
   <string name="notification_clipboard_action">クリップボードを送信</string>
+  <string name="notification_media_playback">デスクトップメディアを再生</string>
   <string name="notification_file_transfer">ファイル転送</string>
   <string name="notification_file_transfer_error">ファイル転送に失敗しました</string>
   <string name="notification_file_transfer_progress">進行中のファイル転送</string>
@@ -27,8 +31,10 @@
   <string name="home">ホーム</string>
   <string name="devices">デバイス</string>
   <string name="settings">設定</string>
+  <string name="device_details">デバイスの詳細</string>
   <string name="about">アプリについて</string>
-  <string name="notifications">通知</string>
+  <string name="permission">Permissions</string>
+  <string name="network">ネットワーク</string>
   <!-- Common UI Elements -->
   <string name="cancel">キャンセル</string>
   <string name="delete">削除</string>
@@ -38,8 +44,11 @@
   <string name="back_button">戻る</string>
   <string name="connect_button">接続</string>
   <string name="grant">許可</string>
+  <string name="proceed">Proceed</string>
   <!-- Permissions -->
+  <string name="done">Done</string>
   <string name="required_permissions">必要な権限</string>
+  <string name="notifications">通知</string>
   <string name="notification_permission_rationale">接続状態の更新で必要です</string>
   <string name="location_permission">位置情報のアクセス</string>
   <string name="location_permission_rationale">Wi-Fi ネットワークの検出で必要です</string>
@@ -53,17 +62,21 @@
   <string name="accessibility_service_rationale">クリップボードの検出で必要です</string>
   <string name="notification_access">通知のアクセス</string>
   <string name="notification_access_rationale">通知の同期で必要です</string>
+  <string name="accessibility_settings">Accessibility settings</string>
+  <string name="app_info">App info</string>
+  <string name="accessibility_rationale">Due to security restrictions, you\'ll need to: \n 1. Try to enable the accessibility service \n 2. Go to App Info \n 3. Open the overflow menu (3 dots) \n 4. Allow restricted settings \n 5. Go back and try to enable the accessibility service again</string>
   <!-- Device Management -->
   <string name="status_connecting">接続しています</string>
   <string name="status_disconnected">切断しました</string>
   <string name="status_connected">接続中</string>
   <string name="add_device">デバイスを追加</string>
   <string name="no_device">デバイスがありません</string>
-  <string name="device_details">デバイスの詳細</string>
   <string name="last_connected">最終接続</string>
   <string name="ip_addresses">IP アドレス</string>
   <string name="no_ip">アドレスが設定されていません</string>
+  <string name="add_custom_ip_button">Add Custom IP Address</string>
   <!-- Onboarding & Welcome -->
+  <string name="custom_device_list">Custom device list</string>
   <string name="welcome">ようこそ</string>
   <string name="welcome_instructions">それでは始めましょう。まずは GitHub での指示に従って Windows のアプリをダウンロードしてインストールしてください。</string>
   <string name="welcome_instructions_2">完了後に Android アプリの GitHub ページで詳細を確認してください。</string>
@@ -96,7 +109,6 @@
   <string name="custom_ip_text_label">ホスト名/IP アドレス</string>
   <string name="ip_example">例: 192.168.1.100</string>
   <!-- Network -->
-  <string name="networks">ネットワーク</string>
   <string name="associated_networks">関連したネットワーク</string>
   <string name="no_associated_network">関連したネットワークはありません</string>
   <!-- Storage -->

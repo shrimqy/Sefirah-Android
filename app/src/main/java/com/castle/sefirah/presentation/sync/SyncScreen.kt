@@ -203,7 +203,6 @@ fun SyncScreen(
                                 maxLines = 1
                             )
                         }
-
                     }
                 }
             )

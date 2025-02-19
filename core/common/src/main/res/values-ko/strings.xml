@@ -107,7 +107,6 @@
     <string name="ip_example">Example: 192.168.1.100</string>
 
     <!-- Network -->
-    <string name="networks">Network</string>
     <string name="associated_networks">Associated Networks</string>
     <string name="no_associated_network">No associated network</string>
 

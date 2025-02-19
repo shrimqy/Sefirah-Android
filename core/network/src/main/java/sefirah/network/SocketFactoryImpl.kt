@@ -43,7 +43,12 @@ class SocketFactoryImpl @Inject constructor(
                     aSocket(selectorManager).tcp().connect(ipAddress, port).tls(connectionScope.coroutineContext) {
                         trustManager = customTrustManager.getRemoteTrustManager()
                     }
-                }.also { Log.d("SocketFactory", "socket: ${it?.remoteAddress}") }
+                }?.also { 
+                    Log.d("SocketFactory", "Connected successfully to ${it.remoteAddress}")
+                } ?: run {
+                    Log.e("SocketFactory", "Connection timed out")
+                    null
+                }
             } catch (e: Exception) {
                 Log.e("SocketFactory", "Connection failed", e)
                 null

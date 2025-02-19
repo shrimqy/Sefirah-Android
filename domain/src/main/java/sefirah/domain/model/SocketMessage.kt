@@ -66,6 +66,8 @@ data class DeviceStatus(
     val chargingStatus: Boolean? = null,
     val wifiStatus: Boolean? = null,
     val bluetoothStatus: Boolean? = null,
+    val isDndEnabled: Boolean? = null,
+    val ringerMode: Int? = null
 ) : SocketMessage()
 
 @Serializable

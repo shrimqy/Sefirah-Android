@@ -23,9 +23,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import sefirah.presentation.R
+import sefirah.common.R as CommonR
 
 @Composable
 fun AppTopBar(
@@ -118,7 +120,7 @@ fun AppTopBar(
                     offset = DpOffset(x = (-9).dp, y = 0.dp)
                 ) {
                     DropdownMenuItem(
-                        text = { Text(text = "Custom device list") },
+                        text = { Text(text = stringResource(id = CommonR.string.custom_device_list)) },
                         onClick = { 
                             isOverflowExpanded = false
                             onAddDeviceClick()

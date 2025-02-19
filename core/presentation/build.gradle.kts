@@ -22,6 +22,7 @@ kotlin {
 }
 
 dependencies {
+    api(projects.core.common)
     implementation(libs.bundles.compose.android)
     implementation(libs.material)
 }

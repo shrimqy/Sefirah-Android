@@ -43,7 +43,7 @@ fun NetworkScreen(rootNavController: NavHostController) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 ),
-                title = { Text(stringResource(R.string.networks)) },
+                title = { Text(stringResource(R.string.network)) },
                 navigationIcon = {
                     IconButton(
                         onClick = { rootNavController.navigateUp() }

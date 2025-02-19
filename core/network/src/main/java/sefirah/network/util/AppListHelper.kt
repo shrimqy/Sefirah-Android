@@ -1,5 +1,6 @@
 package sefirah.network.util
 
+import android.annotation.SuppressLint
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.BitmapDrawable
@@ -8,6 +9,7 @@ import sefirah.domain.model.ApplicationInfo
 import sefirah.presentation.util.bitmapToBase64
 import sefirah.presentation.util.drawableToBitmap
 
+@SuppressLint("QueryPermissionsNeeded")
 fun getInstalledApps(packageManager: PackageManager): List<ApplicationInfo> {
     val appsWithPermission = mutableListOf<ApplicationInfo>()
     val packageInfos: List<PackageInfo> = packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
