@@ -33,7 +33,7 @@ enum class MiscType {
     Shutdown,
     Sleep,
     Hibernate,
-    ClearNotifications
+    ClearNotifications,
 }
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -44,7 +44,7 @@ sealed class SocketMessage
 @Serializable
 @SerialName("0")
 data class Misc(
-    val miscType: MiscType,
+    val miscType: MiscType
 ) : SocketMessage()
 
 @Serializable
@@ -204,6 +204,12 @@ data class UdpBroadcast(
     val port: Int? = null,
     val publicKey: String,
     var timestamp: Long?
+) : SocketMessage()
+
+@Serializable
+@SerialName("13")
+data class DeviceRingerMode(
+    val ringerMode: Int
 ) : SocketMessage()
 
 @Serializable

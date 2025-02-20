@@ -1,6 +1,8 @@
 package sefirah.network.extensions
 
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +12,7 @@ import sefirah.database.model.toEntity
 import sefirah.domain.model.BulkFileTransfer
 import sefirah.domain.model.ClipboardMessage
 import sefirah.domain.model.DeviceInfo
+import sefirah.domain.model.DeviceRingerMode
 import sefirah.domain.model.FileTransfer
 import sefirah.domain.model.Misc
 import sefirah.domain.model.MiscType
@@ -40,9 +43,8 @@ suspend fun NetworkService.handleMessage(message: SocketMessage) {
         }
         is FileTransfer -> handleFileTransfer(message)
         is BulkFileTransfer -> handleBulkFileTransfer(message)
-        else -> {
-
-        }
+        is DeviceRingerMode -> handleRingerMode(message)
+        else -> {}
     }
 }
 
@@ -114,5 +116,22 @@ fun NetworkService.handleMisc(misc: Misc) {
         MiscType.Disconnect -> stop(true)
         MiscType.ClearNotifications -> notificationHandler.removeAllNotification()
         else -> {}
+    }
+}
+
+fun NetworkService.handleRingerMode(ringerMode: DeviceRingerMode) {
+    when(ringerMode.ringerMode) {
+        AudioManager.RINGER_MODE_SILENT -> {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
+        }
+        AudioManager.RINGER_MODE_VIBRATE -> {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+        }
+        AudioManager.RINGER_MODE_NORMAL -> {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+        }
     }
 }
