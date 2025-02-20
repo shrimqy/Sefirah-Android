@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
   <!-- App -->
   <string name="app_name" translatable="false">Sefirah</string>
@@ -15,11 +15,11 @@
   <string name="channel_device_connection">デバイスの接続</string>
   <string name="channel_media_playback">デスクトップメディアを再生</string>
   <!-- Notification Content -->
-  <string name="notification_status_connecting">Connecting to %s</string>
-  <string name="notification_status_disconnected">Not connected</string>
-  <string name="notification_status_connected">Connected to %s</string>
-  <string name="notification_disconnect_action">Disconnect</string>
-  <string name="notification_stop_action">Stop</string>
+  <string name="notification_status_connecting">「%s」に接続中</string>
+  <string name="notification_status_disconnected">何も接続されていません</string>
+  <string name="notification_status_connected">「%s」に接続しました</string>
+  <string name="notification_disconnect_action">切断しました</string>
+  <string name="notification_stop_action">停止</string>
   <string name="notification_clipboard_action">クリップボードを送信</string>
   <string name="notification_media_playback">デスクトップメディアを再生</string>
   <string name="notification_file_transfer">ファイル転送</string>
@@ -33,7 +33,7 @@
   <string name="settings">設定</string>
   <string name="device_details">デバイスの詳細</string>
   <string name="about">アプリについて</string>
-  <string name="permission">Permissions</string>
+  <string name="permission">権限</string>
   <string name="network">ネットワーク</string>
   <!-- Common UI Elements -->
   <string name="cancel">キャンセル</string>
@@ -44,9 +44,9 @@
   <string name="back_button">戻る</string>
   <string name="connect_button">接続</string>
   <string name="grant">許可</string>
-  <string name="proceed">Proceed</string>
+  <string name="proceed">進む</string>
   <!-- Permissions -->
-  <string name="done">Done</string>
+  <string name="done">完了</string>
   <string name="required_permissions">必要な権限</string>
   <string name="notifications">通知</string>
   <string name="notification_permission_rationale">接続状態の更新で必要です</string>
@@ -62,9 +62,9 @@
   <string name="accessibility_service_rationale">クリップボードの検出で必要です</string>
   <string name="notification_access">通知のアクセス</string>
   <string name="notification_access_rationale">通知の同期で必要です</string>
-  <string name="accessibility_settings">Accessibility settings</string>
-  <string name="app_info">App info</string>
-  <string name="accessibility_rationale">Due to security restrictions, you\'ll need to: \n 1. Try to enable the accessibility service \n 2. Go to App Info \n 3. Open the overflow menu (3 dots) \n 4. Allow restricted settings \n 5. Go back and try to enable the accessibility service again</string>
+  <string name="accessibility_settings">ユーザー補助の設定</string>
+  <string name="app_info">アプリ情報</string>
+  <string name="accessibility_rationale">セキュリティによる制限のため次の操作を行う必要があります: \n 1. ユーザー補助サービスを有効化してみる \n 2. アプリ情報を開く \n 3. オーバーフローメニューを開く (3 つのドット) \n 4. 制限された設定を許可を選択 \n 5. 画面に戻ってユーザー補助サービスが有効化できるか確認</string>
   <!-- Device Management -->
   <string name="status_connecting">接続しています</string>
   <string name="status_disconnected">切断しました</string>
@@ -74,9 +74,9 @@
   <string name="last_connected">最終接続</string>
   <string name="ip_addresses">IP アドレス</string>
   <string name="no_ip">アドレスが設定されていません</string>
-  <string name="add_custom_ip_button">Add Custom IP Address</string>
+  <string name="add_custom_ip_button">カスタム IP アドレスを追加</string>
   <!-- Onboarding & Welcome -->
-  <string name="custom_device_list">Custom device list</string>
+  <string name="custom_device_list">カスタムデバイスの一覧</string>
   <string name="welcome">ようこそ</string>
   <string name="welcome_instructions">それでは始めましょう。まずは GitHub での指示に従って Windows のアプリをダウンロードしてインストールしてください。</string>
   <string name="welcome_instructions_2">完了後に Android アプリの GitHub ページで詳細を確認してください。</string>
