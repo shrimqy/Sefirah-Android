@@ -64,7 +64,7 @@
   <string name="notification_access_rationale">通知の同期で必要です</string>
   <string name="accessibility_settings">ユーザー補助の設定</string>
   <string name="app_info">アプリ情報</string>
-  <string name="accessibility_rationale">セキュリティによる制限のため次の操作を行う必要があります: \n 1. ユーザー補助サービスを有効化してみる \n 2. アプリ情報を開く \n 3. オーバーフローメニューを開く (3 つのドット) \n 4. 制限された設定を許可を選択 \n 5. 画面に戻ってユーザー補助サービスが有効化できるか確認</string>
+  <string name="restricted_settings_instruction">セキュリティによる制限のため次の操作を行う必要があります: \n 1. 「%s」 ユーザー補助サービスを有効化してみる \n 2. アプリ情報を開く \n 3. オーバーフローメニューを開く (3 つのドット) \n 4. 制限された設定を許可を選択 \n 5. 画面に戻って 「%s」 が有効化できるか確認</string>
   <!-- Device Management -->
   <string name="status_connecting">接続しています</string>
   <string name="status_disconnected">切断しました</string>

@@ -63,14 +63,14 @@
     <string name="background_battery_usage">Background Battery Usage</string>
     <string name="background_battery_usage_rationale">Allow the app to maintain stable connections by disabling battery optimizations</string>
     <string name="storage_access">Storage Access</string>
-    <string name="storage_access_rationale">Required for remote Android storage access feature</string>
+    <string name="storage_access_rationale">Required for Android storage access on remote device</string>
     <string name="accessibility_service">Accessibility Service</string>
     <string name="accessibility_service_rationale">Required for detecting clipboard</string>
     <string name="notification_access">Notification Access</string>
     <string name="notification_access_rationale">Required for notification synchronization</string>
     <string name="accessibility_settings">Accessibility settings</string>
     <string name="app_info">App info</string>
-    <string name="accessibility_rationale">Due to security restrictions, you\'ll need to: \n 1. Try to enable the accessibility service \n 2. Go to App Info \n 3. Open the overflow menu (3 dots) \n 4. Allow restricted settings \n 5. Go back and try to enable the accessibility service again</string>
+    <string name="restricted_settings_instruction">Due to security restrictions, you\'ll need to: \n 1. Try to enable the \'%s\' \n 2. Tap \'ok\' on the warning and come back \n 3. Go to App Info \n 4. Open the overflow menu (3 dots) \n 5. Tap \'allow restricted settings\' \n 6. Go back and try again to enable the \'%s\'</string>
 
     <!-- Device Management -->
     <string name="status_connecting">Connecting</string>
@@ -142,4 +142,5 @@
     <string name="key">Key</string>
     <string name="manual_connect">Manual Connect</string>
     <string name="auto_connect">Auto Connect</string>
+    <string name="restricted_settings_title">Restricted settings</string>
 </resources>

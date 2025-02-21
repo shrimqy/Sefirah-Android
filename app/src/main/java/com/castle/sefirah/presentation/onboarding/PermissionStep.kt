@@ -67,11 +67,9 @@ internal class PermissionStep : OnboardingStep {
 
         val permissionStates by viewModel.permissionStates.collectAsState()
 
-        // for accessibility service
-        var showRationaleDialog by remember { mutableStateOf(false) }
-
-        // Add separate state for accessibility rationale
-        var showAccessibilityRationaleDialog by remember { mutableStateOf(false) }
+        var permissionRationaleDialog by remember { 
+            mutableStateOf<PermissionRationaleDialog?>(null) 
+        }
 
         // Update permissions on resume
         DisposableEffect(lifecycleOwner.lifecycle) {
@@ -160,7 +158,6 @@ internal class PermissionStep : OnboardingStep {
                         granted = permissionStates.locationGranted,
                         onRequest = {
 
-
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                                 // First request foreground permissions
                                 foregroundLocationRequester.launch(
@@ -198,8 +195,6 @@ internal class PermissionStep : OnboardingStep {
                                 mediaPermissionRequester.launch(Manifest.permission.READ_MEDIA_IMAGES)
                             },
                             viewModel = viewModel
-
-
                         )
                     }
 
@@ -211,7 +206,6 @@ internal class PermissionStep : OnboardingStep {
                         subtitle = stringResource(R.string.background_battery_usage_rationale),
                         granted = permissionStates.batteryGranted,
                         onRequest = {
-
                             @SuppressLint("BatteryLife")
                             val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                                 data = Uri.parse("package:${context.packageName}")
@@ -250,7 +244,13 @@ internal class PermissionStep : OnboardingStep {
                         subtitle = stringResource(R.string.accessibility_service_rationale),
                         granted = permissionStates.accessibilityGranted,
                         onRequest = {
-                            showAccessibilityRationaleDialog = true
+                            permissionRationaleDialog = PermissionRationaleDialog(
+                                show = true,
+                                permissionScreen = {
+                                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                },
+                                restrictedSettings = R.string.accessibility_service
+                            )
                         },
                         viewModel = viewModel
                     )
@@ -261,58 +261,77 @@ internal class PermissionStep : OnboardingStep {
                         subtitle = stringResource(R.string.notification_access_rationale),
                         granted = permissionStates.notificationListenerGranted,
                         onRequest = {
-                            showRationaleDialog = true
+                            permissionRationaleDialog = PermissionRationaleDialog(
+                                show = true,
+                                permissionScreen = {
+                                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                },
+                                restrictedSettings = R.string.notification_access
+                            )
                         },
                         viewModel = viewModel
                     )
-
                 }
             }
 
-            // Accessibility Rationale Dialog
-            if (showAccessibilityRationaleDialog) {
-                AlertDialog(
-                    onDismissRequest = { showAccessibilityRationaleDialog = false },
-                    text = {
-                        Text(stringResource(R.string.accessibility_rationale))
-                    },
-                    confirmButton = {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceAround
-                            ) {
-                                TextButton(
-                                    onClick = { openAppSettings(context) },
+            permissionRationaleDialog?.let { dialog ->
+                if (dialog.show) {
+                    AlertDialog(
+                        onDismissRequest = { permissionRationaleDialog = null },
+                        title = { Text(stringResource(R.string.restricted_settings_title)) },
+                        text = { 
+                            val settingName = stringResource(dialog.restrictedSettings)
+                            Text(
+                                stringResource(
+                                    R.string.restricted_settings_instruction,
+                                    settingName,
+                                    settingName
+                                )
+                            )
+                        },
+                        confirmButton = {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceAround
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.app_info),
-                                    )
-                                }
-                                TextButton(
-                                    onClick = {
-                                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                    TextButton(
+                                        onClick = { openAppSettings(context) },
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.app_info),
+                                        )
                                     }
-                                ) {
-                                    Text(stringResource(R.string.accessibility_settings))
+                                    TextButton(
+                                        onClick = {
+                                            dialog.permissionScreen()
+                                            permissionRationaleDialog = null
+                                        }
+                                    ) {
+                                        Text(stringResource(dialog.restrictedSettings))
+                                    }
                                 }
                             }
+                        },
+                        dismissButton = {
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { permissionRationaleDialog = null }
+                            ) {
+                                Text(stringResource(R.string.cancel))
+                            }
                         }
-                    },
-                    dismissButton = {
-                        Button(
-                            onClick = { showAccessibilityRationaleDialog = false },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = stringResource(R.string.done),
-                                maxLines = 1
-                            )
-                        }
-                    }
-                )
+                    )
+                }
             }
         }
+    }
+    companion object {
+        data class PermissionRationaleDialog(
+            val show: Boolean,
+            val permissionScreen: () -> Unit,
+            val restrictedSettings: Int
+        )
     }
 }
 
