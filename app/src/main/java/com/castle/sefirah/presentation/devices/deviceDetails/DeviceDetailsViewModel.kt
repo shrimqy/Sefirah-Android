@@ -1,7 +1,10 @@
+
 package com.castle.sefirah.presentation.devices.deviceDetails
 
+import android.app.Application
+import android.content.Intent
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,14 +14,15 @@ import kotlinx.coroutines.launch
 import sefirah.data.repository.AppRepository
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.RemoteDeviceEntity
-import sefirah.domain.model.RemoteDevice
+import sefirah.network.NetworkService
 import javax.inject.Inject
 
 @HiltViewModel
 class EditDeviceViewModel @Inject constructor(
     private val appRepository: AppRepository,
-    savedStateHandle: SavedStateHandle
-) : ViewModel() {
+    savedStateHandle: SavedStateHandle,
+    application: Application
+) : AndroidViewModel(application) {
 
     private val deviceId: String = checkNotNull(savedStateHandle["deviceId"])
 
@@ -55,7 +59,10 @@ class EditDeviceViewModel @Inject constructor(
                 val updatedIps = device.ipAddresses.toMutableList().apply {
                     add(ip)
                 }
-                appRepository.updateIpAddresses(deviceId = device.deviceId, ipAddresses = updatedIps)
+                appRepository.updateIpAddresses(
+                    deviceId = device.deviceId,
+                    ipAddresses = updatedIps
+                )
             }
         }
     }
@@ -63,6 +70,10 @@ class EditDeviceViewModel @Inject constructor(
     fun removeDevice() {
         viewModelScope.launch {
             appRepository.removeDevice(deviceId)
+            val intent = Intent(getApplication(), NetworkService::class.java).apply {
+                this.action = NetworkService.Companion.Actions.STOP.name
+            }
+            getApplication<Application>().startService(intent)
         }
     }
 
