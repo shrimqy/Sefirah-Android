@@ -34,6 +34,5 @@ include(":data")
 include(":data")
 
 include(":feature:clipboard")
-include(":feature:media")
+include(":feature:projection")
 include(":feature:notification")
-include(":feature:screen")

@@ -39,6 +39,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import sefirah.clipboard.ClipboardHandler
+import sefirah.common.R
 import sefirah.common.notifications.NotificationCenter
 import sefirah.data.repository.AppRepository
 import sefirah.domain.model.ConnectionState
@@ -50,7 +51,6 @@ import sefirah.domain.model.SocketType
 import sefirah.domain.repository.PlaybackRepository
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
-import sefirah.media.MediaHandler
 import sefirah.network.NetworkDiscovery.NetworkAction
 import sefirah.network.extensions.handleDeviceInfo
 import sefirah.network.extensions.handleMessage
@@ -60,6 +60,7 @@ import sefirah.network.util.ECDHHelper
 import sefirah.network.util.MessageSerializer
 import sefirah.network.util.getInstalledApps
 import sefirah.notification.NotificationHandler
+import sefirah.projection.media.MediaHandler
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -148,31 +149,43 @@ class NetworkService : Service() {
                 sendDeviceInfo(remoteInfo)
 
                 // Wait for device info
-                withTimeoutOrNull(60000) { // 30 seconds timeout
+                val state = withTimeoutOrNull(30000) { // 30 seconds timeout
                     readChannel?.readUTF8Line()?.let { jsonMessage ->
-//                        Log.d(TAG, "Raw received data: $jsonMessage")
-                        val deviceInfo = messageSerializer.deserialize(jsonMessage) as? DeviceInfo
-                        if (deviceInfo == null) {
+                        val message = messageSerializer.deserialize(jsonMessage)
+                        if (message == null) {
                             Log.e(TAG, "Invalid device info received")
-                            return@withTimeoutOrNull null
+                            return@withTimeoutOrNull ConnectionState.Error(getString(R.string.connection_error))
                         }
-                        connectedDevice = remoteInfo
-                        handleDeviceInfo(deviceInfo, remoteInfo, connectedIpAddress!!)
-                        return@withTimeoutOrNull Unit
+                        when (message) {
+                            is DeviceInfo -> {
+                                connectedDevice = remoteInfo
+                                handleDeviceInfo(message, remoteInfo, connectedIpAddress!!)
+                                return@withTimeoutOrNull ConnectionState.Connected
+                            }
+                            else -> {
+                                Log.w(TAG, "Authentication rejected")
+                                return@withTimeoutOrNull ConnectionState.Error(getString(R.string.connection_error))
+                            }
+                        }
                     }
+                    null 
                 } ?: run {
                     Log.e(TAG, "Timeout waiting for device info")
-                    _connectionState.value = ConnectionState.Disconnected()
+                    _connectionState.value = ConnectionState.Error(getString(R.string.connection_error))
                     stop(false)
                     return@launch
                 }
-                _connectionState.value = ConnectionState.Connected
-                startListening()
-                if (remoteInfo.avatar == null) {
-                    sendInstalledApps()
+                _connectionState.value = state
+                if (state == ConnectionState.Connected) {
+                    startListening()
+                    if (remoteInfo.avatar == null) {
+                        sendInstalledApps()
+                    }
+                    // Setup complete
+                    finalizeConnection()
+                } else {
+                    stop(true)
                 }
-                // Setup complete
-                finalizeConnection()
             } catch (e: Exception) {
                 Log.e(TAG, "Error in connecting", e)
                 _connectionState.value = ConnectionState.Disconnected()

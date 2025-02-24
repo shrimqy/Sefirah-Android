@@ -20,8 +20,8 @@ import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PlaybackRepository
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
-import sefirah.media.MediaHandler
-import sefirah.media.MediaService
+import sefirah.projection.media.MediaHandler
+import sefirah.projection.media.MediaService
 import sefirah.network.NetworkManagerImpl
 import sefirah.network.NsdService
 import sefirah.network.sftp.SftpServer

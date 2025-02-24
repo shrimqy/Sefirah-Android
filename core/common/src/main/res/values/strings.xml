@@ -143,4 +143,5 @@
     <string name="manual_connect">Manual Connect</string>
     <string name="auto_connect">Auto Connect</string>
     <string name="restricted_settings_title">Restricted settings</string>
+    <string name="connection_error">Connection failed: Device declined pairing or is unavailable</string>
 </resources>

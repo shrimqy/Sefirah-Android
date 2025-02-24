@@ -1,4 +1,4 @@
-package sefirah.media
+package sefirah.projection.media
 
 import sefirah.domain.model.PlaybackData
 

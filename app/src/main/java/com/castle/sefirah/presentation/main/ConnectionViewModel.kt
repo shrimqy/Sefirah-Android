@@ -131,13 +131,13 @@ class ConnectionViewModel @Inject constructor(
                     }
                     is ConnectionState.Error -> {
                         _isRefreshing.value = false
-                        withContext(Dispatchers.Main.immediate) {
-                            Toast.makeText(
-                                getApplication(),
-                                "Error: ${state.message}",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
+//                        withContext(Dispatchers.Main.immediate) {
+//                            Toast.makeText(
+//                                getApplication(),
+//                                "Error: ${state.message}",
+//                                Toast.LENGTH_LONG
+//                            ).show()
+//                        }
                         connectionStateJob?.cancel()
                     }
                 }

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "sefirah.media"
+    namespace = "sefirah.projection"
 }
 
 dependencies {

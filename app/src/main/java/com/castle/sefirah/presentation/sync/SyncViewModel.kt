@@ -3,7 +3,6 @@ package com.castle.sefirah.presentation.sync
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -97,11 +96,6 @@ class SyncViewModel @Inject constructor(
                         }
                         is ConnectionState.Disconnected -> {
                             _isRefreshing.value = false
-                            Toast.makeText(
-                                context,
-                                "Connection failed: Device declined pairing or is unavailable",
-                                Toast.LENGTH_LONG
-                            ).show()
                             connectionStateJob?.cancel() // Stop collecting after failure
                         }
                         ConnectionState.Connecting -> {
@@ -109,23 +103,17 @@ class SyncViewModel @Inject constructor(
                         }
                         is ConnectionState.Error -> {
                             _isRefreshing.value = false
-                            Toast.makeText(
-                                context,
-                                "Connection error occurred",
-                                Toast.LENGTH_LONG
-                            ).show()
+//                            Toast.makeText(
+//                                context,
+//                                state.message,
+//                                Toast.LENGTH_LONG
+//                            ).show()
                             connectionStateJob?.cancel()
                         }
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error saving to service: ${e.message}", e)
                 _isRefreshing.value = false
-                Toast.makeText(
-                    context,
-                    "Failed to initiate connection",
-                    Toast.LENGTH_LONG
-                ).show()
             }
         }
     }

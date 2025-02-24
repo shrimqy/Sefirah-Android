@@ -1,5 +1,6 @@
 package sefirah.network.extensions
 
+import android.bluetooth.BluetoothClass.Device
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -30,7 +31,7 @@ import sefirah.network.NetworkService
 import sefirah.network.NetworkService.Companion.TAG
 import sefirah.network.util.ECDHHelper
 
-suspend fun NetworkService.handleMessage(message: SocketMessage) {
+fun NetworkService.handleMessage(message: SocketMessage) {
     when (message) {
         is Misc -> handleMisc(message)
         is NotificationMessage -> notificationHandler.removeNotification(message.notificationKey)
