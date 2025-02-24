@@ -1,0 +1,5 @@
+* Added the ability to change the ringer mode of the phone
+* Added instructions for enabling restricted settings
+* Added preference (on Windows) to avoid toasting remote notifications when the phone is in DND
+* Added Japanese translations thanks to reindex-ot
+* Fixed "Storage Access" preference not working as intended
