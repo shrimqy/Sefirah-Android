@@ -9,5 +9,4 @@ data class LocalDevice(
     val deviceName: String,
     val publicKey: String,
     val privateKey: String,
-    val wallpaperBase64: String? = null
 ) : Parcelable

@@ -5,7 +5,9 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.room.withTransaction
+import androidx.sqlite.db.SupportSQLiteDatabase
 import sefirah.database.dao.DeviceDao
 import sefirah.database.dao.NetworkDao
 import sefirah.database.model.CustomIpEntity
@@ -26,9 +28,30 @@ interface AppDatabase {
 
     companion object {
         private const val DATABASE_NAME = "sefirah.db"
+        
+        // Migration from version 2 to 3 (removing wallpaperBase64 from LocalDeviceEntity)
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS LocalDeviceEntity_new (" +
+                    "deviceId TEXT NOT NULL PRIMARY KEY, " +
+                    "deviceName TEXT NOT NULL, " +
+                    "publicKey TEXT NOT NULL, " +
+                    "privateKey TEXT NOT NULL)"
+                )
+                db.execSQL(
+                    "INSERT INTO LocalDeviceEntity_new (deviceId, deviceName, publicKey, privateKey) " +
+                    "SELECT deviceId, deviceName, publicKey, privateKey FROM LocalDeviceEntity"
+                )
+                db.execSQL("DROP TABLE LocalDeviceEntity")
+                db.execSQL("ALTER TABLE LocalDeviceEntity_new RENAME TO LocalDeviceEntity")
+            }
+        }
+        
         fun createRoom(context: Context): AppDatabase = Room
             .databaseBuilder(context, AppRoomDatabase::class.java, DATABASE_NAME)
             .fallbackToDestructiveMigration()
+            .addMigrations(MIGRATION_1_2)
             .build()
     }
 }
@@ -43,7 +66,7 @@ interface AppDatabase {
         CustomIpEntity::class,
         DeviceCustomIpCrossRef::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

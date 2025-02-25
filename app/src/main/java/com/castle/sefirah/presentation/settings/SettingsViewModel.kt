@@ -168,7 +168,6 @@ class SettingsViewModel @Inject constructor(
                         deviceName = deviceName,
                         publicKey = publicKey,
                         privateKey = privateKey,
-                        wallpaperBase64 = wallpaperBase64
                     ).toEntity()
                 )
             } catch (e: Exception) {

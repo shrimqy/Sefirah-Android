@@ -1,7 +1,9 @@
 package sefirah.network
 
+import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.app.Service
+import android.app.WallpaperManager
 import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -60,6 +62,7 @@ import sefirah.network.util.ECDHHelper
 import sefirah.network.util.MessageSerializer
 import sefirah.network.util.getInstalledApps
 import sefirah.notification.NotificationHandler
+import sefirah.presentation.util.drawableToBase64Compressed
 import sefirah.projection.media.MediaHandler
 import javax.inject.Inject
 
@@ -223,9 +226,9 @@ class NetworkService : Service() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private suspend fun sendDeviceInfo(remoteInfo: RemoteDevice) {
         val localDevice = appRepository.getLocalDevice()
-
         // Generate nonce and proof
         val nonce = ECDHHelper.generateNonce()
         val sharedSecret = ECDHHelper.deriveSharedSecret(
@@ -234,11 +237,21 @@ class NetworkService : Service() {
         )
         val proof = ECDHHelper.generateProof(sharedSecret, nonce)
 
+        val wallpaperBase64 = try {
+            val wallpaperManager = WallpaperManager.getInstance(applicationContext)
+            wallpaperManager.drawable?.let { drawable ->
+                drawableToBase64Compressed(drawable)
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Unable to access wallpaper", e)
+            null
+        }
+
         sendMessage(DeviceInfo(
             deviceId = localDevice.deviceId,
             deviceName = localDevice.deviceName,
             publicKey = localDevice.publicKey,
-            avatar = localDevice.wallpaperBase64,
+            avatar = wallpaperBase64,
             nonce = nonce,
             proof = proof
         ))
