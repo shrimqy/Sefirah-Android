@@ -19,3 +19,27 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep classes referenced by Apache SSHD
+-dontwarn javax.management.**
+-keep class javax.management.** { *; }
+
+# Keep EdDSA crypto classes
+-dontwarn net.i2p.crypto.eddsa.**
+-keep class net.i2p.crypto.eddsa.** { *; }
+
+# Keep SLF4J classes
+-dontwarn org.slf4j.**
+-keep class org.slf4j.** { *; }
+
+# Keep Apache SSHD classes
+-dontwarn org.apache.sshd.**
+-keep class org.apache.sshd.** { *; }
+
+# Keep Apache MINA classes
+-dontwarn org.apache.mina.**
+-keep class org.apache.mina.** { *; }
+
+# Keep BouncyCastle classes
+-dontwarn org.bouncycastle.**
+-keep class org.bouncycastle.** { *; }
