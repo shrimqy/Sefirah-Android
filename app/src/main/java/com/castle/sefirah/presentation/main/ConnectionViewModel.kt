@@ -3,11 +3,9 @@ package com.castle.sefirah.presentation.main
 import android.app.Application
 import android.content.Intent
 import android.util.Log
-import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import com.komu.sekia.di.AppCoroutineScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import sefirah.data.repository.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.domain.model.ConnectionState

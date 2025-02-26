@@ -18,7 +18,6 @@ data class PermissionStates(
     val storageGranted: Boolean = false,
     val accessibilityGranted: Boolean = false,
     val notificationListenerGranted: Boolean = false,
-    val readMediaGranted: Boolean = false,
     val readSensitiveNotificationsGranted: Boolean = false
 )
 
@@ -54,16 +53,6 @@ fun checkStoragePermission(context: Context): Boolean {
     } else {
         context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
                 PackageManager.PERMISSION_GRANTED
-    }
-}
-
-fun checkReadMediaPermission(context: Context): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        context.checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) ==
-                PackageManager.PERMISSION_GRANTED
-    } else {
-        // For older versions, we use storage permission
-        checkStoragePermission(context)
     }
 }
 

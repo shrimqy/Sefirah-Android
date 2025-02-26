@@ -37,7 +37,7 @@
     <string name="settings">Settings</string>
     <string name="device_details">Device Details</string>
     <string name="about">About</string>
-    <string name="permission">Permissions</string>
+    <string name="permissions">Permissions</string>
     <string name="network">Network</string>
 
     <!-- Common UI Elements -->
@@ -53,7 +53,6 @@
     <string name="done">Done</string>
 
     <!-- Permissions -->
-    <string name="required_permissions">Required Permissions</string>
     <string name="notifications">Notifications</string>
     <string name="notification_permission_rationale">For connection status updates</string>
     <string name="location_permission">Location Permission</string>

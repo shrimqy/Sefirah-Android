@@ -45,7 +45,6 @@
     <string name="grant">Grant</string>
 
     <!-- Permissions -->
-    <string name="required_permissions">Required Permissions</string>
     <string name="notification_permission_rationale">For connection status updates</string>
     <string name="location_permission">Location Permission</string>
     <string name="location_permission_rationale">Required for WiFi network discovery</string>

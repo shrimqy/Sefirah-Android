@@ -14,7 +14,6 @@ import androidx.lifecycle.viewModelScope
 import sefirah.common.util.checkBatteryOptimization
 import sefirah.common.util.checkLocationPermissions
 import sefirah.common.util.checkNotificationPermission
-import sefirah.common.util.checkReadMediaPermission
 import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
@@ -79,7 +78,6 @@ class SettingsViewModel @Inject constructor(
             storageGranted = checkStoragePermission(context),
             accessibilityGranted = isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}") ,
             notificationListenerGranted = isNotificationListenerEnabled(context),
-            readMediaGranted = checkReadMediaPermission(context)
         )
         _permissionStates.value = newStates
 
@@ -103,9 +101,6 @@ class SettingsViewModel @Inject constructor(
         if (!previousStates.notificationListenerGranted && newStates.notificationListenerGranted)
             saveNotificationSyncSettings(true)
 
-        if (!previousStates.readMediaGranted && newStates.readMediaGranted)
-            saveImageClipboardSettings(true)
-
         if (!previousStates.storageGranted && newStates.storageGranted)
             saveRemoteStorageSettings(true)
     }
@@ -113,7 +108,6 @@ class SettingsViewModel @Inject constructor(
     private fun handleRevokedPermissions(settings: PreferencesSettings, newStates: PermissionStates) {
         if (!newStates.accessibilityGranted && settings.clipboardSync ||
             !newStates.notificationListenerGranted && settings.notificationSync ||
-            !newStates.readMediaGranted && settings.imageClipboard ||
             !newStates.storageGranted && settings.remoteStorage
         ) {
             updatePreferencesBasedOnPermissions(settings)
@@ -127,9 +121,6 @@ class SettingsViewModel @Inject constructor(
 
             if (!_permissionStates.value.notificationListenerGranted && settings.notificationSync)
                 preferencesRepository.saveNotificationSyncSettings(false)
-
-            if (!_permissionStates.value.readMediaGranted && settings.imageClipboard)
-                preferencesRepository.saveImageClipboardSettings(false)
 
             if (!_permissionStates.value.storageGranted && settings.remoteStorage)
                 preferencesRepository.saveRemoteStorageSettings(false)
@@ -151,16 +142,6 @@ class SettingsViewModel @Inject constructor(
                 val (publicKey, privateKey) = ECDHHelper.generateKeys()
                 val deviceName = Global.getString(getApplication<Application>().contentResolver, "device_name")
                 val androidId = Secure.getString(getApplication<Application>().contentResolver, Secure.ANDROID_ID)
-
-                val wallpaperBase64 = try {
-                    val wallpaperManager = WallpaperManager.getInstance(getApplication())
-                    wallpaperManager.drawable?.let { drawable ->
-                        drawableToBase64Compressed(drawable)
-                    }
-                } catch (e: SecurityException) {
-                    Log.w("OnboardingViewModel", "Unable to access wallpaper", e)
-                    null
-                }
 
                 appRepository.addLocalDevice(
                     LocalDevice(

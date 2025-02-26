@@ -3,11 +3,13 @@ package com.castle.sefirah.presentation.onboarding
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -67,8 +69,8 @@ internal class PermissionStep : OnboardingStep {
 
         val permissionStates by viewModel.permissionStates.collectAsState()
 
-        var permissionRationaleDialog by remember { 
-            mutableStateOf<PermissionRationaleDialog?>(null) 
+        var permissionRationaleDialog by remember {
+            mutableStateOf<PermissionRationaleDialog?>(null)
         }
 
         // Update permissions on resume
@@ -105,7 +107,7 @@ internal class PermissionStep : OnboardingStep {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = stringResource(R.string.required_permissions),
+                        text = stringResource(R.string.permissions),
                         style = MaterialTheme.typography.headlineSmall,
                     )
                 }
@@ -179,25 +181,6 @@ internal class PermissionStep : OnboardingStep {
                         viewModel = viewModel
                     )
 
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val mediaPermissionRequester = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.RequestPermission(),
-                            onResult = { /* handled in onResume */ }
-                        )
-
-                        PermissionItem(
-                            title = stringResource(R.string.media_access),
-                            subtitle = stringResource(R.string.media_access_rationale),
-                            permission = Manifest.permission.READ_MEDIA_IMAGES,
-                            granted = permissionStates.readMediaGranted,
-                            onRequest = {
-                                mediaPermissionRequester.launch(Manifest.permission.READ_MEDIA_IMAGES)
-                            },
-                            viewModel = viewModel
-                        )
-                    }
-
                     HorizontalDivider()
 
                     // Battery Optimization
@@ -237,20 +220,23 @@ internal class PermissionStep : OnboardingStep {
                         viewModel = viewModel
                     )
 
-
                     // Accessibility Service
                     PermissionItem(
                         title = stringResource(R.string.accessibility_service),
                         subtitle = stringResource(R.string.accessibility_service_rationale),
                         granted = permissionStates.accessibilityGranted,
                         onRequest = {
-                            permissionRationaleDialog = PermissionRationaleDialog(
-                                show = true,
-                                permissionScreen = {
-                                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                                },
-                                restrictedSettings = R.string.accessibility_service
-                            )
+                            if (isAppSideLoaded(context)) {
+                                permissionRationaleDialog = PermissionRationaleDialog(
+                                    show = true,
+                                    permissionScreen = {
+                                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                    },
+                                    restrictedSettings = R.string.accessibility_service
+                                )
+                            } else {
+                                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            }
                         },
                         viewModel = viewModel
                     )
@@ -261,13 +247,17 @@ internal class PermissionStep : OnboardingStep {
                         subtitle = stringResource(R.string.notification_access_rationale),
                         granted = permissionStates.notificationListenerGranted,
                         onRequest = {
-                            permissionRationaleDialog = PermissionRationaleDialog(
-                                show = true,
-                                permissionScreen = {
-                                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                                },
-                                restrictedSettings = R.string.notification_access
-                            )
+                            if (isAppSideLoaded(context)) {
+                                permissionRationaleDialog = PermissionRationaleDialog(
+                                    show = true,
+                                    permissionScreen = {
+                                        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                    },
+                                    restrictedSettings = R.string.notification_access
+                                )
+                            } else {
+                                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                            }
                         },
                         viewModel = viewModel
                     )
@@ -279,7 +269,7 @@ internal class PermissionStep : OnboardingStep {
                     AlertDialog(
                         onDismissRequest = { permissionRationaleDialog = null },
                         title = { Text(stringResource(R.string.restricted_settings_title)) },
-                        text = { 
+                        text = {
                             val settingName = stringResource(dialog.restrictedSettings)
                             Text(
                                 stringResource(
@@ -326,6 +316,20 @@ internal class PermissionStep : OnboardingStep {
             }
         }
     }
+
+    private fun isAppSideLoaded(context: Context): Boolean {
+        return try {
+            val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName
+            } else {
+                context.packageManager.getInstallerPackageName(context.packageName)
+            }
+            installer != "com.android.vending"
+        } catch (e: Exception) {
+            true // Assume side-loaded if we can't verify
+        }
+    }
+
     companion object {
         data class PermissionRationaleDialog(
             val show: Boolean,

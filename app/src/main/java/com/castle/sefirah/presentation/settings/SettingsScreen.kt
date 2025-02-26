@@ -151,16 +151,9 @@ fun SettingsScreen(
                 title = stringResource(R.string.image_clipboard_preference),
                 subtitle = stringResource(R.string.image_clipboard_subtitle),
                 icon = Icons.Filled.ContentPaste,
-                checked = preferencesSettings?.imageClipboard == true && permissionStates.readMediaGranted,
-                permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    Manifest.permission.READ_MEDIA_IMAGES
-                } else null,
-
-                onRequest = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        mediaPermissionRequester.launch(Manifest.permission.READ_MEDIA_IMAGES)
-                    }
-                },
+                checked = preferencesSettings?.imageClipboard == true,
+                permission = null,
+                onRequest = {},
                 onCheckedChanged = { checked ->
                     viewModel.saveImageClipboardSettings(checked)
                 },

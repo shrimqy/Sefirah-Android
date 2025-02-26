@@ -36,7 +36,7 @@ fun PermissionScreen(rootNavController: NavHostController) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 ),
-                title = { Text(stringResource(R.string.permission)) },
+                title = { Text(stringResource(R.string.permissions)) },
                 navigationIcon = {
                     IconButton(
                         onClick = { rootNavController.navigateUp() }
