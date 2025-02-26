@@ -8,7 +8,8 @@ import com.castle.sefirah.BaseActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import sefirah.domain.model.ClipboardMessage
 import sefirah.network.FileTransferService
 import sefirah.network.FileTransferService.Companion.ACTION_SEND_FILE
 
@@ -45,6 +46,7 @@ class ShareDeepLinkActivity: BaseActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_SEND) {
             when {
+                intent.type?.startsWith("text/") == true -> handleText(intent)
                 intent.type?.startsWith("image/") == true -> handleFileTransfer(intent)
                 intent.type?.startsWith("video/") == true -> handleFileTransfer(intent)
                 intent.type?.startsWith("application/") == true -> handleFileTransfer(intent)
@@ -55,6 +57,18 @@ class ShareDeepLinkActivity: BaseActivity() {
             }
         } else {
             Log.e("ShareToPc", "Unsupported intent action: ${intent?.action}")
+            finishAffinity()
+        }
+    }
+
+    private fun handleText(intent: Intent) {
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+        Log.d("ShareToPc", "Handling text share: $text")
+        if (text?.isNotEmpty() == true) {
+            CoroutineScope(Dispatchers.IO).launch {
+                networkService?.sendMessage(ClipboardMessage("text/plain", text))
+            }
+        } else {
             finishAffinity()
         }
     }
