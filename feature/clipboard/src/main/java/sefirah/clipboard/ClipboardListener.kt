@@ -34,6 +34,9 @@ class ClipboardListener : AccessibilityService() {
 
     private var currentPackage: CharSequence? = null
     private var runForNextEventAlso = false
+    private var lastDetectionTimeMs = 0L
+    private val minDetectionInterval = 100 // Minimum time between detections
+
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -56,9 +59,17 @@ class ClipboardListener : AccessibilityService() {
 
             if (event?.eventType != null)
                 clipboardDetector.addEvent(event.eventType)
+            val currentTimeMs = System.currentTimeMillis()
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
                 && clipboardDetector.getSupportedEventTypes(event)) {
+
+                if (currentTimeMs - lastDetectionTimeMs < minDetectionInterval) {
+                    Log.d(TAG, "Ignoring duplicate detection")
+                    return
+                }
+
+                lastDetectionTimeMs = currentTimeMs
                 runForNextEventAlso = true
                 Log.d(TAG,"Running for first time")
                 runChangeClipboardActivity()
