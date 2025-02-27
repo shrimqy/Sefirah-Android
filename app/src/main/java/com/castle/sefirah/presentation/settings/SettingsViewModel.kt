@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import sefirah.clipboard.ClipboardListener
 import sefirah.common.util.PermissionStates
 import sefirah.data.repository.AppRepository
+import sefirah.database.model.toDomain
 import sefirah.database.model.toEntity
 import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.PreferencesSettings
@@ -46,6 +47,9 @@ class SettingsViewModel @Inject constructor(
 ) : AndroidViewModel(application) {
     private val _preferencesSettings = MutableStateFlow<PreferencesSettings?>(null)
     val preferencesSettings: StateFlow<PreferencesSettings?> = _preferencesSettings
+
+    private val _localDevice = MutableStateFlow<LocalDevice?>(null)
+    val localDevice: StateFlow<LocalDevice?> = _localDevice
 
     var appEntryValue by mutableStateOf(false)
 
@@ -66,6 +70,26 @@ class SettingsViewModel @Inject constructor(
 
         viewModelScope.launch {
             appEntryValue = preferencesRepository.readAppEntry()
+            // Subscribe to the flow of local device changes
+            appRepository.getLocalDeviceFlow().collectLatest { device ->
+                _localDevice.value = device?.toDomain()
+            }
+        }
+    }
+
+    fun updateDeviceName(newName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Get current local device
+                val currentDevice = _localDevice.value ?: return@launch
+                
+                // Update only the device name
+                appRepository.updateLocalDeviceName(currentDevice.deviceId, newName)
+                
+                Log.d(TAG, "Device name updated to: $newName")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating device name", e)
+            }
         }
     }
 

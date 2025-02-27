@@ -143,4 +143,7 @@
     <string name="auto_connect">Auto Connect</string>
     <string name="restricted_settings_title">Restricted settings</string>
     <string name="connection_error">Connection failed: Device declined pairing or is unavailable</string>
+    <string name="device_name_preference">Device name</string>
+    <string name="rename_device">Rename device</string>
+    <string name="rename">Rename</string>
 </resources>

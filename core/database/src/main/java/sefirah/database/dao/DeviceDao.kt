@@ -48,8 +48,14 @@ interface DeviceDao {
     @Update
     suspend fun updateLocalDevice(device: LocalDeviceEntity)
 
+    @Query("UPDATE LocalDeviceEntity SET deviceName = :deviceName WHERE deviceId = :deviceId")
+    suspend fun updateLocalDeviceName(deviceId: String, deviceName: String)
+
     @Query("SELECT * FROM LocalDeviceEntity LIMIT 1")
     suspend fun getLocalDevice(): LocalDeviceEntity
+
+    @Query("SELECT * FROM LocalDeviceEntity LIMIT 1")
+    fun getLocalDeviceFlow(): Flow<LocalDeviceEntity?>
 
     @Query("UPDATE RemoteDeviceEntity SET prefAddress = :preferredIp WHERE deviceId = :deviceId")
     suspend fun updatePreferredIp(deviceId: String, preferredIp: String)

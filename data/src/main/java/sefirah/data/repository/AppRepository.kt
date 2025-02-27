@@ -12,6 +12,7 @@ import sefirah.database.model.DeviceNetworkCrossRef
 import sefirah.database.model.LocalDeviceEntity
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.RemoteDeviceEntity
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,7 +37,9 @@ class AppRepository @Inject constructor(
 
     suspend fun addLocalDevice(device: LocalDeviceEntity) = deviceDao.addLocalDevice(device)
     suspend fun updateLocalDevice(device: LocalDeviceEntity) = deviceDao.updateLocalDevice(device)
+    suspend fun updateLocalDeviceName(deviceId: String, deviceName: String) = deviceDao.updateLocalDeviceName(deviceId, deviceName)
     suspend fun getLocalDevice() = deviceDao.getLocalDevice()
+    fun getLocalDeviceFlow() = deviceDao.getLocalDeviceFlow()
 
     fun getAllNetworksFlow() = networkDao.getAllNetworksFlow()
     suspend fun addNetwork(network: NetworkEntity) = networkDao.addNetwork(network)

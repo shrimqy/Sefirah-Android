@@ -23,17 +23,25 @@ import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -42,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -55,12 +64,11 @@ import com.castle.sefirah.presentation.settings.components.SwitchPreferenceWidge
 import com.castle.sefirah.presentation.settings.components.TextPreferenceWidget
 import kotlinx.coroutines.launch
 import sefirah.clipboard.ClipboardListener
+import sefirah.common.R
 import sefirah.common.util.getReadablePathFromUri
 import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
 import sefirah.common.util.openAppSettings
-import sefirah.common.R
-import androidx.compose.ui.res.stringResource
 
 @Composable
 fun SettingsScreen(
@@ -73,6 +81,16 @@ fun SettingsScreen(
     
     val permissionStates by viewModel.permissionStates.collectAsState()
     val preferencesSettings by viewModel.preferencesSettings.collectAsState()
+    val localDevice by viewModel.localDevice.collectAsState()
+
+    // State for device name dialog
+    var showDeviceNameDialog by remember { mutableStateOf(false) }
+    var deviceNameText by remember { mutableStateOf("") }
+
+    // Update device name when local device changes
+    LaunchedEffect(localDevice) {
+        deviceNameText = localDevice?.deviceName ?: ""
+    }
 
     // Update permissions on resume
     DisposableEffect(lifecycleOwner.lifecycle) {
@@ -296,6 +314,17 @@ fun SettingsScreen(
         }
 
         item {
+            TextPreferenceWidget(
+                title = stringResource(R.string.device_name_preference),
+                subtitle = localDevice?.deviceName,
+                icon = Icons.Default.PhoneAndroid,
+                onPreferenceClick = {
+                    showDeviceNameDialog = true
+                }
+            )
+        }
+
+        item {
             HorizontalDivider()
         }
 
@@ -320,6 +349,39 @@ fun SettingsScreen(
             )
 
         }
+    }
+
+    // Device Name Dialog
+    if (showDeviceNameDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeviceNameDialog = false },
+            title = { Text(stringResource(R.string.rename_device)) },
+            text = {
+                OutlinedTextField(
+                    value = deviceNameText,
+                    label = { Text(stringResource(R.string.device_name_preference)) },
+                    onValueChange = { deviceNameText = it },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = deviceNameText.isNotBlank(),
+                    onClick = {
+                        showDeviceNameDialog = false
+                        viewModel.updateDeviceName(deviceNameText)
+                    }
+                ) { Text(stringResource(R.string.rename)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        deviceNameText = localDevice?.deviceName.toString()
+                        showDeviceNameDialog = false
+                    }
+                ) { Text(stringResource(R.string.cancel))  }
+            }
+        )
     }
 }
 
