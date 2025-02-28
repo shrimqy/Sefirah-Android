@@ -74,6 +74,11 @@ class NotificationService @Inject constructor(
             return
         } else {
             scope.launch {
+                if (!::listener.isInitialized) {
+                    Log.w(TAG, "listener not connected")
+                    return@launch
+                }
+                
                 activeNotificationsSend = true
                 val activeNotifications = listener.activeNotifications
                 if (activeNotifications.isNullOrEmpty()) {
