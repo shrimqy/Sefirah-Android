@@ -80,10 +80,18 @@ class NetworkDiscovery @Inject constructor(
     var action = NetworkAction.NONE
 
     fun register(networkAction: NetworkAction) {
+        Log.d(TAG, "Registering network action: $networkAction")
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU && action == NetworkAction.SAVE_NETWORK) saveCurrentNetworkAsTrusted()
         action = networkAction
 
         if (isRegistered) unregister()
+
+        if (networkAction == NetworkAction.START_DEVICE_DISCOVERY
+            && !checkLocationPermissions(context) 
+            && (pairedDeviceListener?.isActive == false || pairedDeviceListener == null)
+            && (listenerJob?.isActive == false || listenerJob == null)) {
+            startPairedDeviceListener()
+        }
 
         connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -101,7 +109,6 @@ class NetworkDiscovery @Inject constructor(
 
     fun unregister() {
         if (!isRegistered) return
-
         try {
             connectivityManager.unregisterNetworkCallback(networkCallback)
             isRegistered = false
@@ -154,7 +161,7 @@ class NetworkDiscovery @Inject constructor(
     // for pairing
     fun startDiscovery() {
         scope.launch {
-            Log.d(TAG, "Starting discovery")
+            Log.i(TAG, "Starting discovery")
             if (pairedDeviceListener?.isActive == true) {
                 pairedDeviceListener?.cancel()
                 pairedDeviceListener = null
@@ -243,13 +250,25 @@ class NetworkDiscovery @Inject constructor(
                     if (udpBroadcast.deviceId == lastConnectedDevice.deviceId) {
                         initiateConnection(lastConnectedDevice.deviceId)
                         unregister()
-                        stopDefaultListener()
+                        stopPairedDeviceListener()
                         break
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error in paired device listener", e)
             }
+        }
+    }
+
+    private fun stopPairedDeviceListener() {
+        try {
+            udpSocket?.close()
+            udpSocket = null
+            pairedDeviceListener?.cancel()
+            pairedDeviceListener = null
+            action = NetworkAction.NONE
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping listener", e)
         }
     }
 

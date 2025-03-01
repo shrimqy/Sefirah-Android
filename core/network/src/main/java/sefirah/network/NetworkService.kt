@@ -280,7 +280,12 @@ class NetworkService : Service() {
             networkDiscovery.unregister()
             _connectionState.value = ConnectionState.Disconnected(true)
         } else {
-            networkDiscovery.register(NetworkAction.START_DEVICE_DISCOVERY)
+            scope.launch {
+                val autoDiscovery = preferencesRepository.readAutoDiscoverySettings()
+                Log.d(TAG, "Auto discovery: $autoDiscovery")
+                if (autoDiscovery)
+                    networkDiscovery.register(NetworkAction.START_DEVICE_DISCOVERY)
+            }
             _connectionState.value = ConnectionState.Disconnected()
         }
         deviceStatus = null

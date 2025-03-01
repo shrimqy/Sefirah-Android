@@ -57,6 +57,12 @@ class PreferencesDatastore @Inject constructor(
         }
     }
 
+    override suspend fun readAutoDiscoverySettings(): Boolean {
+        return datastore.data.map { preferences ->
+            preferences[AUTO_DISCOVERY] ?: false
+        }.first()
+    }
+
 
     override suspend fun saveAutoDiscoverySettings(discoverySettings: Boolean) {
         AUTO_DISCOVERY.update(discoverySettings)

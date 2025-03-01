@@ -20,6 +20,7 @@ interface PreferencesRepository {
     fun readLastConnected(): Flow<String?>
 
     suspend fun saveAutoDiscoverySettings(discoverySettings: Boolean)
+    suspend fun readAutoDiscoverySettings(): Boolean
 
     suspend fun updateStorageLocation(uri: String)
     suspend fun getStorageLocation(): Flow<String>
