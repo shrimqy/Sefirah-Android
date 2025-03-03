@@ -3,8 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -73,8 +79,8 @@
             android:excludeFromRecents="true"
             android:theme="@style/TranslucentTheme.Dark" />
 
-        <service android:name="sefirah.network.NetworkService" android:foregroundServiceType="dataSync"/>
-        <service android:name="sefirah.network.FileTransferService" android:foregroundServiceType="dataSync" />
+        <service android:name="sefirah.network.NetworkService" android:foregroundServiceType="connectedDevice"/>
+        <service android:name="sefirah.network.FileTransferService" android:foregroundServiceType="connectedDevice" />
 
         <service android:name="sefirah.notification.NotificationListener"
             android:label="@string/app_name"
