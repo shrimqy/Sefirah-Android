@@ -39,7 +39,7 @@
 
 ### Android App
 
-(IzzyOnDroid)[https://apt.izzysoft.de/fdroid/index/apk/com.castle.sefirah]
+[IzzyOnDroid](https://apt.izzysoft.de/fdroid/index/apk/com.castle.sefirah)
 
 ## How to Use
 
