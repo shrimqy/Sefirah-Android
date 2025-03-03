@@ -1,0 +1,8 @@
+* Reduce apk size
+* Fix duplicate clipboard detection
+* Implement clipboard sharing via sharesheet
+* Implement renaming Android devices
+* Fix an issue where it would cause crashes if Notification listener is not connected
+* Start UDP listener if auto-discovery preference is true even if location permission hasn't been granted
+* Fix an issue where the listener won't stop even after connecting to the device
+* Remove redundant permissions
