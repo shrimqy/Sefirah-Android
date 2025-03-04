@@ -23,19 +23,8 @@ fun getInstalledApps(packageManager: PackageManager): List<ApplicationInfo> {
             continue
         }
 
-        // For Android 13+, check POST_NOTIFICATIONS permission
-        // For older versions, just check if it has a launch intent
-        val shouldIncludeApp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.checkPermission(
-                android.Manifest.permission.POST_NOTIFICATIONS,
-                packageName
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            // Include app if it can be launched
-            packageManager.getLaunchIntentForPackage(packageName) != null
-        }
-
-        if (shouldIncludeApp) {
+        // Include all apps that can be launched
+        if (packageManager.getLaunchIntentForPackage(packageName) != null) {
             val appName = try {
                 packageManager.getApplicationLabel(applicationInfo).toString()
             } catch (e: PackageManager.NameNotFoundException) {
