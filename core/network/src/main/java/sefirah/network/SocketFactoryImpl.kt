@@ -78,7 +78,6 @@ class SocketFactoryImpl @Inject constructor(
             val selectorManager = SelectorManager(Dispatchers.IO)
             aSocket(selectorManager).udp().bind(InetSocketAddress("0.0.0.0", port)) {
                 reuseAddress = true
-                reusePort = true
                 broadcast = true
             }
         } catch (e: Exception) {
