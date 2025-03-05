@@ -1,0 +1,2 @@
+fix network discovery (udp client was broken in the last update)
+add support for devices outside of local network
