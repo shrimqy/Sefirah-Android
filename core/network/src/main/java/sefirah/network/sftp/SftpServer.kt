@@ -34,7 +34,6 @@ import sefirah.network.util.MediaStoreHelper
 import sefirah.network.util.TrustManager
 import sefirah.network.util.generateRandomPassword
 import sefirah.network.util.getDeviceIpAddress
-import java.net.URI
 import java.nio.channels.Channel
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.CopyOption
@@ -182,38 +181,42 @@ class SftpServer @Inject constructor(
         if (isRunning) return serverInfo
 
         val pwd = generateRandomPassword()
-        try {
-            sshd = SshServer.setUpDefaultServer().apply {
-                port = 8668
-                keyPairProvider = PfxKeyPairProvider()
 
-                publickeyAuthenticator = PublickeyAuthenticator { _, _, _ -> true }
-                passwordAuthenticator = PasswordAuthenticator { username, password, _ ->
-                    username == USER && password == pwd
+        PORT_RANGE.forEach { port ->
+            try {
+                sshd = SshServer.setUpDefaultServer().apply {
+                    this.port = port
+                    keyPairProvider = PfxKeyPairProvider()
+
+                    publickeyAuthenticator = PublickeyAuthenticator { _, _, _ -> true }
+                    passwordAuthenticator = PasswordAuthenticator { username, password, _ ->
+                        username == USER && password == pwd
+                    }
+                    fileSystemFactory = SimpleFileSystemFactory()
+                    subsystemFactories = listOf(SftpSubsystemFactory())
+                    start()
                 }
+                val ipAddress = getDeviceIpAddress()
+                isRunning = true
 
-                fileSystemFactory = SimpleFileSystemFactory()
-                subsystemFactories = listOf(SftpSubsystemFactory())
-                start()
+                Log.d(TAG, "SFTP server started: $ipAddress on port $port, Pass: $pwd")
+
+                serverInfo = ipAddress?.let {
+                    SftpServerInfo(
+                        username = USER,
+                        password = pwd,
+                        ipAddress = it,
+                        port = port
+                    )
+                }
+                return serverInfo
             }
-            val ipAddress = getDeviceIpAddress()
-            isRunning = true
-
-            Log.d(TAG, "SFTP server started: $ipAddress on port 8668, Pass: $pwd")
-
-            serverInfo = ipAddress?.let {
-                SftpServerInfo(
-                    username = USER,
-                    password = pwd,
-                    ipAddress = it,
-                    port = 8668
-                )
+            catch (e: Exception) {
+                Log.e(TAG, "Failed to start SFTP server", e)
+                throw e
             }
-            return serverInfo
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start SFTP server", e)
-            throw e
         }
+        return null
     }
 
     fun stop() {
@@ -233,7 +236,7 @@ class SftpServer @Inject constructor(
         private const val USER = "sun"
         val SUPPORTS_NATIVEFS = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
-        private val PORT_RANGE = 1739..1764
+        private val PORT_RANGE = 5151..5169
 
         init {
             System.setProperty(SECURITY_PROVIDER_REGISTRARS, "") // disable BouncyCastle

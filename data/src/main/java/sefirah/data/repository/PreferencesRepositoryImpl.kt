@@ -25,7 +25,7 @@ class PreferencesDatastore @Inject constructor(
 
     override suspend fun readAppEntry(): Boolean {
         return datastore.data.map { preferences ->
-            preferences[APP_ENTRY] ?: false
+            preferences[APP_ENTRY] ?: true
         }.first()
     }
 

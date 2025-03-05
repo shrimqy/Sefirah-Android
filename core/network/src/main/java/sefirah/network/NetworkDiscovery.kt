@@ -46,6 +46,7 @@ import sefirah.domain.model.UdpBroadcast
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.NetworkService.Companion.REMOTE_INFO
 import sefirah.network.util.MessageSerializer
+import sefirah.network.util.getDeviceIpAddress
 import javax.inject.Inject
 
 
@@ -69,7 +70,7 @@ class NetworkDiscovery @Inject constructor(
     val discoveredDevices = _discoveredDevices.asStateFlow()
 
     private val services: StateFlow<List<NsdServiceInfo>> = nsdService.services
-    private var udpPort: Int = 8689
+    private var udpPort: Int = 5149
 
     enum class NetworkAction {
         SAVE_NETWORK,
@@ -169,7 +170,7 @@ class NetworkDiscovery @Inject constructor(
 
             val localDevice = appRepository.getLocalDevice().toDomain()
             startBroadcasting(localDevice)
-            startNSDDiscovery(localDevice)
+//            startNSDDiscovery(localDevice)
             startDeviceListener(localDevice)
             startCleanupJob()
         }
@@ -287,6 +288,7 @@ class NetworkDiscovery @Inject constructor(
             Log.d(TAG, "Broadcaster started")
             try {
                 val udpBroadcast = UdpBroadcast(
+                    ipAddresses = getDeviceIpAddress()?.let { listOf(it) } ?: emptyList(),
                     deviceId = localDevice.deviceId,
                     deviceName = localDevice.deviceName,
                     publicKey = localDevice.publicKey,
@@ -316,7 +318,7 @@ class NetworkDiscovery @Inject constructor(
 
                             udpSocket?.send(Datagram(
                                 bytePacket,
-                                InetSocketAddress(ipAddress, 8689)
+                                InetSocketAddress(ipAddress, udpPort)
                             ))
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to $ipAddress: ${e.message?.take(30)}")

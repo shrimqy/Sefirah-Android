@@ -583,7 +583,7 @@ class FileTransferService : Service() {
 
         private const val TAG = "FileTransferService"
 
-        private val PORT_RANGE = 9000..9069
+        private val PORT_RANGE = 5152..5169
         private const val DEFAULT_BUFFER_SIZE = 81920 * 5
 
         private const val CANCEL_REQUEST_CODE = 100

@@ -225,7 +225,7 @@ fun SettingsScreen(
                 title = stringResource(R.string.auto_device_discovery_preference),
                 subtitle = stringResource(R.string.auto_device_discovery_subtitle),
                 icon = Icons.Default.DesktopWindows,
-                checked = preferencesSettings?.autoDiscovery == true && permissionStates.locationGranted,
+                checked = preferencesSettings?.autoDiscovery == true,
                 permission = Manifest.permission.ACCESS_FINE_LOCATION,
                 onCheckedChanged = { checked ->
                     viewModel.saveAutoDiscoverySettings(checked)
