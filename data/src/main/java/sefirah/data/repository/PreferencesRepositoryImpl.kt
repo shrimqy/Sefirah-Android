@@ -59,7 +59,7 @@ class PreferencesDatastore @Inject constructor(
 
     override suspend fun readAutoDiscoverySettings(): Boolean {
         return datastore.data.map { preferences ->
-            preferences[AUTO_DISCOVERY] ?: false
+            preferences[AUTO_DISCOVERY] ?: true
         }.first()
     }
 
