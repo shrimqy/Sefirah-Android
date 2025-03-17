@@ -49,6 +49,7 @@ class SmsHandler @Inject constructor(
         mostRecentTimestampLock.lock()
         mostRecentTimestamp = getNewestMessageTimestamp(context)
         mostRecentTimestampLock.unlock()
+        existingThreadIds = emptySet()
 
         CoroutineScope(Dispatchers.IO).launch {
             sendAllConversations()
@@ -137,17 +138,23 @@ class SmsHandler @Inject constructor(
         if (messages.isEmpty()) {
             return
         }
+        val threadId = messages[0].threadID.threadID
 
-        val textMessages = messages.distinct().map {
+        val textMessages = messages.map {
             val text = it.toTextMessage()
             text
         }
 
+        val isNew = !existingThreadIds.contains(threadId)
+        Log.d(TAG, "isNew: $isNew, threadId: $threadId")
+        Log.d(TAG, "existingThreadIds: $existingThreadIds")
+
         val conversation = TextConversation(
-            conversationType = ConversationType.Active,
-            threadId = messages[0].threadID.threadID,
+            conversationType = if (isNew) ConversationType.New else ConversationType.ActiveUpdated,
+            threadId = threadId,
             messages = textMessages
         )
+        existingThreadIds = existingThreadIds.plus(threadId)
         
         // Send the conversation packet
         CoroutineScope(Dispatchers.IO).launch {
