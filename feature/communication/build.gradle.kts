@@ -9,7 +9,7 @@ android {
 dependencies {
     api(projects.core.common)
     api(projects.domain)
-    api(projects.androidSmsmms)
+    implementation(libs.android.smsmms)
     implementation(libs.core.ktx)
     implementation(libs.commons.io)
     implementation(libs.commons.lang3)

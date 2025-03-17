@@ -41,8 +41,12 @@ import com.klinker.android.send_message.Settings
 import com.klinker.android.send_message.Transaction
 import com.klinker.android.send_message.Utils
 import org.apache.commons.io.IOUtils
+import sefirah.common.R
 import sefirah.communication.telephony.TelephonyHelper
 import sefirah.communication.telephony.TelephonyHelper.LocalPhoneNumber
+import sefirah.domain.model.SmsAddress
+import sefirah.domain.model.SmsAttachment
+import sefirah.domain.model.TextMessage
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -50,10 +54,6 @@ import java.io.IOException
 import java.util.Random
 import kotlin.concurrent.thread
 import kotlin.math.abs
-import sefirah.common.R
-import sefirah.domain.model.SmsAddress
-import sefirah.domain.model.SmsAttachment
-import sefirah.domain.model.TextMessage
 
 object SmsMmsUtils {
     private const val SENDING_MESSAGE = "Sending message"
