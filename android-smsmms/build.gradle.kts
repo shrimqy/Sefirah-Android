@@ -9,6 +9,13 @@ android {
     useLibrary( "org.apache.http.legacy")
 
     lint
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
 }
 
 dependencies {
