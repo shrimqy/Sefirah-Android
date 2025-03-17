@@ -2,7 +2,6 @@ package com.castle.sefirah.presentation.settings
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.app.WallpaperManager
 import android.provider.Settings.Global
 import android.provider.Settings.Secure
 import android.util.Log
@@ -11,12 +10,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import sefirah.common.util.checkBatteryOptimization
-import sefirah.common.util.checkLocationPermissions
-import sefirah.common.util.checkNotificationPermission
-import sefirah.common.util.checkStoragePermission
-import sefirah.common.util.isAccessibilityServiceEnabled
-import sefirah.common.util.isNotificationListenerEnabled
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +20,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import sefirah.clipboard.ClipboardListener
 import sefirah.common.util.PermissionStates
+import sefirah.common.util.checkBatteryOptimization
+import sefirah.common.util.checkLocationPermissions
+import sefirah.common.util.checkNotificationPermission
+import sefirah.common.util.checkStoragePermission
+import sefirah.common.util.isAccessibilityServiceEnabled
+import sefirah.common.util.isNotificationListenerEnabled
+import sefirah.common.util.smsPermissionGranted
 import sefirah.data.repository.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.database.model.toEntity
@@ -34,7 +34,6 @@ import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.PreferencesSettings
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.network.util.ECDHHelper
-import sefirah.presentation.util.drawableToBase64Compressed
 import javax.inject.Inject
 
 private const val TAG = "SettingsViewModel"
@@ -61,13 +60,14 @@ class SettingsViewModel @Inject constructor(
 
 
     init {
+        updatePermissionStates()
+        // set up the preference collection with a proper synchronization mechanism
         viewModelScope.launch {
             preferencesRepository.preferenceSettings().collectLatest { settings ->
                 _preferencesSettings.value = settings
-                updatePermissionStates()
             }
         }
-
+        
         viewModelScope.launch {
             appEntryValue = preferencesRepository.readAppEntry()
             // Subscribe to the flow of local device changes
@@ -82,11 +82,7 @@ class SettingsViewModel @Inject constructor(
             try {
                 // Get current local device
                 val currentDevice = _localDevice.value ?: return@launch
-                
-                // Update only the device name
                 appRepository.updateLocalDeviceName(currentDevice.deviceId, newName)
-                
-                Log.d(TAG, "Device name updated to: $newName")
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating device name", e)
             }
@@ -94,62 +90,16 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updatePermissionStates() {
-        val previousStates = _permissionStates.value
         val newStates = PermissionStates(
             notificationGranted = checkNotificationPermission(context),
             batteryGranted = checkBatteryOptimization(context),
             locationGranted = checkLocationPermissions(context),
             storageGranted = checkStoragePermission(context),
-            accessibilityGranted = isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}") ,
+            accessibilityGranted = isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}"),
             notificationListenerGranted = isNotificationListenerEnabled(context),
+            smsPermissionGranted = smsPermissionGranted(context)
         )
         _permissionStates.value = newStates
-
-        handlePermissionChanges(previousStates, newStates)
-    }
-
-    private fun handlePermissionChanges(previousStates: PermissionStates, newStates: PermissionStates) {
-        // Handle newly granted permissions
-        handleNewlyGrantedPermissions(previousStates, newStates)
-
-        // Handle revoked permissions
-        _preferencesSettings.value?.let { settings ->
-            handleRevokedPermissions(settings, newStates)
-        }
-    }
-
-    private fun handleNewlyGrantedPermissions(previousStates: PermissionStates, newStates: PermissionStates) {
-        if (!previousStates.accessibilityGranted && newStates.accessibilityGranted)
-            saveClipboardSyncSettings(true)
-
-        if (!previousStates.notificationListenerGranted && newStates.notificationListenerGranted)
-            saveNotificationSyncSettings(true)
-
-        if (!previousStates.storageGranted && newStates.storageGranted)
-            saveRemoteStorageSettings(true)
-    }
-
-    private fun handleRevokedPermissions(settings: PreferencesSettings, newStates: PermissionStates) {
-        if (!newStates.accessibilityGranted && settings.clipboardSync ||
-            !newStates.notificationListenerGranted && settings.notificationSync ||
-            !newStates.storageGranted && settings.remoteStorage
-        ) {
-            updatePreferencesBasedOnPermissions(settings)
-        }
-    }
-
-    private fun updatePreferencesBasedOnPermissions(settings: PreferencesSettings) {
-        viewModelScope.launch {
-            if (!_permissionStates.value.accessibilityGranted && settings.clipboardSync)
-                preferencesRepository.saveClipboardSyncSettings(false)
-
-            if (!_permissionStates.value.notificationListenerGranted && settings.notificationSync)
-                preferencesRepository.saveNotificationSyncSettings(false)
-
-            if (!_permissionStates.value.storageGranted && settings.remoteStorage)
-                preferencesRepository.saveRemoteStorageSettings(false)
-
-        }
     }
 
     fun saveAppEntry() {
@@ -192,6 +142,12 @@ class SettingsViewModel @Inject constructor(
 //            preferencesRepository.saveReadSensitiveNotificationsSettings(boolean)
 //        }
 //    }
+
+    fun saveMessageSyncSettings(boolean: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveMessageSyncSettings(boolean)
+        }
+    }
 
     fun saveNotificationSyncSettings(boolean: Boolean) {
         viewModelScope.launch {
@@ -236,6 +192,7 @@ class SettingsViewModel @Inject constructor(
 
     fun saveRemoteStorageSettings(boolean: Boolean) {
         viewModelScope.launch {
+            Log.d(TAG, "Saving remoteStorage setting: $boolean")
             preferencesRepository.saveRemoteStorageSettings(boolean)
         }
     }

@@ -122,6 +122,16 @@ class PreferencesDatastore @Inject constructor(
         }
     }
 
+    override suspend fun saveMessageSyncSettings(messageSync: Boolean) {
+        MESSAGE_SYNC.update(messageSync)
+    }
+
+    override fun readMessageSyncSettings(): Flow<Boolean> { 
+        return datastore.data.map { preferences ->
+            preferences[MESSAGE_SYNC] ?: true
+        }
+    }
+
     override suspend fun saveLanguage(language: String) {
         LANGUAGE.update(language)
     }
@@ -129,41 +139,6 @@ class PreferencesDatastore @Inject constructor(
     override fun readLanguage(): Flow<String> {
         return datastore.data.map { preferences ->
             preferences[LANGUAGE] ?: "system"
-        }
-    }
-
-    private suspend inline fun <T> Preferences.Key<T>.update(newValue: T) {
-        datastore.edit { preferences ->
-            preferences[this] = newValue
-        }
-    }
-
-
-    override fun preferenceSettings(): Flow<PreferencesSettings>  {
-        return datastore.data.catch {
-            emit(emptyPreferences())
-        }.map { preferences->
-            val language = preferences[LANGUAGE] ?: "system"
-            val discovery = preferences[AUTO_DISCOVERY] ?: true
-            val storageLocation = preferences[STORAGE_LOCATION] ?: ""
-            val readSensitiveNotifications = preferences[READ_SENSITIVE_NOTIFICATIONS] ?: false
-            val notificationSync =  preferences[NOTIFICATION_SYNC] ?: true
-            val imageClipboard = preferences[IMAGE_CLIPBOARD] ?: true
-
-            val clipboardSync = preferences[CLIPBOARD_SYNC] ?: true
-            val mediaSession = preferences[MEDIA_SESSION] ?: true
-            val remoteStorage = preferences[REMOTE_STORAGE] ?: true
-            PreferencesSettings(
-                language = language,
-                autoDiscovery =  discovery,
-                storageLocation =  storageLocation,
-                readSensitiveNotifications = readSensitiveNotifications,
-                notificationSync = notificationSync,
-                mediaSession =  mediaSession,
-                clipboardSync =  clipboardSync,
-                imageClipboard =  imageClipboard,
-                remoteStorage = remoteStorage
-            )
         }
     }
 
@@ -184,9 +159,7 @@ class PreferencesDatastore @Inject constructor(
     }
 
     override suspend fun saveRemoteStorageSettings(enabled: Boolean) {
-        datastore.edit {
-            it[REMOTE_STORAGE] = enabled
-        }
+        REMOTE_STORAGE.update(enabled)
     }
 
     override fun readRemoteStorageSettings(): Flow<Boolean> {
@@ -207,6 +180,42 @@ class PreferencesDatastore @Inject constructor(
         }
     }
 
+    private suspend inline fun <T> Preferences.Key<T>.update(newValue: T) {
+        datastore.edit { preferences ->
+            preferences[this] = newValue
+        }
+    }
+
+    override fun preferenceSettings(): Flow<PreferencesSettings>  {
+        return datastore.data.catch {
+            emit(emptyPreferences())
+        }.map { preferences->
+            val language = preferences[LANGUAGE] ?: "system"
+            val discovery = preferences[AUTO_DISCOVERY] ?: true
+            val storageLocation = preferences[STORAGE_LOCATION] ?: ""
+            val readSensitiveNotifications = preferences[READ_SENSITIVE_NOTIFICATIONS] ?: false
+            val notificationSync =  preferences[NOTIFICATION_SYNC] ?: true
+            val imageClipboard = preferences[IMAGE_CLIPBOARD] ?: true
+            val messageSync = preferences[MESSAGE_SYNC] ?: true
+            val clipboardSync = preferences[CLIPBOARD_SYNC] ?: true
+            val mediaSession = preferences[MEDIA_SESSION] ?: true
+            val remoteStorage = preferences[REMOTE_STORAGE] ?: true
+
+            PreferencesSettings(
+                language = language,
+                autoDiscovery =  discovery,
+                storageLocation =  storageLocation,
+                readSensitiveNotifications = readSensitiveNotifications,
+                notificationSync = notificationSync,
+                mediaSession =  mediaSession,
+                clipboardSync =  clipboardSync,
+                messageSync = messageSync,
+                imageClipboard =  imageClipboard,
+                remoteStorage = remoteStorage
+            )
+        }
+    }
+
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "appPreferences")
 
@@ -224,5 +233,6 @@ class PreferencesDatastore @Inject constructor(
         val NOTIFICATION_SYNC = booleanPreferencesKey("notificationSync")
         val REMOTE_STORAGE = booleanPreferencesKey("remoteStorage")
         val PASSIVE_DISCOVERY = booleanPreferencesKey("passiveDiscovery")
+        val MESSAGE_SYNC = booleanPreferencesKey("messageSync")
     }
 }

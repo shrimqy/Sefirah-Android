@@ -49,5 +49,8 @@ interface PreferencesRepository {
 
     suspend fun savePassiveDiscovery(enabled: Boolean)
     fun readPassiveDiscoverySettings(): Flow<Boolean>
+
+    suspend fun saveMessageSyncSettings(messageSync: Boolean)
+    fun readMessageSyncSettings(): Flow<Boolean>
 }
 

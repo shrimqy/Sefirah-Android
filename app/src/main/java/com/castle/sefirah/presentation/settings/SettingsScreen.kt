@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DesktopWindows
@@ -29,12 +30,10 @@ import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -108,12 +107,7 @@ fun SettingsScreen(
     val uriHandler = LocalUriHandler.current
 
     // Permission requesters
-    val notificationPermissionRequester = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { viewModel.updatePermissionStates() }
-    )
-
-    val mediaPermissionRequester = rememberLauncherForActivityResult(
+    val permissionRequester = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { viewModel.updatePermissionStates() }
     )
@@ -121,6 +115,32 @@ fun SettingsScreen(
     val backgroundLocationRequester = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { viewModel.updatePermissionStates() }
+    )
+
+    val telephonyPermissionRequester = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {
+            viewModel.saveMessageSyncSettings(true)
+            viewModel.updatePermissionStates()
+        }
+    )
+
+    val contactsPermissionRequester = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {
+            telephonyPermissionRequester.launch(Manifest.permission.READ_PHONE_STATE)
+        }
+    )
+
+    val smsPermissionRequester = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            val isGranted = permissions.entries.all { it.value }
+            if (isGranted) {
+                contactsPermissionRequester.launch(Manifest.permission.READ_CONTACTS)
+            }
+            viewModel.updatePermissionStates()
+        }
     )
 
     val foregroundLocationRequester = rememberLauncherForActivityResult(
@@ -152,7 +172,6 @@ fun SettingsScreen(
                 checked = preferencesSettings?.clipboardSync == true && permissionStates.accessibilityGranted,
                 permission = null,
                 onRequest = {
-
                     if(!isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}") ) {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     }
@@ -187,13 +206,31 @@ fun SettingsScreen(
                 checked = preferencesSettings?.notificationSync == true && permissionStates.notificationListenerGranted,
                 permission = null,
                 onRequest = {
-
                     if (!isNotificationListenerEnabled(context)) {
                         context.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
                     }
                 },
                 onCheckedChanged = { checked ->
                     viewModel.saveNotificationSyncSettings(checked)
+                },
+                viewModel = viewModel
+            )
+        }
+
+        item {
+            SwitchPermissionPrefWidget(
+                title = stringResource(R.string.message_sync_preference),
+                subtitle = stringResource(R.string.message_sync_subtitle),
+                icon = Icons.AutoMirrored.Filled.Message,
+                checked = preferencesSettings?.messageSync == true && permissionStates.smsPermissionGranted,
+                permission = Manifest.permission.READ_SMS,
+                onRequest = { 
+                    smsPermissionRequester.launch(
+                        arrayOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS) 
+                    ) 
+                },
+                onCheckedChanged = { checked ->
+                    viewModel.saveMessageSyncSettings(checked)
                 },
                 viewModel = viewModel
             )
@@ -210,7 +247,7 @@ fun SettingsScreen(
                 } else null,
                 onRequest = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        notificationPermissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                 },
                 onCheckedChanged = { checked ->
