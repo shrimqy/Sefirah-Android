@@ -20,7 +20,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.Message
@@ -46,7 +45,7 @@ class NotificationService @Inject constructor(
 ) : NotificationHandler, NotificationCallback {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var isConnected : Boolean = false
+    private var isListenerConnected : Boolean = false
 
     private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
     
@@ -62,6 +61,7 @@ class NotificationService @Inject constructor(
                 if (state == ConnectionState.Disconnected()) activeNotificationsSend = false
             }
         }
+
         scope.launch {
             preferencesRepository.readNotificationSyncSettings().collectLatest {
                 notificationSyncSettings.value = it
@@ -70,7 +70,7 @@ class NotificationService @Inject constructor(
     }
 
     override fun sendActiveNotifications() {
-        if (!isConnected && !notificationSyncSettings.value) {
+        if (!isListenerConnected && !notificationSyncSettings.value) {
             return
         } else {
             scope.launch {
@@ -121,7 +121,7 @@ class NotificationService @Inject constructor(
     }
 
     override fun onListenerConnected(service: NotificationListenerService) {
-        isConnected = true
+        isListenerConnected = true
         listener = service
         if ((connectionState.value == ConnectionState.Connected) && !activeNotificationsSend) {
             sendActiveNotifications()
@@ -129,8 +129,7 @@ class NotificationService @Inject constructor(
     }
 
     override fun onListenerDisconnected() {
-        isConnected = false
-
+        isListenerConnected = false
     }
 
     override fun performNotificationAction(action: NotificationAction) {
@@ -144,10 +143,24 @@ class NotificationService @Inject constructor(
         try {
             clickAction.actionIntent.send()
         } catch (e: PendingIntent.CanceledException) {
-            Log.e(TAG, "Error performing click action", e)
+            Log.e(TAG, "Error performing action", e)
         }
     }
 
+    override fun openNotification(notificationKey: String?) {
+        val notification = listener.activeNotifications
+            .find { it.key == notificationKey }
+            ?.notification ?: return
+
+        val contentIntent = notification.contentIntent ?: return
+        
+        try {
+            contentIntent.send()
+            Log.d(TAG, "Opened notification: $notificationKey")
+        } catch (e: PendingIntent.CanceledException) {
+            Log.e(TAG, "Error opening notification", e)
+        }
+    }
 
     override fun performReplyAction(action: ReplyAction) {
         // Get notification and its first reply action (usually messaging apps only have one)

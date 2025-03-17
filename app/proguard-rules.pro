@@ -63,3 +63,7 @@
 -dontwarn org.slf4j.impl.**
 -dontwarn net.i2p.crypto.eddsa.**
 -dontwarn javax.management.**
+
+# Keep everything in the SMS/MMS library
+-keep class com.klinker.android.send_message.** { *; }
+-keep class com.google.android.mms.** { *; }

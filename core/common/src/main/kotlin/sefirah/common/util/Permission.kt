@@ -18,7 +18,8 @@ data class PermissionStates(
     val storageGranted: Boolean = false,
     val accessibilityGranted: Boolean = false,
     val notificationListenerGranted: Boolean = false,
-    val readSensitiveNotificationsGranted: Boolean = false
+    val readSensitiveNotificationsGranted: Boolean = false,
+    val smsPermissionGranted: Boolean = false
 )
 
 fun checkNotificationPermission(context: Context): Boolean {
@@ -79,3 +80,17 @@ fun isNotificationListenerEnabled(context: Context): Boolean {
     )
     return flat?.contains(context.packageName) == true
 }
+
+fun smsPermissionGranted(context: Context): Boolean {
+    val readSmsPermission = context.checkSelfPermission(Manifest.permission.READ_SMS) ==
+        PackageManager.PERMISSION_GRANTED
+    val sendSmsPermission = context.checkSelfPermission(Manifest.permission.SEND_SMS) ==
+        PackageManager.PERMISSION_GRANTED
+    val contactsPermission = context.checkSelfPermission(Manifest.permission.READ_CONTACTS) ==
+        PackageManager.PERMISSION_GRANTED
+    val telephonyPermission = context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) ==
+        PackageManager.PERMISSION_GRANTED
+    return readSmsPermission && sendSmsPermission && contactsPermission && telephonyPermission
+}
+
+

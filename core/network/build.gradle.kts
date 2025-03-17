@@ -36,6 +36,7 @@ dependencies {
     api(projects.feature.notification)
     api(projects.feature.clipboard)
     api(projects.feature.projection)
+    api(projects.feature.communication)
 
     implementation(libs.core.ktx)
     implementation(libs.kotlinx.serialization.json)

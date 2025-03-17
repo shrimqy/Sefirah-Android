@@ -43,10 +43,13 @@ import kotlinx.coroutines.withTimeoutOrNull
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.R
 import sefirah.common.notifications.NotificationCenter
+import sefirah.communication.sms.SmsHandler
+import sefirah.communication.telephony.TelephonyHelper
 import sefirah.data.repository.AppRepository
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.DeviceStatus
+import sefirah.domain.model.PhoneNumber
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.SocketType
@@ -79,6 +82,7 @@ class NetworkService : Service() {
     @Inject lateinit var sftpServer: SftpServer
     @Inject lateinit var preferencesRepository: PreferencesRepository
     @Inject lateinit var playbackRepository: PlaybackRepository
+    @Inject lateinit var smsHandler: SmsHandler
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
@@ -129,10 +133,18 @@ class NetworkService : Service() {
             _connectionState.value = ConnectionState.Connecting
             try {
                 var connected = false
+
                 if (remoteInfo.prefAddress != null) {
                     connected = initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port)
-                } else {
-                    for (ipAddress in remoteInfo.ipAddresses) {
+                }
+                if (!connected) {
+                    // Create a list of unique IP addresses with preferred address first
+                    val uniqueIpAddresses: MutableList<String> = remoteInfo.ipAddresses.toMutableList()
+                    
+                    uniqueIpAddresses.remove(remoteInfo.prefAddress)
+                
+                    // Try connecting to each address
+                    for (ipAddress in uniqueIpAddresses) {
                         if (initializeConnection(ipAddress, remoteInfo.port)) {
                             connected = true
                             break
@@ -247,13 +259,22 @@ class NetworkService : Service() {
             null
         }
 
+        val localPhoneNumbers : List<PhoneNumber> = try {
+            TelephonyHelper.getAllPhoneNumbers(this).map { it.toDto() }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get local phone numbers", e)
+            emptyList()
+        }
+
         sendMessage(DeviceInfo(
             deviceId = localDevice.deviceId,
             deviceName = localDevice.deviceName,
             publicKey = localDevice.publicKey,
             avatar = wallpaperBase64,
             nonce = nonce,
-            proof = proof
+            proof = proof,
+            phoneNumbers = localPhoneNumbers
         ))
     }
 
@@ -268,16 +289,18 @@ class NetworkService : Service() {
         networkDiscovery.register(NetworkAction.SAVE_NETWORK)
         sendDeviceStatus()
         notificationHandler.sendActiveNotifications()
-        clipboardHandler.start()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && preferencesRepository.readRemoteStorageSettings().first()) {
             sftpServer.start()?.let { sendMessage(it) }
         }
         networkDiscovery.unregister()
+
+        smsHandler.start()
     }
 
     fun stop(forcedStop: Boolean) {
         if (forcedStop) {
             networkDiscovery.unregister()
+            networkDiscovery.stopPairedDeviceListener()
             _connectionState.value = ConnectionState.Disconnected(true)
         } else {
             scope.launch {
@@ -370,24 +393,17 @@ class NetworkService : Service() {
             }
         }
     }
-
     override fun onCreate() {
         super.onCreate()
         sftpServer.initialize()
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        
-        // Replace the previous interruption filter registration with this combined one
-        val intentFilter = IntentFilter().apply {
-            NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED
-            AudioManager.RINGER_MODE_CHANGED_ACTION
-        }
+
         registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED))
         registerReceiver(interruptionFilterReceiver, IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
         registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED))
 
         connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
 
-        // Add observer for connection state changes
         scope.launch {
             _connectionState.collect { state ->
                 setNotification(state, deviceName)

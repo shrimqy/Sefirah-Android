@@ -13,10 +13,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import sefirah.clipboard.extensions.LanguageDetector
 import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
 class ClipboardListener : AccessibilityService() {
@@ -53,6 +56,9 @@ class ClipboardListener : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        val isDisconnected = runBlocking { networkManager.connectionState.first().isDisconnected }
+        if (isDisconnected) return
+        
         try {
             if (event?.packageName != packageName)
                 currentPackage = event?.packageName

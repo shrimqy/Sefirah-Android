@@ -1,6 +1,5 @@
 package sefirah.network.extensions
 
-import android.bluetooth.BluetoothClass.Device
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -19,10 +18,13 @@ import sefirah.domain.model.Misc
 import sefirah.domain.model.MiscType
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationMessage
+import sefirah.domain.model.NotificationType
 import sefirah.domain.model.PlaybackData
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.ReplyAction
 import sefirah.domain.model.SocketMessage
+import sefirah.domain.model.TextMessage
+import sefirah.domain.model.ThreadRequest
 import sefirah.network.FileTransferService
 import sefirah.network.FileTransferService.Companion.ACTION_RECEIVE_FILE
 import sefirah.network.FileTransferService.Companion.EXTRA_BULK_TRANSFER
@@ -34,7 +36,7 @@ import sefirah.network.util.ECDHHelper
 fun NetworkService.handleMessage(message: SocketMessage) {
     when (message) {
         is Misc -> handleMisc(message)
-        is NotificationMessage -> notificationHandler.removeNotification(message.notificationKey)
+        is NotificationMessage -> handleNotificationMessage(message)
         is NotificationAction -> notificationHandler.performNotificationAction(message)
         is ReplyAction -> notificationHandler.performReplyAction(message)
         is PlaybackData -> handleMediaInfo(message)
@@ -45,6 +47,8 @@ fun NetworkService.handleMessage(message: SocketMessage) {
         is FileTransfer -> handleFileTransfer(message)
         is BulkFileTransfer -> handleBulkFileTransfer(message)
         is DeviceRingerMode -> handleRingerMode(message)
+        is ThreadRequest -> smsHandler.handleThreadRequest(message)
+        is TextMessage -> smsHandler.sendTextMessage(message)
         else -> {}
     }
 }
@@ -134,5 +138,13 @@ fun NetworkService.handleRingerMode(ringerMode: DeviceRingerMode) {
             val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
         }
+    }
+}
+
+private fun NetworkService.handleNotificationMessage(message: NotificationMessage) {
+    when (message.notificationType) {
+        NotificationType.Removed -> notificationHandler.removeNotification(message.notificationKey)
+        NotificationType.Invoke -> notificationHandler.openNotification(message.notificationKey)
+        else -> {}
     }
 }

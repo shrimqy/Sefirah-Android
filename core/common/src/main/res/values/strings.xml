@@ -146,4 +146,35 @@
     <string name="device_name_preference">Device name</string>
     <string name="rename_device">Rename device</string>
     <string name="rename">Rename</string>
+
+    <string name="message_reply_label">REPLY</string>
+    <string name="mark_as_read_label">MARK AS READ</string>
+    <string name="user_display_name">You</string>
+    <string name="set_default_sms_app_title">Send MMS</string>
+    <string name="set_group_message_as_mms_title">Send group MMS</string>
+    <string name="set_group_message_as_mms" translatable="false">set_group_message_as_mms</string>
+    <string name="set_long_text_as_mms_title">Send long text as MMS</string>
+    <string name="set_long_text_as_mms" translatable="false">set_long_text_as_mms</string>
+    <string name="convert_to_mms_after_title">Convert to MMS</string>
+    <string name="convert_to_mms_after" translatable="false">convert_to_mms_after</string>
+    <string name="convert_to_mms_after_default" translatable="false">3</string>
+    <string name="messages_permission">Messages permission</string>
+    <string name="messages_permission_rationale">For sending and reading messages</string>
+    <string name="message_sync_preference">Sync messages</string>
+    <string name="message_sync_subtitle">Enables reading and texting messages from desktop</string>
+    <string-array name="convert_to_mms_after_entries">
+        <item>After one message</item>
+        <item>After two messages</item>
+        <item>After three messages</item>
+        <item>After four messages</item>
+        <item>After five messages</item>
+    </string-array>
+    <string-array name="convert_to_mms_after_values" translatable="false">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+
 </resources>

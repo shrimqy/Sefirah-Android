@@ -110,6 +110,7 @@ class SyncViewModel @Inject constructor(
 //                            ).show()
                             connectionStateJob?.cancel()
                         }
+                        else -> {}
                     }
                 }
             } catch (e: Exception) {

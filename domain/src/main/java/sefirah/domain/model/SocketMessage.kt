@@ -16,8 +16,16 @@ enum class NotificationType {
     Active,
     New,
     Removed,
-    Action
+    Action,
+    Invoke
 }
+
+enum class ConversationType {
+    Active,
+    New,
+    Removed,
+}
+
 enum class MediaAction {
     Resume,
     Pause,
@@ -57,6 +65,7 @@ data class DeviceInfo(
     val publicKey: String? = null,
     val nonce: String? = null,
     val proof: String? = null,
+    val phoneNumbers: List<PhoneNumber> = emptyList(),
 ) : SocketMessage(), Parcelable
 
 @Serializable
@@ -213,62 +222,52 @@ data class DeviceRingerMode(
 ) : SocketMessage()
 
 @Serializable
-sealed class InteractiveControl {
-    @Serializable
-    @SerialName("SINGLE")
-    data class SingleTap(
-        val x: Double,
-        val y: Double,
-        val frameWidth: Double,
-        val frameHeight: Double
-    ) : InteractiveControl()
+@SerialName("14")
+data class TextMessage(
+    val addresses: List<SmsAddress>,
+    val body: String,
+    val timestamp: Long = 0,
+    val messageType: Int = 0,
+    val read: Boolean = false,
+    val threadId: Long? = null,
+    val uniqueId: Long = 0,
+    val subscriptionId: Int = 0,
+    val attachments: List<SmsAttachment>? = null,
+    val isTextMessage: Boolean = false,
+    val hasMultipleRecipients: Boolean = false
+) : SocketMessage()
 
-    @Serializable
-    @SerialName("HOLD")
-    data class HoldTap(
-        val x: Double,
-        val y: Double,
-        val frameWidth: Double,
-        val frameHeight: Double
-    ) : InteractiveControl()
+@Serializable
+@SerialName("15")
+data class TextConversation(
+    val conversationType: ConversationType,
+    val threadId: Long,
+    val messages: List<TextMessage> = emptyList()
+) : SocketMessage()
 
-    @Serializable
-    @SerialName("KEYBOARD")
-    data class KeyboardAction(
-        val action: KeyboardActionType,
-    ) : InteractiveControl()
+@Serializable
+@SerialName("16")
+data class ThreadRequest(
+    val threadId: Long,
+    val rangeStartTimestamp: Long = -1,
+    val numberToRequest: Long = -1
+) : SocketMessage()
 
-    @Serializable
-    @SerialName("KEY")
-    data class KeyEvent(
-        val key: String,
-    ) : InteractiveControl()
+@Serializable
+data class SmsAddress(
+    val address: String
+)
 
-    @Serializable
-    @SerialName("SCROLL")
-    data class ScrollEvent(
-        val direction: ScrollDirection
-    ) : InteractiveControl()
+@Serializable
+data class SmsAttachment(
+    val mimeType: String,
+    val base64EncodedFile: String? = null,
+    val fileName: String
+)
 
-    @Serializable
-    @SerialName("SWIPE")
-    data class SwipeEvent(
-        val startX: Double,
-        val startY: Double,
-        val endX: Double,
-        val endY: Double,
-        val willContinue: Boolean,
-        val frameWidth: Double,
-        val frameHeight: Double,
-        val duration: Double,
-    ) : InteractiveControl()
-}
-
-enum class ScrollDirection {
-    Up, Down
-}
-
-enum class KeyboardActionType {
-    Tab, Backspace, Enter, Escape, CtrlC, CtrlV, CtrlX, CtrlA
-}
-
+@Parcelize
+@Serializable
+data class PhoneNumber(
+    val number: String,
+    val subscriptionId: Int
+) : Parcelable

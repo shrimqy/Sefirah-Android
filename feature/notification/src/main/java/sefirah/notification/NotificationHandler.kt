@@ -7,6 +7,7 @@ interface NotificationHandler {
     fun sendActiveNotifications()
     fun removeAllNotification()
     fun removeNotification(notificationId: String?)
+    fun openNotification(notificationKey: String?)
     fun performNotificationAction(action: NotificationAction)
     fun performReplyAction(action: ReplyAction)
     fun stopListener()

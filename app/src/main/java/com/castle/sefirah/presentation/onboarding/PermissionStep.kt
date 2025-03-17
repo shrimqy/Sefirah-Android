@@ -118,11 +118,11 @@ internal class PermissionStep : OnboardingStep {
             ) {
                 Column {
                     // Notification Permission (Android 13+)
+                    val permissionRequester = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestPermission(),
+                        onResult = { /* handled in onResume */ }
+                    )
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val permissionRequester = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.RequestPermission(),
-                            onResult = { /* handled in onResume */ }
-                        )
                         PermissionItem(
                             title = stringResource(R.string.notifications),
                             subtitle = stringResource(R.string.notification_permission_rationale),
@@ -131,8 +131,6 @@ internal class PermissionStep : OnboardingStep {
                             onRequest = { permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS) },
                             viewModel = viewModel
                         )
-
-
                     }
 
                     // Location Permission
@@ -150,6 +148,31 @@ internal class PermissionStep : OnboardingStep {
                                 // If foreground permissions granted, request background permission
                                 backgroundLocationRequester.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                             }
+                        }
+                    )
+
+                    
+                    val telephonyPermissionRequester = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestPermission(),
+                        onResult = { 
+                            // handled in onResume
+                        }
+                    )
+                    val contactsPermissionRequester = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestPermission(),
+                        onResult = {
+                            telephonyPermissionRequester.launch(Manifest.permission.READ_PHONE_STATE)
+                        }
+                    )
+                
+                    val smsPermissionRequester = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestMultiplePermissions(),
+                        onResult = { permissions ->
+                            val isGranted = permissions.entries.all { it.value }
+                            if (isGranted) {
+                                contactsPermissionRequester.launch(Manifest.permission.READ_CONTACTS)
+                            }
+                            viewModel.updatePermissionStates()
                         }
                     )
 
@@ -181,6 +204,18 @@ internal class PermissionStep : OnboardingStep {
                         viewModel = viewModel
                     )
 
+                    PermissionItem(
+                        title = stringResource(R.string.messages_permission),
+                        subtitle = stringResource(R.string.messages_permission_rationale),
+                        granted = permissionStates.smsPermissionGranted,
+                        onRequest = {
+                            smsPermissionRequester.launch(
+                                arrayOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS) 
+                            ) 
+                        },
+                        viewModel = viewModel
+                    )
+
                     HorizontalDivider()
 
                     // Battery Optimization
@@ -206,7 +241,6 @@ internal class PermissionStep : OnboardingStep {
                         subtitle = stringResource(R.string.storage_access_rationale),
                         granted = permissionStates.storageGranted,
                         onRequest = {
-
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
                             } else {

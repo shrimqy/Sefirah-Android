@@ -19,9 +19,6 @@ fun getInstalledApps(packageManager: PackageManager): List<ApplicationInfo> {
         
         // Skip system apps
         val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
-        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0) {
-            continue
-        }
 
         // Include all apps that can be launched
         if (packageManager.getLaunchIntentForPackage(packageName) != null) {

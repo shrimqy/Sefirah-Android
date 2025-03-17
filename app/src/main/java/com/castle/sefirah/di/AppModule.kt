@@ -12,7 +12,6 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import sefirah.clipboard.ClipboardHandler
-import sefirah.clipboard.ClipboardService
 import sefirah.common.notifications.NotificationCenter
 import sefirah.data.repository.PlaybackRepositoryImpl
 import sefirah.data.repository.PreferencesDatastore
@@ -20,17 +19,17 @@ import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PlaybackRepository
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
-import sefirah.projection.media.MediaHandler
-import sefirah.projection.media.MediaService
 import sefirah.network.NetworkManagerImpl
 import sefirah.network.NsdService
-import sefirah.network.sftp.SftpServer
 import sefirah.network.SocketFactoryImpl
+import sefirah.network.sftp.SftpServer
 import sefirah.network.util.MessageSerializer
 import sefirah.network.util.TrustManager
 import sefirah.notification.NotificationCallback
 import sefirah.notification.NotificationHandler
 import sefirah.notification.NotificationService
+import sefirah.projection.media.MediaHandler
+import sefirah.projection.media.MediaService
 import javax.inject.Singleton
 
 @Module
@@ -125,9 +124,9 @@ object AppModule {
     @Provides
     @Singleton
     fun providesClipboardHandler(
-        service: ClipboardService
+        context: Context
     ): ClipboardHandler {
-        return service
+        return ClipboardHandler(context)
     }
 
     @Provides

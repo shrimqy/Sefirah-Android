@@ -88,10 +88,14 @@ class NetworkDiscovery @Inject constructor(
         if (isRegistered) unregister()
 
         if (networkAction == NetworkAction.START_DEVICE_DISCOVERY
-            && !checkLocationPermissions(context) 
             && (pairedDeviceListener?.isActive == false || pairedDeviceListener == null)
             && (listenerJob?.isActive == false || listenerJob == null)) {
-            startPairedDeviceListener()
+            // Enable device listener if hotspot is enabled or location permission is not granted
+            if (isHotspotEnabled() || !checkLocationPermissions(context)) {
+                Log.d(TAG, "Starting paired device listener")
+                startPairedDeviceListener()
+                return
+            }
         }
 
         connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -115,6 +119,17 @@ class NetworkDiscovery @Inject constructor(
             isRegistered = false
         } catch (e: Exception) {
             Log.e(TAG, "Failed to unregister network callback", e)
+        }
+    }
+
+    private fun isHotspotEnabled(): Boolean {
+        try {
+            val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val method = wifiManager.javaClass.getDeclaredMethod("isWifiApEnabled")
+            return method.invoke(wifiManager) as Boolean
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to check hotspot status", e)
+            return false
         }
     }
 
@@ -249,6 +264,20 @@ class NetworkDiscovery @Inject constructor(
                     if (udpBroadcast.deviceId == localDevice.deviceId) continue
 
                     if (udpBroadcast.deviceId == lastConnectedDevice.deviceId) {
+                        // Check if there are any new IP addresses to add
+                        val existingAddresses = lastConnectedDevice.ipAddresses.toSet()
+                        val addressesToAdd = udpBroadcast.ipAddresses.toSet() - existingAddresses
+
+                        if (addressesToAdd.isNotEmpty()) {
+                            try {
+                                // Update by adding the new IP addresses
+                                val updatedAddresses = existingAddresses + addressesToAdd
+                                appRepository.updateIpAddresses(lastConnectedDevice.deviceId, updatedAddresses.toList())
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to update IP addresses in database", e)
+                            }
+                        }
+                        
                         initiateConnection(lastConnectedDevice.deviceId)
                         unregister()
                         stopPairedDeviceListener()
@@ -261,7 +290,7 @@ class NetworkDiscovery @Inject constructor(
         }
     }
 
-    private fun stopPairedDeviceListener() {
+    fun stopPairedDeviceListener() {
         try {
             udpSocket?.close()
             udpSocket = null
