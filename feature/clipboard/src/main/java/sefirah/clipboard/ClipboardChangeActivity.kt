@@ -51,7 +51,6 @@ class ClipboardChangeActivity : FragmentActivity() {
         Log.e("ClipboardChangeActivity", "Destroyed()")
     }
 
-
     private fun sendClip(data: String?) {
         if (data != null) {
             CoroutineScope(Dispatchers.IO).launch {
