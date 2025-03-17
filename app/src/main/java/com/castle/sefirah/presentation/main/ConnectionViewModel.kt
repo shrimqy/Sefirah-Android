@@ -137,6 +137,7 @@ class ConnectionViewModel @Inject constructor(
 //                        }
                         connectionStateJob?.cancel()
                     }
+                    else -> {}
                 }
             }
         }

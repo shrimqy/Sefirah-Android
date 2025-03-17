@@ -133,10 +133,18 @@ class NetworkService : Service() {
             _connectionState.value = ConnectionState.Connecting
             try {
                 var connected = false
+
                 if (remoteInfo.prefAddress != null) {
                     connected = initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port)
-                } else {
-                    for (ipAddress in remoteInfo.ipAddresses) {
+                }
+                if (!connected) {
+                    // Create a list of unique IP addresses with preferred address first
+                    val uniqueIpAddresses: MutableList<String> = remoteInfo.ipAddresses.toMutableList()
+                    
+                    uniqueIpAddresses.remove(remoteInfo.prefAddress)
+                
+                    // Try connecting to each address
+                    for (ipAddress in uniqueIpAddresses) {
                         if (initializeConnection(ipAddress, remoteInfo.port)) {
                             connected = true
                             break
@@ -281,7 +289,6 @@ class NetworkService : Service() {
         networkDiscovery.register(NetworkAction.SAVE_NETWORK)
         sendDeviceStatus()
         notificationHandler.sendActiveNotifications()
-        clipboardHandler.start()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && preferencesRepository.readRemoteStorageSettings().first()) {
             sftpServer.start()?.let { sendMessage(it) }
         }
@@ -293,6 +300,7 @@ class NetworkService : Service() {
     fun stop(forcedStop: Boolean) {
         if (forcedStop) {
             networkDiscovery.unregister()
+            networkDiscovery.stopPairedDeviceListener()
             _connectionState.value = ConnectionState.Disconnected(true)
         } else {
             scope.launch {
@@ -385,24 +393,17 @@ class NetworkService : Service() {
             }
         }
     }
-
     override fun onCreate() {
         super.onCreate()
         sftpServer.initialize()
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        
-        // Replace the previous interruption filter registration with this combined one
-        val intentFilter = IntentFilter().apply {
-            NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED
-            AudioManager.RINGER_MODE_CHANGED_ACTION
-        }
+
         registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED))
         registerReceiver(interruptionFilterReceiver, IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
         registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED))
 
         connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
 
-        // Add observer for connection state changes
         scope.launch {
             _connectionState.collect { state ->
                 setNotification(state, deviceName)
