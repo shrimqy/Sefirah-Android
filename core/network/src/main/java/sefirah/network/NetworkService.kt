@@ -43,10 +43,13 @@ import kotlinx.coroutines.withTimeoutOrNull
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.R
 import sefirah.common.notifications.NotificationCenter
+import sefirah.communication.sms.SmsHandler
+import sefirah.communication.telephony.TelephonyHelper
 import sefirah.data.repository.AppRepository
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.DeviceStatus
+import sefirah.domain.model.PhoneNumber
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.SocketType
@@ -79,6 +82,7 @@ class NetworkService : Service() {
     @Inject lateinit var sftpServer: SftpServer
     @Inject lateinit var preferencesRepository: PreferencesRepository
     @Inject lateinit var playbackRepository: PlaybackRepository
+    @Inject lateinit var smsHandler: SmsHandler
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
@@ -247,13 +251,22 @@ class NetworkService : Service() {
             null
         }
 
+        val localPhoneNumbers : List<PhoneNumber> = try {
+            TelephonyHelper.getAllPhoneNumbers(this).map { it.toDto() }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get local phone numbers", e)
+            emptyList()
+        }
+
         sendMessage(DeviceInfo(
             deviceId = localDevice.deviceId,
             deviceName = localDevice.deviceName,
             publicKey = localDevice.publicKey,
             avatar = wallpaperBase64,
             nonce = nonce,
-            proof = proof
+            proof = proof,
+            phoneNumbers = localPhoneNumbers
         ))
     }
 
@@ -273,6 +286,8 @@ class NetworkService : Service() {
             sftpServer.start()?.let { sendMessage(it) }
         }
         networkDiscovery.unregister()
+
+        smsHandler.start()
     }
 
     fun stop(forcedStop: Boolean) {

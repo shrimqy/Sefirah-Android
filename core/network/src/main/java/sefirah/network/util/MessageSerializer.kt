@@ -17,7 +17,9 @@ import sefirah.domain.model.PlaybackData
 import sefirah.domain.model.ReplyAction
 import sefirah.domain.model.SftpServerInfo
 import sefirah.domain.model.SocketMessage
+import sefirah.domain.model.TextConversation
 import sefirah.domain.model.UdpBroadcast
+import sefirah.domain.model.TextMessage
 import javax.inject.Inject
 
 class MessageSerializer @Inject constructor() {
@@ -37,6 +39,8 @@ class MessageSerializer @Inject constructor() {
                 subclass(ApplicationInfo::class)
                 subclass(SftpServerInfo::class)
                 subclass(UdpBroadcast::class)
+                subclass(TextMessage::class)
+                subclass(TextConversation::class)
             }
         }
         isLenient = true
