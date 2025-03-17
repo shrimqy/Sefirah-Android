@@ -1,6 +1,5 @@
 package sefirah.network.extensions
 
-import android.bluetooth.BluetoothClass.Device
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -145,6 +144,7 @@ fun NetworkService.handleRingerMode(ringerMode: DeviceRingerMode) {
 private fun NetworkService.handleNotificationMessage(message: NotificationMessage) {
     when (message.notificationType) {
         NotificationType.Removed -> notificationHandler.removeNotification(message.notificationKey)
+        NotificationType.Invoke -> notificationHandler.openNotification(message.notificationKey)
         else -> {}
     }
 }

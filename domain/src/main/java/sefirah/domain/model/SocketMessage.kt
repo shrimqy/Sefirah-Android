@@ -16,7 +16,8 @@ enum class NotificationType {
     Active,
     New,
     Removed,
-    Action
+    Action,
+    Invoke
 }
 
 enum class ConversationType {
