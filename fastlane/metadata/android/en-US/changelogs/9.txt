@@ -1,0 +1,4 @@
+Added sms texting support
+Allow invoking notifications directly from desktop through scrcpy
+Fixed a few issues with network discovery and connectivity
+Fixed an issue where preference settings won't be saved correctly
