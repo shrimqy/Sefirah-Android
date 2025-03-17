@@ -56,6 +56,8 @@
 
 -keep class org.slf4j.impl.** { *; }
 
+-keep class org.kde.invent.sredman.android.smsmms.** { *; }
+
 -dontwarn java.rmi.**
 -dontwarn javax.security.**
 -dontwarn org.apache.tomcat.jni.**
@@ -63,3 +65,12 @@
 -dontwarn org.slf4j.impl.**
 -dontwarn net.i2p.crypto.eddsa.**
 -dontwarn javax.management.**
+
+-keep class com.google.android.mms.** { *; }
+-keepclassmembers class com.google.android.mms.** { *; }
+-keep class com.android.mms.** { *; }
+-keepclassmembers class com.android.mms.** { *; }
+
+-keep class com.klinker.android.** { *; }
+-keep class com.android.internal.telephony.** { *; }
+-keep class android.provider.Telephony.** { *; }
