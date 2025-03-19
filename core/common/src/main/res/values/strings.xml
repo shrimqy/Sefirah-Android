@@ -177,4 +177,7 @@
         <item>5</item>
     </string-array>
 
+    <!-- Toast Messages -->
+    <string name="toast_network">Make sure you\'re connected to the same network as your PC</string>
+
 </resources>

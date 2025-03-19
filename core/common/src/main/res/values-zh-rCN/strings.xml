@@ -125,4 +125,5 @@
     <string name="messages_permission_rationale">用于读取与发送短信</string>
     <string name="message_sync_preference">同步短信</string>
     <string name="message_sync_subtitle">允许在桌面端读取与发送短信</string>
+    <string name="toast_network">请确保与要连接的PC处于同一网络</string>
 </resources>
