@@ -61,7 +61,7 @@
     <string name="status_connected">已连接</string>
     <string name="add_device">添加设备</string>
     <string name="no_device">什么都没有¯\\_(ツ)_/¯</string>
-    <string name="last_connected">最近连过</string>
+    <string name="last_connected">上次连接</string>
     <string name="ip_addresses">IP地址</string>
     <string name="no_ip">未配置地址</string>
     <string name="add_custom_ip_button">添加自定义IP地址</string>
