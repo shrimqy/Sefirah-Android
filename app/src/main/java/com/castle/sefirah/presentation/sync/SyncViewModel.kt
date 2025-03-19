@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import sefirah.common.R
 import sefirah.data.repository.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.domain.model.ConnectionState
@@ -53,7 +54,7 @@ class SyncViewModel @Inject constructor(
             networkDiscovery.startDiscovery()
             delay(1.seconds)
             if (discoveredDevices.value.isEmpty()) {
-                Toast.makeText(application.applicationContext, "Make sure you're connected to the same network as your PC", Toast.LENGTH_LONG).show()
+                Toast.makeText(application.applicationContext, R.string.toast_network, Toast.LENGTH_LONG).show()
             }
         }
 
