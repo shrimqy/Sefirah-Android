@@ -44,7 +44,7 @@ import sefirah.clipboard.ClipboardHandler
 import sefirah.common.R
 import sefirah.common.notifications.NotificationCenter
 import sefirah.communication.sms.SmsHandler
-import sefirah.communication.telephony.TelephonyHelper
+import sefirah.communication.utils.TelephonyHelper
 import sefirah.data.repository.AppRepository
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
@@ -193,7 +193,7 @@ class NetworkService : Service() {
                 _connectionState.value = state
                 if (state == ConnectionState.Connected) {
                     startListening()
-                    if (remoteInfo.avatar == null) {
+                    if (remoteInfo.lastConnected == null) {
                         sendInstalledApps()
                     }
                     // Setup complete

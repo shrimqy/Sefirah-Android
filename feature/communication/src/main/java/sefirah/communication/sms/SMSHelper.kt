@@ -34,8 +34,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import sefirah.common.util.MimeType
-import sefirah.communication.telephony.TelephonyHelper
-import sefirah.communication.telephony.TelephonyHelper.LocalPhoneNumber
+import sefirah.communication.utils.TelephonyHelper.LocalPhoneNumber
 import java.io.IOException
 import java.util.Objects
 import java.util.SortedMap
@@ -43,6 +42,8 @@ import java.util.TreeMap
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.text.Charsets.UTF_8
+import androidx.core.net.toUri
+import sefirah.communication.utils.TelephonyHelper
 
 @SuppressLint("InlinedApi")
 object SMSHelper {
@@ -50,7 +51,7 @@ object SMSHelper {
     private const val THUMBNAIL_WIDTH = 100
 
     // The constant Telephony.Mms.Part.CONTENT_URI was added in API 29
-    val mMSPartUri : Uri = Uri.parse("content://mms/part/")
+    val mMSPartUri : Uri = "content://mms/part/".toUri()
 
     /**
      * Get the base address for all message conversations
@@ -65,14 +66,14 @@ object SMSHelper {
         if ("Samsung".equals(Build.MANUFACTURER, ignoreCase = true)) {
             Log.i("SMSHelper", "This appears to be a Samsung device. This may cause some features to not work properly.")
         }
-        return Uri.parse("content://mms-sms/conversations?simple=true")
+        return "content://mms-sms/conversations?simple=true".toUri()
     }
 
     private fun getCompleteConversationsUri(): Uri {
         // This glorious - but completely undocumented - content URI gives us all messages, both MMS and SMS,
         // in all conversations
         // See https://stackoverflow.com/a/36439630/3723163
-        return Uri.parse("content://mms-sms/complete-conversations")
+        return "content://mms-sms/complete-conversations".toUri()
     }
 
     /**
@@ -191,7 +192,7 @@ object SMSHelper {
             val existingMessages = sortedMessages.computeIfAbsent(
                 message.date
             ) { _: Long? -> ArrayList() }
-            existingMessages.add(message)
+            existingMessages?.add(message)
         }
         val toReturn: MutableList<Message> = ArrayList(allMessages.size)
         for (messages in sortedMessages.values) {
@@ -420,7 +421,7 @@ object SMSHelper {
      * Get the last message from each conversation. Can use the thread_ids in those messages to look
      * up more messages in those conversations
      *
-     * Returns values ordered from most-recently-touched conversation to oldest, if possible.
+     * Returns values ordered from oldest to most-recently-touched conversation, if possible.
      * Otherwise ordering is undefined.
      *
      * @param context android.content.Context running the request
@@ -491,8 +492,8 @@ object SMSHelper {
             }
             threadIds = threadTimestampPair
                 // Sort oldest-to-newest (smallest to largest)
-                .sortedWith { left: Pair<ThreadID, Long>, right: Pair<ThreadID, Long> -> 
-                    left.second.compareTo(right.second) 
+                .sortedWith { left: Pair<ThreadID, Long>, right: Pair<ThreadID, Long> ->
+                    left.second.compareTo(right.second)
                 }
                 .map { threadTimestampPairElement: Pair<ThreadID, Long> -> threadTimestampPairElement.first }
         }
@@ -543,7 +544,14 @@ object SMSHelper {
         val subscriptionID = NumberUtils.toInt(messageInfo.getOrDefault(Message.SUBSCRIPTION_ID, null))
 
         // Examine all the required SMS columns and emit a log if something seems amiss
-        val anyNulls = arrayOf(Telephony.Sms.ADDRESS, Message.BODY, Message.DATE, Message.TYPE, Message.READ, Message.THREAD_ID, Message.U_ID)
+        val anyNulls = arrayOf(Telephony.Sms.ADDRESS,
+            Message.BODY,
+            Message.DATE,
+            Message.TYPE,
+            Message.READ,
+            Message.THREAD_ID,
+            Message.U_ID
+        )
             .map { key: String -> messageInfo.getOrDefault(key, null) }
             .any { obj: String? -> Objects.isNull(obj) }
         if (anyNulls) {
