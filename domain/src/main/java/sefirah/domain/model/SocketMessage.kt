@@ -226,6 +226,7 @@ data class DeviceRingerMode(
 @SerialName("14")
 data class TextMessage(
     val addresses: List<SmsAddress>,
+    val contacts: List<Contact> = emptyList(),
     val body: String,
     val timestamp: Long = 0,
     val messageType: Int = 0,
@@ -256,7 +257,14 @@ data class ThreadRequest(
 
 @Serializable
 data class SmsAddress(
-    val address: String
+    val address: String,
+)
+
+@Serializable
+data class Contact(
+    val phoneNumber: String,
+    val contactName: String,
+    val photoBase64: String? = null
 )
 
 @Serializable

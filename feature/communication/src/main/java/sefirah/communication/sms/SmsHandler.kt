@@ -141,7 +141,7 @@ class SmsHandler @Inject constructor(
         val threadId = messages[0].threadID.threadID
 
         val textMessages = messages.map {
-            val text = it.toTextMessage()
+            val text = it.toTextMessage(context)
             text
         }
 
@@ -167,7 +167,6 @@ class SmsHandler @Inject constructor(
      * Send all conversations (one message per thread)
      */
     private fun sendAllConversations() {
-        haveMessagesBeenRequested = true
         val conversations = getConversations(this.context)
         
         // Build a set of thread IDs while we process the conversations
@@ -178,7 +177,7 @@ class SmsHandler @Inject constructor(
             val threadId = message.threadID.threadID
             currentThreadIds.add(threadId)
             
-            val textMessage = message.toTextMessage()
+            val textMessage = message.toTextMessage(context)
 
             // Create a TextConversation with just this one message
             val conversation = TextConversation(
@@ -207,7 +206,7 @@ class SmsHandler @Inject constructor(
 
         // Get all messages in the thread
         val messages = if (request.rangeStartTimestamp < 0) {
-            SMSHelper.getMessagesInThread(context, threadID, 
+            SMSHelper.getMessagesInThread(context, threadID,
                 if (request.numberToRequest < 0) null else request.numberToRequest)
         } else {
             getMessagesInRange(context, threadID, request.rangeStartTimestamp,
@@ -215,7 +214,7 @@ class SmsHandler @Inject constructor(
         }
         
         // Convert all messages to TextMessage objects
-        val textMessages = messages.map { it.toTextMessage() }
+        val textMessages = messages.map { it.toTextMessage(context) }
 
         // Create a TextConversation containing all messages from this thread
         val conversation = TextConversation(

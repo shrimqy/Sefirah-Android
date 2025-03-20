@@ -42,8 +42,9 @@ import com.klinker.android.send_message.Transaction
 import com.klinker.android.send_message.Utils
 import org.apache.commons.io.IOUtils
 import sefirah.common.R
-import sefirah.communication.telephony.TelephonyHelper
-import sefirah.communication.telephony.TelephonyHelper.LocalPhoneNumber
+import sefirah.communication.utils.ContactsHelper
+import sefirah.communication.utils.TelephonyHelper
+import sefirah.communication.utils.TelephonyHelper.LocalPhoneNumber
 import sefirah.domain.model.SmsAddress
 import sefirah.domain.model.SmsAttachment
 import sefirah.domain.model.TextMessage
@@ -73,8 +74,9 @@ object SmsMmsUtils {
                 // the FromAddress (below) since the default value there is null.
                 // The only more-correct thing we could do here is query the user (maybe in a
                 // persistent configuration) for their phone number(s).
-                sendingPhoneNumber = LocalPhoneNumber(null, subscriptionID)
-                Log.w(SENDING_MESSAGE, ("We do not know *any* phone numbers for this device. "
+                sendingPhoneNumber = LocalPhoneNumber(null.toString(), subscriptionID)
+                Log.w(
+                    SENDING_MESSAGE, ("We do not know *any* phone numbers for this device. "
                         + "Attempting to send a message without knowing the local phone number is likely "
                         + "to result in strange behavior, such as the message being sent to yourself, "
                         + "or might entirely fail to send (or be received).")
@@ -130,12 +132,9 @@ object SmsMmsUtils {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
 
         val sendingPhoneNumber: LocalPhoneNumber = getSendingPhoneNumber(context, subID)
-        if (sendingPhoneNumber.number != null) {
-            // If the message is going to more than one target (to allow the user to send a message to themselves)
-            if (addressList.size > 1) {
-                // Remove the user's phone number if present in the list of recipients
-                addressList.removeIf { address -> sendingPhoneNumber.isMatchingPhoneNumber(address.getAddress()) }
-            }
+        if (addressList.size > 1) {
+            // Remove the user's phone number if present in the list of recipients
+            addressList.removeIf { address -> sendingPhoneNumber.isMatchingPhoneNumber(address.getAddress()) }
         }
 
         try {
@@ -497,9 +496,15 @@ object SmsMmsUtils {
     }
 
 
-    fun SMSHelper.Message.toTextMessage(): TextMessage {
+    fun SMSHelper.Message.toTextMessage(context: Context): TextMessage {
+        val addresses = this.addresses.map { SmsAddress(it.getAddress()) }
+        val contacts = this.addresses.mapNotNull {
+            ContactsHelper().getContactInfo(context, it.getAddress())
+        }
+
         return TextMessage(
-            addresses = this.addresses.map { SmsAddress(it.getAddress()) },
+            addresses = addresses,
+            contacts = contacts,
             body = this.body,
             timestamp = this.date,
             messageType = this.type,
