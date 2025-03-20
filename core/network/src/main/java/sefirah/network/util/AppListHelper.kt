@@ -45,5 +45,5 @@ fun getInstalledApps(packageManager: PackageManager): List<ApplicationInfo> {
         }
     }
 
-    return appsWithPermission
+    return appsWithPermission.sortedBy { it.appName }
 }
