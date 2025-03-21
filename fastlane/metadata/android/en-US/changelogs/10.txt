@@ -1,0 +1,4 @@
+- Sort the app list before sending
+- Send relevant contact information (if present) with the text messages
+- Fix sms preference not working
+- Add Chinese-Simplified Translation & change hard-coded strings

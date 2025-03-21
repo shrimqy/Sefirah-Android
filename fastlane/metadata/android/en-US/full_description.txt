@@ -9,6 +9,8 @@
     <li><b>Media Control:</b> Control media playback and volume of your PC from android.</li>
     <li><b>Notification Sync:</b> Allows toasting the notifications from your android in desktop.</li>
     <li><b>Storage Integration:</b> Integrate your android storage with your pc to access files from your phone.</li>
+    <li><b>Screen Mirroring:</b> Control and mirror your phone screen from desktop (requires scrcpy)</li>
+    <li><b>SMS Texting:</b> Send and receive SMS messages in desktop.</li>
 </ul>
 
 <p><b>Limitations:</b></p>
@@ -22,7 +24,7 @@
     <li><b>Accessibility permissions:</b> For syncing Android's clipboard to Windows.</li>
     <li><b>Location permissions:</b> For checking if the Android device is in a familiar network or not and initiating auto reconnection.</li>
     <li><b>Storage permissions:</b> For allowing windows to access Android storage</li>
-    <li><b>Media permission:</b> Primarily for accessing the device wallpaper.</li>
+    <li><b>Contacts, Phone and SMS permissions:</b> For reading and sending SMS</li>
     <li><b>Notification permission:</b> For notifying device connection status, other misc feature notifications if necessary and keeping the connection alive.</li>
     <li><b>Notification Listener permission:</b> To listen to incoming and active notification</li>
 </ul>
