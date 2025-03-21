@@ -11,6 +11,7 @@ import android.provider.Telephony
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sefirah.communication.sms.SMSHelper.MessageLooper.Companion.getLooper
 import sefirah.communication.sms.SMSHelper.getConversations
@@ -26,6 +27,7 @@ import sefirah.domain.model.TextConversation
 import sefirah.domain.model.TextMessage
 import sefirah.domain.model.ThreadRequest
 import sefirah.domain.repository.NetworkManager
+import sefirah.domain.repository.PreferencesRepository
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import javax.inject.Inject
@@ -35,6 +37,7 @@ import javax.inject.Singleton
 class SmsHandler @Inject constructor(
     private val context: Context,
     private val networkManager: NetworkManager,
+    private val preferencesRepository: PreferencesRepository
 ) {
     private var smsReceiver: BroadcastReceiver? = null
 
@@ -155,12 +158,10 @@ class SmsHandler @Inject constructor(
             messages = textMessages
         )
         existingThreadIds = existingThreadIds.plus(threadId)
-        
+
         // Send the conversation packet
-        CoroutineScope(Dispatchers.IO).launch {
-            Log.d(TAG, "conversation: $conversation")
-            networkManager.sendMessage(conversation)
-        }
+        Log.d(TAG, "conversation: $conversation")
+        sendToDesktop(conversation)
     }
 
     /**
@@ -187,9 +188,7 @@ class SmsHandler @Inject constructor(
             )
             Log.d(TAG, "conversation: $conversation")
             // Send as a conversation container
-            CoroutineScope(Dispatchers.IO).launch {
-                networkManager.sendMessage(conversation)
-            }
+            sendToDesktop(conversation)
         }
         
         // Store the current thread IDs for later comparison
@@ -224,8 +223,13 @@ class SmsHandler @Inject constructor(
         )
         
         // Send the conversation packet
+        sendToDesktop(conversation)
+    }
+
+    private fun sendToDesktop(conversation: TextConversation) {
         CoroutineScope(Dispatchers.IO).launch {
-            networkManager.sendMessage(conversation)
+            if (preferencesRepository.readMessageSyncSettings().first())
+                networkManager.sendMessage(conversation)
         }
     }
 

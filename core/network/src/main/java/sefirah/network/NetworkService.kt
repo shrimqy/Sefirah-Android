@@ -293,8 +293,9 @@ class NetworkService : Service() {
             sftpServer.start()?.let { sendMessage(it) }
         }
         networkDiscovery.unregister()
-
-        smsHandler.start()
+        if (preferencesRepository.readMessageSyncSettings().first()) {
+            smsHandler.start()
+        }
     }
 
     fun stop(forcedStop: Boolean) {
