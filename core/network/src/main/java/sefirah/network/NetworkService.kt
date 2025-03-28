@@ -43,6 +43,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.R
 import sefirah.common.notifications.NotificationCenter
+import sefirah.common.util.checkStoragePermission
+import sefirah.common.util.smsPermissionGranted
 import sefirah.communication.sms.SmsHandler
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.data.repository.AppRepository
@@ -132,6 +134,7 @@ class NetworkService : Service() {
         scope.launch {
             _connectionState.value = ConnectionState.Connecting
             try {
+                Log.d(TAG, "last connected ${remoteInfo.lastConnected}")
                 var connected = false
 
                 if (remoteInfo.prefAddress != null) {
@@ -193,11 +196,8 @@ class NetworkService : Service() {
                 _connectionState.value = state
                 if (state == ConnectionState.Connected) {
                     startListening()
-                    if (remoteInfo.lastConnected == null) {
-                        sendInstalledApps()
-                    }
-                    // Setup complete
-                    finalizeConnection()
+                    Log.d(TAG, " last connected: ${remoteInfo.lastConnected}")
+                    finalizeConnection(remoteInfo.lastConnected == null)
                 } else {
                     stop(true)
                 }
@@ -285,16 +285,22 @@ class NetworkService : Service() {
         }
     }
 
-    private suspend fun finalizeConnection() {
+    private suspend fun finalizeConnection(isNewDevice: Boolean) {
         networkDiscovery.register(NetworkAction.SAVE_NETWORK)
         sendDeviceStatus()
         notificationHandler.sendActiveNotifications()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && preferencesRepository.readRemoteStorageSettings().first()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+            && preferencesRepository.readRemoteStorageSettings().first()
+            && checkStoragePermission(this)
+        ) {
+            sftpServer.initialize()
             sftpServer.start()?.let { sendMessage(it) }
         }
-        networkDiscovery.unregister()
-        if (preferencesRepository.readMessageSyncSettings().first()) {
+        if (preferencesRepository.readMessageSyncSettings().first() && smsPermissionGranted(this)) {
             smsHandler.start()
+        }
+        if (isNewDevice) {
+            sendInstalledApps()
         }
     }
 
@@ -396,7 +402,6 @@ class NetworkService : Service() {
     }
     override fun onCreate() {
         super.onCreate()
-        sftpServer.initialize()
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
 
         registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED))

@@ -10,9 +10,9 @@
 package sefirah.network.sftp
 
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.util.Log
+import androidx.core.net.toUri
 import org.apache.sshd.common.file.nativefs.NativeFileSystemFactory
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory
 import org.apache.sshd.common.keyprovider.KeyPairProvider
@@ -84,7 +84,7 @@ class SftpServer @Inject constructor(
                 if (SUPPORTS_NATIVEFS) {
                     NativeFileSystemFactory()
                 } else {
-                    // TODO: Configure KDE Connect Saf file system
+                    // Configure KDE Connect Saf file system
                     return
                 }
             )
@@ -97,7 +97,7 @@ class SftpServer @Inject constructor(
                 withFileSystemAccessor(object : SftpFileSystemAccessor {
                     fun notifyMediaStore(path: Path) {
                         kotlin.runCatching {
-                            val uri = Uri.parse(path.toUri().toString())
+                            val uri = path.toUri().toString().toUri()
                             MediaStoreHelper.indexFile(context, uri)
                             uri
                         }.fold(
