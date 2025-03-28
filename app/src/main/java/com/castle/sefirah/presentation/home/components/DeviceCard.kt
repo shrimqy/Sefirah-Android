@@ -43,6 +43,7 @@ import sefirah.presentation.util.base64ToBitmap
 @Composable
 fun DeviceCard(
     modifier: Modifier = Modifier,
+    onclick: () -> Unit,
     device: RemoteDevice?,
     connectionState: ConnectionState,
     onSyncAction: () -> Unit,
@@ -50,7 +51,7 @@ fun DeviceCard(
     navController: NavController
 ) {
     Card(
-        onClick = { /*TODO: Handle card click */ },
+        onClick = { onclick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(),
         modifier = modifier

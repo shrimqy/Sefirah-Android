@@ -34,6 +34,7 @@ import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.PreferencesSettings
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.network.util.ECDHHelper
+import java.io.File
 import javax.inject.Inject
 
 private const val TAG = "SettingsViewModel"
@@ -125,6 +126,15 @@ class SettingsViewModel @Inject constructor(
                         privateKey = privateKey,
                     ).toEntity()
                 )
+
+                try {
+                    val file = File(context.getExternalFilesDir(null), "device_info.txt")
+                    file.writeText(androidId)
+                    Log.d(TAG, "Debug info written to: ${file.absolutePath}")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to write debug info", e)
+                }
+
             } catch (e: Exception) {
                 Log.e("OnboardingViewModel", "Error adding device to database", e)
             }

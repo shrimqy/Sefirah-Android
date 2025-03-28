@@ -1,74 +1,102 @@
 package com.castle.sefirah.presentation.home
 
 import android.app.Application
-import android.content.Intent
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.komu.sekia.di.AppCoroutineScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.launch
-import sefirah.data.repository.AppRepository
-import sefirah.database.model.toDomain
-import sefirah.domain.model.ConnectionState
-import sefirah.domain.model.MediaAction
-import sefirah.domain.model.PlaybackData
-import sefirah.domain.model.RemoteDevice
+import sefirah.domain.model.AudioDevice
+import sefirah.domain.model.PlaybackAction
+import sefirah.domain.model.PlaybackActionType
+import sefirah.domain.model.PlaybackSession
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.repository.NetworkManager
-import sefirah.domain.repository.PlaybackRepository
-import sefirah.domain.repository.PreferencesRepository
-import sefirah.network.NetworkService
-import sefirah.network.NetworkService.Companion.Actions
-import sefirah.network.NetworkService.Companion.TAG
+import sefirah.projection.media.MediaHandler
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    playbackRepository: PlaybackRepository,
     private val networkManager: NetworkManager,
+    private val mediaHandler: MediaHandler,
     application: Application
 ) : AndroidViewModel(application) {
 
-    val playbackData: StateFlow<PlaybackData?> = playbackRepository.readPlaybackData()
+    val activeSessions: StateFlow<List<PlaybackSession>> = mediaHandler.activeSessions
+    val audioDevices: StateFlow<List<AudioDevice>> = mediaHandler.audioDevices
 
-    // Handle play/pause, next, previous actions
-    fun onPlayPause() {
-        val action: MediaAction = if (playbackData.value?.isPlaying == true) MediaAction.Pause else MediaAction.Resume
+    fun onPlayPause(session: PlaybackSession) {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(PlaybackData(appName = playbackData.value!!.appName, mediaAction = action))
+            val actionType = if (session.isPlaying) 
+                PlaybackActionType.Pause 
+            else 
+                PlaybackActionType.Play
+                
+            sendMessage(
+                PlaybackAction(
+                    playbackActionType = actionType,
+                    source = session.source
+                )
+            )
         }
     }
 
-    fun onNext() {
+    fun onNext(session: PlaybackSession) {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(PlaybackData(appName = playbackData.value!!.appName, mediaAction = MediaAction.NextQueue))
+            sendMessage(
+                PlaybackAction(
+                    playbackActionType = PlaybackActionType.Next,
+                    source = session.source
+                )
+            )
         }
     }
 
-    fun onPrevious() {
+    fun onPrevious(session: PlaybackSession) {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(PlaybackData(appName = playbackData.value!!.appName, mediaAction = MediaAction.PrevQueue))
+            sendMessage(
+                PlaybackAction(
+                    playbackActionType = PlaybackActionType.Previous,
+                    source = session.source
+                )
+            )
         }
     }
 
-    fun onVolumeChange(volume: Int) {
+    fun onSeek(session: PlaybackSession, position: Double) {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(PlaybackData(volume = volume.toFloat(), mediaAction = MediaAction.Volume))
+            sendMessage(
+                PlaybackAction(
+                    playbackActionType = PlaybackActionType.Seek,
+                    source = session.source,
+                    value = position
+                )
+            )
+        }
+    }
+    
+    fun onVolumeChange(device: AudioDevice, volume: Float) {
+        viewModelScope.launch(Dispatchers.IO) {
+            sendMessage(
+                PlaybackAction(
+                    playbackActionType = PlaybackActionType.VolumeUpdate,
+                    source = device.deviceId,
+                    value = volume.toDouble()
+                )
+            )
+        }
+    }
+    
+    fun setDefaultDevice(device: AudioDevice) {
+        viewModelScope.launch(Dispatchers.IO) {
+            mediaHandler.defaultAudioDevice(device)
+            sendMessage(
+                PlaybackAction(
+                    playbackActionType = PlaybackActionType.DefaultDevice,
+                    source = device.deviceId
+                )
+            )
         }
     }
 
