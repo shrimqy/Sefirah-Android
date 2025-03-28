@@ -13,10 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.notifications.NotificationCenter
-import sefirah.data.repository.PlaybackRepositoryImpl
 import sefirah.data.repository.PreferencesDatastore
 import sefirah.domain.repository.NetworkManager
-import sefirah.domain.repository.PlaybackRepository
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.NetworkManagerImpl
@@ -29,7 +27,6 @@ import sefirah.notification.NotificationCallback
 import sefirah.notification.NotificationHandler
 import sefirah.notification.NotificationService
 import sefirah.projection.media.MediaHandler
-import sefirah.projection.media.MediaService
 import javax.inject.Singleton
 
 @Module
@@ -131,21 +128,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providesMediaService(
+    fun providesMediaHandler(
         context: Context,
         networkManager: NetworkManager,
         notificationCenter: NotificationCenter,
         preferencesRepository: PreferencesRepository
-    ) : MediaService {
-        return MediaService(context, networkManager, notificationCenter, preferencesRepository)
-    }
-
-    @Provides
-    @Singleton
-    fun providesMediaHandler(
-        service: MediaService
     ) : MediaHandler {
-        return service
+        return MediaHandler(context, networkManager, notificationCenter, preferencesRepository)
     }
 
     @Provides
@@ -153,10 +142,4 @@ object AppModule {
     fun providesPreferencesRepository(
         application: Application
     ): PreferencesRepository = PreferencesDatastore(context = application)
-
-    @Provides
-    @Singleton
-    fun providedPlaybackRepository(): PlaybackRepository {
-        return PlaybackRepositoryImpl()
-    }
 }

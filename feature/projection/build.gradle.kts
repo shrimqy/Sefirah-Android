@@ -9,6 +9,7 @@ android {
 dependencies {
     api(projects.core.common)
     api(projects.core.presentation)
+    api(projects.feature.notification)
     api(projects.domain)
 
     implementation(libs.core.ktx)

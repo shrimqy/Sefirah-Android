@@ -91,6 +91,13 @@
             </intent-filter>
         </service>
 
+        <receiver android:name="sefirah.projection.media.MediaActionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+
         <!--        Remove the default WorkManager initializer-->
         <provider
             android:name="androidx.startup.InitializationProvider"

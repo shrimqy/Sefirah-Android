@@ -4,8 +4,8 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
-import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonClassDiscriminator
 
 enum class ClipboardType {
     Image,
@@ -27,13 +27,25 @@ enum class ConversationType {
     Removed,
 }
 
-enum class MediaAction {
-    Resume,
+enum class SessionType {
+    NewSession,
+    TimelineUpdate,
+    MediaUpdate,
+    PlaybackInfoUpdate,
+    RemovedSession
+}
+
+enum class PlaybackActionType {
+    Play,
     Pause,
-    NextQueue,
-    PrevQueue,
+    Next,
+    Previous,
     Seek,
-    Volume
+    Shuffle,
+    Repeat,
+    PlaybackRate,
+    DefaultDevice,
+    VolumeUpdate
 }
 
 enum class MiscType {
@@ -135,16 +147,19 @@ data class Message(
 @Serializable
 @SerialName("7")
 @Parcelize
-data class PlaybackData(
-    val appName: String? = null,
+data class PlaybackSession(
+    var sessionType: SessionType,
+    val isCurrentSession: Boolean = false,
+    val source: String? = null,
     val trackTitle: String? = null,
     val artist: String? = null,
-    var volume: Float? = null,
-    var isPlaying: Boolean? = null,
-    val position: Long? = null,
-    val maxSeekTime: Long? = null,
-    val minSeekTime: Long? = null,
-    var mediaAction: MediaAction? = null,
+    var isPlaying: Boolean = false,
+    var playbackRate: Double? = 0.0,
+    var isShuffle: Boolean = false,
+    val audioDevice: List<AudioDevice>? = null,
+    var position: Double = 0.0,
+    val maxSeekTime: Double = 0.0,
+    val minSeekTime: Double? = null,
     val thumbnail: String? = null,
     val appIcon: String? = null,
 ) : SocketMessage(), Parcelable
@@ -280,3 +295,21 @@ data class PhoneNumber(
     val number: String,
     val subscriptionId: Int
 ) : Parcelable
+
+@Parcelize
+@Serializable
+@SerialName("17")
+data class AudioDevice(
+    val deviceId: String,
+    var isSelected: Boolean,
+    val deviceName: String,
+    val volume: Float,
+) : SocketMessage(), Parcelable
+
+@Serializable
+@SerialName("18")
+data class PlaybackAction(
+    val playbackActionType: PlaybackActionType,
+    val source: String? = null,
+    val value: Double? = null
+) : SocketMessage()

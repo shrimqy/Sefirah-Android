@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sefirah.database.model.toEntity
+import sefirah.domain.model.AudioDevice
 import sefirah.domain.model.BulkFileTransfer
 import sefirah.domain.model.ClipboardMessage
 import sefirah.domain.model.DeviceInfo
@@ -19,7 +20,7 @@ import sefirah.domain.model.MiscType
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationMessage
 import sefirah.domain.model.NotificationType
-import sefirah.domain.model.PlaybackData
+import sefirah.domain.model.PlaybackSession
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.ReplyAction
 import sefirah.domain.model.SocketMessage
@@ -39,7 +40,7 @@ fun NetworkService.handleMessage(message: SocketMessage) {
         is NotificationMessage -> handleNotificationMessage(message)
         is NotificationAction -> notificationHandler.performNotificationAction(message)
         is ReplyAction -> notificationHandler.performReplyAction(message)
-        is PlaybackData -> handleMediaInfo(message)
+        is PlaybackSession -> handleMediaInfo(message)
         is ClipboardMessage -> {
             Log.d("ClipboardMessage", "Received clipboard message: ${message.content}")
             clipboardHandler.setClipboard(message)
@@ -49,6 +50,7 @@ fun NetworkService.handleMessage(message: SocketMessage) {
         is DeviceRingerMode -> handleRingerMode(message)
         is ThreadRequest -> smsHandler.handleThreadRequest(message)
         is TextMessage -> smsHandler.sendTextMessage(message)
+        is AudioDevice -> mediaHandler.addAudioDevice(message)
         else -> {}
     }
 }
@@ -106,14 +108,12 @@ suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo, remoteInfo: 
 }
 
 
-fun NetworkService.handleMediaInfo(playbackData: PlaybackData) {
+fun NetworkService.handleMediaInfo(session: PlaybackSession) {
     CoroutineScope(Dispatchers.IO).launch {
         if (preferencesRepository.readMediaSessionSettings().first()) {
-            mediaHandler.updateMediaSession(playbackData)
+            mediaHandler.handlePlaybackSessionUpdates(session)
         }
-        playbackRepository.updatePlaybackData(playbackData)
     }
-
 }
 
 fun NetworkService.handleMisc(misc: Misc) {

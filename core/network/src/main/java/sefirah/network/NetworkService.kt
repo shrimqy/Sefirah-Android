@@ -55,7 +55,6 @@ import sefirah.domain.model.PhoneNumber
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.SocketType
-import sefirah.domain.repository.PlaybackRepository
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.NetworkDiscovery.NetworkAction
@@ -83,7 +82,6 @@ class NetworkService : Service() {
     @Inject lateinit var mediaHandler: MediaHandler
     @Inject lateinit var sftpServer: SftpServer
     @Inject lateinit var preferencesRepository: PreferencesRepository
-    @Inject lateinit var playbackRepository: PlaybackRepository
     @Inject lateinit var smsHandler: SmsHandler
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
