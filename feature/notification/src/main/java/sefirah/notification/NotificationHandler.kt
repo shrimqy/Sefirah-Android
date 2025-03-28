@@ -10,5 +10,4 @@ interface NotificationHandler {
     fun openNotification(notificationKey: String?)
     fun performNotificationAction(action: NotificationAction)
     fun performReplyAction(action: ReplyAction)
-    fun stopListener()
 }

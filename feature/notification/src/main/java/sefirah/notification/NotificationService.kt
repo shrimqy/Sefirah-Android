@@ -187,11 +187,6 @@ class NotificationService @Inject constructor(
         }
     }
 
-    override fun stopListener() {
-        NotificationListener.stop(context)
-    }
-
-
     private fun sendNotification(sbn: StatusBarNotification, notificationType: NotificationType) {
         if (!notificationSyncSettings.value) return
         val notification = sbn.notification
