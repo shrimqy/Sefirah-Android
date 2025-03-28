@@ -122,19 +122,31 @@ class MediaHandler @Inject constructor(
     
     private fun addSession(session: PlaybackSession) {
         _activeSessions.update { currentSessions ->
-            val existingIndex = currentSessions.indexOfFirst { it.source == session.source }
-            if (existingIndex >= 0) {
-                currentSessions.toMutableList().apply {
-                    this[existingIndex] = session
+            // First, get the modified list with the new/updated session
+            val sessionsList = if (currentSessions.any { it.source == session.source }) {
+                currentSessions.map { 
+                    if (it.source == session.source) session else it 
                 }
             } else {
                 currentSessions + session
             }
-        }
-        
-        if (session.isCurrentSession) {
-            lastPositionUpdateTimeMap[session.source!!] = System.currentTimeMillis()
-            updateMediaSession(session)
+            
+            // If the new session is marked as current, make non-playing sessions not current
+            if (session.isCurrentSession) {
+                lastPositionUpdateTimeMap[session.source!!] = System.currentTimeMillis()
+                updateMediaSession(session)
+
+                sessionsList.map { existingSession ->
+                    if (existingSession.source != session.source && !existingSession.isPlaying) {
+                        // Make non-playing sessions not current
+                        existingSession.copy(isCurrentSession = false)
+                    } else {
+                        existingSession
+                    }
+                }
+            } else {
+                sessionsList
+            }
         }
     }
 
@@ -142,13 +154,18 @@ class MediaHandler @Inject constructor(
         _activeSessions.update { currentSessions ->
             currentSessions.filter { it.source != session.source }
         }
+        if (_activeSessions.value.isEmpty())
+        {
+            release()
+        }
+
     }
 
     // Main Activity Intent
     private val mainIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
     }
-    val mainPendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE)
+    private val mainPendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
     private fun updateMediaSession(playbackSession: PlaybackSession) {
@@ -338,6 +355,7 @@ class MediaHandler @Inject constructor(
             it.release()
             mediaSession = null
         }
+        notificationCenter.cancelNotification(AppNotifications.MEDIA_PLAYBACK_ID)
     }
 
     private fun getMaxVolume(): Int {

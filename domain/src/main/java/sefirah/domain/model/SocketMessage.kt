@@ -149,7 +149,7 @@ data class Message(
 @Parcelize
 data class PlaybackSession(
     var sessionType: SessionType,
-    val isCurrentSession: Boolean = false,
+    var isCurrentSession: Boolean = false,
     val source: String? = null,
     val trackTitle: String? = null,
     val artist: String? = null,

@@ -70,7 +70,10 @@ fun MediaCard(
     // When active session changes, scroll to it
     LaunchedEffect(sessions) {
         val newActiveIndex = sessions.indexOfFirst { it.isCurrentSession }.coerceAtLeast(0)
-        if (newActiveIndex != pagerState.currentPage) {
+        // Only scroll if current page isn't already showing a current session
+        val currentPageIsActive = pagerState.currentPage < sessions.size && 
+                                  sessions[pagerState.currentPage].isCurrentSession
+        if (newActiveIndex != pagerState.currentPage && !currentPageIsActive) {
             scope.launch {
                 pagerState.animateScrollToPage(newActiveIndex)
             }
@@ -125,14 +128,12 @@ fun PlaybackSession(
                     .height(210.dp)
             ) {
 
-                // Background image - only create painter when thumbnail changes
                 session.thumbnail?.let { thumbnail ->
-                    // Remember the bitmap conversion result, not just the painter
+                    // Remember the bitmap conversion result
                     val bitmap = remember(thumbnail) {
                         base64ToBitmap(thumbnail)
                     }
 
-                    // The painter will only be recreated when the bitmap changes
                     val painter = rememberAsyncImagePainter(model = bitmap)
 
                     Image(
@@ -224,7 +225,11 @@ fun PlaybackSession(
                         }
                     }
 
-                    val sliderPosition = (displayPosition / session.maxSeekTime).toFloat().coerceIn(0f, 1f)
+                    val sliderPosition = if (session.maxSeekTime > 0) {
+                        (displayPosition / session.maxSeekTime).toFloat().coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
                                         
                     Slider(
                         value = sliderPosition,
