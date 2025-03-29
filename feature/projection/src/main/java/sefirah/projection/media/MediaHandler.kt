@@ -350,15 +350,16 @@ class MediaHandler @Inject constructor(
         }
     }
 
-    fun release() {
+    fun release(isDisconnected: Boolean = false) {
         mediaSession?.let {
             it.isActive = false
             it.release()
             mediaSession = null
         }
         _activeSessions.value = emptyList()
-        _audioDevices.value = emptyList()
         notificationCenter.cancelNotification(AppNotifications.MEDIA_PLAYBACK_ID)
+        if (isDisconnected)
+            _audioDevices.value = emptyList()
     }
 
     private fun getMaxVolume(): Int {

@@ -319,7 +319,7 @@ class NetworkService : Service() {
         }
         deviceStatus = null
         sftpServer.stop()
-        mediaHandler.release()
+        mediaHandler.release(true)
         writeChannel?.close()
         socket?.close()
     }
@@ -483,7 +483,7 @@ class NetworkService : Service() {
         unregisterReceiver(batteryReceiver)
         unregisterReceiver(interruptionFilterReceiver)
         sftpServer.stop()
-        mediaHandler.release()
+        mediaHandler.release(true)
         writeChannel?.close()
         socket?.close()
     }
