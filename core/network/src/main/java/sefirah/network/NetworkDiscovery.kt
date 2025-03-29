@@ -254,7 +254,7 @@ class NetworkDiscovery @Inject constructor(
             try {
                 val localDevice = appRepository.getLocalDevice().toDomain()
                 val lastConnectedDevice = appRepository.getLastConnectedDevice() ?: return@launch
-
+                unregister()
                 while (isActive) {
                     val datagram = udpSocket?.receive() ?: continue
                     val udpBroadcast = datagram.packet.readUTF8Line()?.let {
@@ -277,9 +277,7 @@ class NetworkDiscovery @Inject constructor(
                                 Log.e(TAG, "Failed to update IP addresses in database", e)
                             }
                         }
-                        
                         initiateConnection(lastConnectedDevice.deviceId)
-                        unregister()
                         stopPairedDeviceListener()
                         break
                     }
@@ -452,6 +450,7 @@ class NetworkDiscovery @Inject constructor(
             udpSocket = null
             nsdService.stopAdvertisingService()
             listenerJob?.cancel()
+            unregister()
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping listener", e)
         }

@@ -300,6 +300,7 @@ class NetworkService : Service() {
         if (isNewDevice) {
             sendInstalledApps()
         }
+        networkDiscovery.unregister()
     }
 
     fun stop(forcedStop: Boolean) {
