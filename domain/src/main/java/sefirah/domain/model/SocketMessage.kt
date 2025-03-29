@@ -28,9 +28,8 @@ enum class ConversationType {
 }
 
 enum class SessionType {
-    NewSession,
+    Session,
     TimelineUpdate,
-    MediaUpdate,
     PlaybackInfoUpdate,
     RemovedSession
 }

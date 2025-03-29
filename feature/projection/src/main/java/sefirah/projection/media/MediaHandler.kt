@@ -81,10 +81,9 @@ class MediaHandler @Inject constructor(
 
     fun handlePlaybackSessionUpdates(playbackSession: PlaybackSession) {
         when (playbackSession.sessionType) {
-            SessionType.NewSession -> addSession(playbackSession)
+            SessionType.Session -> addSession(playbackSession)
             SessionType.RemovedSession -> removeSession(playbackSession)
             SessionType.TimelineUpdate -> updateTimeline(playbackSession)
-            SessionType.MediaUpdate -> {}
             SessionType.PlaybackInfoUpdate -> updatePlaybackInfo(playbackSession)
         }
     }
@@ -109,10 +108,12 @@ class MediaHandler @Inject constructor(
         _activeSessions.update { currentSessions ->
             currentSessions.map { session ->
                 if (session.source == playbackSession.source) {
-                    session.copy(
+                    val updatedSession = session.copy(
                         isPlaying = playbackSession.isPlaying,
                         isShuffle = playbackSession.isShuffle,
                         playbackRate = playbackSession.playbackRate)
+                    updateMediaSession(updatedSession)
+                    updatedSession
                 } else {
                     session
                 }
