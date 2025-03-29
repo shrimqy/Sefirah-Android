@@ -355,6 +355,8 @@ class MediaHandler @Inject constructor(
             it.release()
             mediaSession = null
         }
+        _activeSessions.value = emptyList()
+        _audioDevices.value = emptyList()
         notificationCenter.cancelNotification(AppNotifications.MEDIA_PLAYBACK_ID)
     }
 
