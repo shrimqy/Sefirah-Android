@@ -1,0 +1,3 @@
+• Update Ui
+• Improve media playback and add audio device control
+• Notifies if an update is available on startup
