@@ -13,10 +13,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import sefirah.clipboard.ClipboardHandler
 import sefirah.common.notifications.NotificationCenter
+import sefirah.data.repository.AppUpdateChecker
 import sefirah.data.repository.PreferencesDatastore
+import sefirah.data.repository.ReleaseRepository
 import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
+import sefirah.network.NetworkHelper
 import sefirah.network.NetworkManagerImpl
 import sefirah.network.NsdService
 import sefirah.network.SocketFactoryImpl
@@ -142,4 +145,22 @@ object AppModule {
     fun providesPreferencesRepository(
         application: Application
     ): PreferencesRepository = PreferencesDatastore(context = application)
+
+    @Provides
+    @Singleton
+    fun providesAppUpdateChecker(
+        application: Application,
+        releaseRepository: ReleaseRepository
+    ) : AppUpdateChecker {
+        return AppUpdateChecker(application, releaseRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun providesReleaseRepository(
+        preferencesRepository: PreferencesRepository,
+        networkHelper: NetworkHelper
+    ) : ReleaseRepository {
+        return ReleaseRepository(preferencesRepository, networkHelper)
+    }
 }

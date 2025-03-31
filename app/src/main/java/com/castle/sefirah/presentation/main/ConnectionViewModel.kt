@@ -3,6 +3,7 @@ package com.castle.sefirah.presentation.main
 import android.app.Application
 import android.content.Intent
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import com.komu.sekia.di.AppCoroutineScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import sefirah.data.repository.AppRepository
+import sefirah.data.repository.AppUpdateChecker
+import sefirah.data.repository.ReleaseRepository
+import sefirah.database.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.RemoteDevice
@@ -28,6 +31,7 @@ class ConnectionViewModel @Inject constructor(
     private val networkManager: NetworkManager,
     private val appScope: AppCoroutineScope,
     private val appRepository: AppRepository,
+    private val appUpdateChecker: AppUpdateChecker,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -39,6 +43,11 @@ class ConnectionViewModel @Inject constructor(
 
     private val _deviceDetails = MutableStateFlow<RemoteDevice?>(null)
     val deviceDetails: StateFlow<RemoteDevice?> = _deviceDetails
+
+    private val _newUpdate = MutableStateFlow<ReleaseRepository.Result.NewUpdate?>(null)
+    val newUpdate: StateFlow<ReleaseRepository.Result.NewUpdate?> = _newUpdate
+
+    val hasCheckedForUpdate = mutableStateOf(false)
 
     init {
         appScope.launch {
@@ -141,5 +150,13 @@ class ConnectionViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    suspend fun checkForUpdate(): ReleaseRepository.Result {
+        val result = appUpdateChecker.checkForUpdate()
+        if (result is ReleaseRepository.Result.NewUpdate) {
+            _newUpdate.value = result
+        }
+        return result
     }
 }

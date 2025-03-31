@@ -1,5 +1,7 @@
 package com.castle.sefirah.presentation.main
 
+import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
@@ -14,6 +16,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +43,10 @@ import sefirah.presentation.components.NavBar
 import sefirah.presentation.components.NavigationItem
 import sefirah.presentation.components.PullRefresh
 import androidx.compose.ui.res.stringResource
+import com.castle.sefirah.navigation.SettingsRouteScreen
+import com.castle.sefirah.presentation.settings.SettingsScreen
+import sefirah.data.repository.ReleaseRepository
+
 
 
 @OptIn(ExperimentalAnimationGraphicsApi::class)
@@ -47,9 +54,10 @@ import androidx.compose.ui.res.stringResource
 fun MainScreen(
     rootNavController: NavHostController,
     homeNavController: NavHostController = rememberNavController(),
+    viewModel: ConnectionViewModel = hiltViewModel()
 ) {
     val backStackState = homeNavController.currentBackStackEntryAsState().value
-    val viewModel: ConnectionViewModel = hiltViewModel()
+
 
     val homeText = stringResource(CommonR.string.home)
     val devicesText = stringResource(CommonR.string.devices)
@@ -67,7 +75,23 @@ fun MainScreen(
         )
     }
 
+    // Add this state to track if we've checked for updates
+    val hasCheckedForUpdate = remember { viewModel.hasCheckedForUpdate }
 
+    LaunchedEffect(key1 = Unit) {
+        // Only check for updates if we haven't done so yet
+        if (!hasCheckedForUpdate.value) {
+            Log.d("MainScreen", "Checking for update")
+            
+            val result = viewModel.checkForUpdate()
+            if (result is ReleaseRepository.Result.NewUpdate) {
+                rootNavController.navigate(SettingsRouteScreen.NewUpdateScreen.route)
+            }
+            
+            // Mark that we've checked for updates
+            hasCheckedForUpdate.value = true
+        }
+    }
 
     val currentRoute = backStackState?.destination?.route
 

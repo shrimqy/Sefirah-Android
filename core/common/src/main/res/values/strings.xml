@@ -179,5 +179,9 @@
 
     <!-- Toast Messages -->
     <string name="toast_network">Make sure you\'re connected to the same network as your PC</string>
+    <string name="update_check_notification_update_available">New version available!</string>
+    <string name="update_check_confirm">Download</string>
+    <string name="action_not_now">Not now</string>
+    <string name="update_check_open">Open on Github</string>
 
 </resources>

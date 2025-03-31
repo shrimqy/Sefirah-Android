@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -180,6 +181,16 @@ class PreferencesDatastore @Inject constructor(
         }
     }
 
+    override suspend fun saveLastCheckedForUpdate(lastChecked: Long) {
+        LAST_CHECKED_FOR_UPDATE.update(lastChecked)
+    }
+
+    override fun readLastCheckedForUpdate(): Flow<Long> {
+        return datastore.data.map { preferences ->
+            preferences[LAST_CHECKED_FOR_UPDATE] ?: 0
+        }
+    }
+
     private suspend inline fun <T> Preferences.Key<T>.update(newValue: T) {
         datastore.edit { preferences ->
             preferences[this] = newValue
@@ -234,5 +245,6 @@ class PreferencesDatastore @Inject constructor(
         val REMOTE_STORAGE = booleanPreferencesKey("remoteStorage")
         val PASSIVE_DISCOVERY = booleanPreferencesKey("passiveDiscovery")
         val MESSAGE_SYNC = booleanPreferencesKey("messageSync")
+        val LAST_CHECKED_FOR_UPDATE = longPreferencesKey("lastCheckedForUpdate")
     }
 }

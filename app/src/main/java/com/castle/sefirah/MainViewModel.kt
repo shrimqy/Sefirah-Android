@@ -1,6 +1,7 @@
 package com.castle.sefirah
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import sefirah.data.repository.AppUpdateChecker
+import sefirah.data.repository.ReleaseRepository
 import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
 
@@ -20,6 +23,7 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     context: Context,
     private val preferencesRepository: PreferencesRepository,
+
 ): ViewModel() {
     var splashCondition by mutableStateOf(true)
         private set

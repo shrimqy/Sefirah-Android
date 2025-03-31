@@ -47,7 +47,7 @@ import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.smsPermissionGranted
 import sefirah.communication.sms.SmsHandler
 import sefirah.communication.utils.TelephonyHelper
-import sefirah.data.repository.AppRepository
+import sefirah.database.AppRepository
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.DeviceStatus

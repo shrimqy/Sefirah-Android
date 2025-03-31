@@ -9,7 +9,7 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import sefirah.network.NetworkService.Companion.REMOTE_INFO
-import sefirah.data.repository.AppRepository
+import sefirah.database.AppRepository
 import sefirah.database.model.toDomain
 
 @HiltWorker

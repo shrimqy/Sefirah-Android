@@ -41,6 +41,7 @@ class MainActivity : BaseActivity() {
             }
         }
     }
+
     private fun setupNotificationChannels() {
         try {
             AppNotifications.createChannels(this)

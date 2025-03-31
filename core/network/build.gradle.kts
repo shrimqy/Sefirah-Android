@@ -30,7 +30,7 @@ android {
 
 dependencies {
     api(projects.core.common)
-    api(projects.data)
+    api(projects.core.database)
     api(projects.domain)
 
     api(projects.feature.notification)

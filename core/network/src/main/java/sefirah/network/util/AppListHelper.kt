@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.BitmapDrawable
-import android.os.Build
 import sefirah.domain.model.ApplicationInfo
 import sefirah.presentation.util.bitmapToBase64
 import sefirah.presentation.util.drawableToBitmap

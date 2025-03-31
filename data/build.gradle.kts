@@ -10,9 +10,12 @@ android {
 
 dependencies {
     api(projects.domain)
+    api(projects.core.network)
     api(projects.core.database)
 
     implementation(libs.datastore)
+
+    implementation(libs.ktor.client.core)
 
     implementation(libs.core.ktx)
     implementation(libs.androidx.appcompat)

@@ -24,6 +24,7 @@ sealed class SettingsRouteScreen(var route: String) {
     data object NetworkScreen: SettingsRouteScreen("discovery")
     data object AboutScreen: SettingsRouteScreen("about")
     data object PermissionScreen: SettingsRouteScreen("permission")
+    data object NewUpdateScreen: SettingsRouteScreen("new_update")
 }
 
 sealed class DeviceRouteScreen(var route: String) {

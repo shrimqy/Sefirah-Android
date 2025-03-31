@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import sefirah.common.R
-import sefirah.data.repository.AppRepository
+import sefirah.database.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.LocalDevice

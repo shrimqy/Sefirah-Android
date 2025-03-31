@@ -9,9 +9,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.MainRouteScreen
+import com.castle.sefirah.navigation.SettingsRouteScreen
 import com.castle.sefirah.navigation.transitions.NavigationTransitions
 import com.castle.sefirah.presentation.devices.DeviceScreen
 import com.castle.sefirah.presentation.home.HomeScreen
+import com.castle.sefirah.presentation.settings.update.NewUpdateScreen
 import com.castle.sefirah.presentation.settings.SettingsScreen
 
 @Composable
@@ -97,6 +99,10 @@ fun MainNavGraph(
             }
         ) {
             SettingsScreen(rootNavController)
+        }
+
+        composable(route = SettingsRouteScreen.NewUpdateScreen.route) {
+            NewUpdateScreen(rootNavController)
         }
     }
 }

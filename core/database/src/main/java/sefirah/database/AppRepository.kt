@@ -1,10 +1,8 @@
-package sefirah.data.repository
+package sefirah.database
 
 import android.content.Context
-import android.net.Network
 import dagger.hilt.android.qualifiers.ApplicationContext
 import sefirah.database.dao.NetworkDao
-import sefirah.database.AppDatabase
 import sefirah.database.dao.DeviceDao
 import sefirah.database.model.CustomIpEntity
 import sefirah.database.model.DeviceCustomIpCrossRef
@@ -12,7 +10,6 @@ import sefirah.database.model.DeviceNetworkCrossRef
 import sefirah.database.model.LocalDeviceEntity
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.RemoteDeviceEntity
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 

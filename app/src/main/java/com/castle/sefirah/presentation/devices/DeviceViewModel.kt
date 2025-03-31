@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import sefirah.data.repository.AppRepository
+import sefirah.database.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.repository.PreferencesRepository

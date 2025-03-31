@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import sefirah.data.repository.AppRepository
+import sefirah.database.AppRepository
 import sefirah.database.model.CustomIpEntity
 import sefirah.network.NetworkDiscovery
 import javax.inject.Inject

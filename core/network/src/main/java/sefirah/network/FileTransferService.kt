@@ -33,8 +33,7 @@ import kotlinx.coroutines.withTimeout
 import sefirah.common.R
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
-import sefirah.common.util.getCertFromString
-import sefirah.data.repository.AppRepository
+import sefirah.database.AppRepository
 import sefirah.domain.model.BulkFileTransfer
 import sefirah.domain.model.FileMetadata
 import sefirah.domain.model.FileTransfer

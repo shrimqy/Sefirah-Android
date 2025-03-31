@@ -4,12 +4,13 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import com.castle.sefirah.presentation.about.AboutScreen
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.navigation.SettingsRouteScreen
+import com.castle.sefirah.presentation.about.AboutScreen
 import com.castle.sefirah.presentation.network.NetworkScreen
 import com.castle.sefirah.presentation.permission.PermissionScreen
+import com.castle.sefirah.presentation.settings.update.NewUpdateScreen
 
 fun NavGraphBuilder.settingsNavGraph(rootNavController: NavHostController) {
     navigation(
@@ -24,6 +25,9 @@ fun NavGraphBuilder.settingsNavGraph(rootNavController: NavHostController) {
         }
         composable(route = SettingsRouteScreen.PermissionScreen.route) {
             PermissionScreen(rootNavController,)
+        }
+        composable(route = SettingsRouteScreen.NewUpdateScreen.route) {
+            NewUpdateScreen(rootNavController)
         }
     }
 }

@@ -37,7 +37,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import sefirah.common.util.checkLocationPermissions
-import sefirah.data.repository.AppRepository
+import sefirah.database.AppRepository
 import sefirah.database.model.DeviceNetworkCrossRef
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.toDomain

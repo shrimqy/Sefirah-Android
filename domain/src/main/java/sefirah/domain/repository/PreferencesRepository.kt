@@ -52,5 +52,8 @@ interface PreferencesRepository {
 
     suspend fun saveMessageSyncSettings(messageSync: Boolean)
     fun readMessageSyncSettings(): Flow<Boolean>
+
+    suspend fun saveLastCheckedForUpdate(lastChecked: Long)
+    fun readLastCheckedForUpdate(): Flow<Long>
 }
 

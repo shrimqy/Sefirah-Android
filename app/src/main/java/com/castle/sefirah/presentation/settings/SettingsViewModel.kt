@@ -27,7 +27,7 @@ import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
 import sefirah.common.util.smsPermissionGranted
-import sefirah.data.repository.AppRepository
+import sefirah.database.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.database.model.toEntity
 import sefirah.domain.model.LocalDevice

@@ -36,6 +36,8 @@ material3 = "1.3.1"
 hilt = "2.53.1"
 hiltAndroidx = "1.2.0"
 
+richtext = "0.20.0"
+
 # Networking
 ktor = "2.3.13"
 minaCore = "2.2.3"
@@ -144,6 +146,10 @@ kotlinx-immutables = { module = "org.jetbrains.kotlinx:kotlinx-collections-immut
 
 # Material Design
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+
+richtext-commonmark = { module = "com.halilibo.compose-richtext:richtext-commonmark", version.ref = "richtext" }
+richtext-m3 = { module = "com.halilibo.compose-richtext:richtext-ui-material3", version.ref = "richtext" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

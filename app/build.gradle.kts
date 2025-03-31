@@ -62,6 +62,8 @@ dependencies {
     api(projects.core.common)
     api(projects.core.network)
     api(projects.core.presentation)
+    api(projects.data)
+    api(projects.domain)
 
     implementation(libs.androidx.appcompat)
     implementation(libs.hilt.navigation.compose)
@@ -73,6 +75,9 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.compose.navigation)
     implementation(libs.splashscreen)
+
+    implementation(libs.richtext.m3)
+    implementation(libs.richtext.commonmark)
 
     implementation(libs.androidx.media)
     implementation(libs.androidx.hilt.work)
