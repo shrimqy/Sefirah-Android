@@ -32,19 +32,19 @@
   <a style="text-decoration:none" href="https://apps.microsoft.com/detail/9PJV6D1JPG0H?launch=true&mode=full" target="_blank" rel="noopener noreferrer">
     <picture>
       <source media="(prefers-color-scheme: light)" srcset=".github/./readme-images/StoreBadge-dark.png" width="220" />
-      <img src=".github/./readme-images/StoreBadge-light.png" width="220" />
+      <img src=".github/./readme-images/StoreBadge-light.png" width="200" />
     </picture>
   </a>
 </p>
 
 ### Android App
 
-[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height="80">](https://apt.izzysoft.de/fdroid/index/apk/com.castle.sefirah)
-[<img src="https://www.openapk.net/images/openapk-badge.png" alt="Get it on OpenApk" height="80">](https://www.openapk.net/sefirah/com.castle.sefirah/)
+[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" width="220">](https://apt.izzysoft.de/fdroid/index/apk/com.castle.sefirah)
+[<img src="https://www.openapk.net/images/openapk-badge.png" alt="Get it on OpenApk" width="220">](https://www.openapk.net/sefirah/com.castle.sefirah/)
 
 ## How to Use
 
-1. **Download and Install the [Android app](https://github.com/shrimqy/Sefirah-Android)**
+1. **Download and Install the [Windows app](https://github.com/shrimqy/Sefirah)**
 
 2. **Setting Up**:
    - On the Android device, allow the necessary permissions on the onboarding page. (**Note:** Allow restricted settings from App Info after attempting to grant notification access or accessibility permission, as Android blocks side-loaded apps from requesting sensitive permissions.)
@@ -62,7 +62,15 @@
 5. **Windows Explorer Storage**:
    - You would need Android 11 or higher
    - **Note:** This feature is still a bit experimental and may not work on all Windows versions especially older versions of Windows 10 and other unofficial debloated Windows 11 versions.
-
+6. **SMS Texting**:
+   - Grant all the permissions required from the permissions page in Android. After that, reconnect and the messages should appear in the Messages tab in the Desktop app. You can now view and send texts as sms. You can also switch sims if your device has dual sims. Attachments have not been implemented yet.
+7. **Screen Mirroring using [Scrcpy](https://github.com/Genymobile/scrcpy)**:
+   - You would need to [download](https://github.com/Genymobile/scrcpy/releases), extract and set the scrcpy location in App settings.
+   - You can specify your preferences for the scrcpy to launch with in the screen mirroring section.
+   - For initiating screen mirroring, the easiest way would be to plug your device through usb and start using the button next to the ringer mode (In the arugments text box add "--tcpip" if you want to make the connection wireless and you don't need to specify anymore arugments if you don't know what you're doing).
+   - Sefirah will try to connect to your device if the default tcpip port is open for subsequent connections.
+   - If you have any doubts or problems in connecting scrcpy, refer [scrcpy docs](https://github.com/Genymobile/scrcpy/blob/master/doc/connection.md) and [Scrcpy FAQ](https://github.com/Genymobile/scrcpy/blob/master/FAQ.md).
+   - If you like their project, please consider supporting the author [rom1v](https://blog.rom1v.com/about/#support-my-open-source-work)
 ## Screenshots
 
 ![screenshots of app](./.github/readme-images/Screenshot.png)
