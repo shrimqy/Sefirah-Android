@@ -6,7 +6,11 @@
 
 # Sefirah - Android
 
-**Sefirah** is an opinionated phone link alternative designed to enhance your workflow with seamless clipboard and notification sharing between your Windows PC and Android device. It's tailored for users who want a straightforward and efficient way to keep their devices in sync.
+**Sefirah** is an opinionated phone link alternative designed to enhance your workflow with seamless clipboard and notification sharing between your Windows PC and Android device. 
+
+If you have any feature requests as a whole or a bug report, open the issue in the repo for the Windows app, unless you're sure that this only concerns the Android version.
+
+**[Windows app](https://github.com/shrimqy/Sefirah)**
 
 ## Features
 
