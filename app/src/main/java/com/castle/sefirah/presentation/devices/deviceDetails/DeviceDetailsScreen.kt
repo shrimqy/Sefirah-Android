@@ -173,8 +173,7 @@ private fun DeviceHeader(device: RemoteDeviceEntity?) {
             .padding(vertical = 8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        )
     ) {
         Column(
             modifier = Modifier
@@ -246,8 +245,7 @@ private fun IpAddressSection(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        )
     ) {
         Column(Modifier.padding(16.dp)) {
             device?.ipAddresses?.forEach { ip ->
@@ -367,7 +365,6 @@ private fun NetworksSection(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(Modifier.padding(8.dp)) {
             if (associatedNetworks.isEmpty()) {
