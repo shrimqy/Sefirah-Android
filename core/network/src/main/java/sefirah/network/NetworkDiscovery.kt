@@ -185,7 +185,7 @@ class NetworkDiscovery @Inject constructor(
 
             val localDevice = appRepository.getLocalDevice().toDomain()
             startBroadcasting(localDevice)
-//            startNSDDiscovery(localDevice)
+            startNSDDiscovery(localDevice)
             startDeviceListener(localDevice)
             startCleanupJob()
         }
