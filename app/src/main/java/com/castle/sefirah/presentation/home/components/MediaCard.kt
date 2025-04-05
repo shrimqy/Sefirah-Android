@@ -119,13 +119,11 @@ fun PlaybackSession(
             .fillMaxWidth()
             .padding(16.dp),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
     ) {
         session.trackTitle?.let {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(210.dp)
             ) {
 
                 session.thumbnail?.let { thumbnail ->
