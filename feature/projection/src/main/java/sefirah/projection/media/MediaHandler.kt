@@ -283,11 +283,11 @@ class MediaHandler @Inject constructor(
                 mediaSession.setPlaybackState(playbackState.build())
                 mediaStyle.setMediaSession(mediaSession.sessionToken)
 
-                val currentAudioDevice = audioDevices.value.first { it.isSelected }
+                val currentAudioDevice = audioDevices.value.firstOrNull() { it.isSelected }
                 mediaSession.setPlaybackToRemote(object : VolumeProviderCompat(
                     VOLUME_CONTROL_ABSOLUTE,
                     getMaxVolume(),
-                    getCurrentVolume(currentAudioDevice.volume)
+                    getCurrentVolume(currentAudioDevice?.volume)
                 ) {
                     override fun onSetVolumeTo(volume: Int) {
                         currentVolume = volume
@@ -297,7 +297,7 @@ class MediaHandler @Inject constructor(
                             handleMediaAction(
                                 PlaybackAction(
                                 playbackActionType = PlaybackActionType.VolumeUpdate,
-                                source = currentAudioDevice.deviceId,
+                                source = currentAudioDevice?.deviceId,
                                 value = normalizedVolume
                             ))
                         }
