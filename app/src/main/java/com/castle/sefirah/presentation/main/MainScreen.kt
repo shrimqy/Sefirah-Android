@@ -1,6 +1,5 @@
 package com.castle.sefirah.presentation.main
 
-import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -24,29 +23,27 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import sefirah.common.R as CommonR
 import com.castle.sefirah.R
 import com.castle.sefirah.navigation.DeviceRouteScreen
 import com.castle.sefirah.navigation.MainRouteScreen
+import com.castle.sefirah.navigation.SettingsRouteScreen
 import com.castle.sefirah.navigation.SyncRoute
 import com.castle.sefirah.navigation.graphs.MainNavGraph
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import sefirah.data.repository.ReleaseRepository
 import sefirah.presentation.components.AppTopBar
 import sefirah.presentation.components.NavBar
 import sefirah.presentation.components.NavigationItem
 import sefirah.presentation.components.PullRefresh
-import androidx.compose.ui.res.stringResource
-import com.castle.sefirah.navigation.SettingsRouteScreen
-import com.castle.sefirah.presentation.settings.SettingsScreen
-import sefirah.data.repository.ReleaseRepository
-
+import sefirah.common.R as CommonR
 
 
 @OptIn(ExperimentalAnimationGraphicsApi::class)

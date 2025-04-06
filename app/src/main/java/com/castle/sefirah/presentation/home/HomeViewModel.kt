@@ -8,6 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import sefirah.domain.model.AudioDevice
+import sefirah.domain.model.CommandMessage
+import sefirah.domain.model.CommandType
 import sefirah.domain.model.PlaybackAction
 import sefirah.domain.model.PlaybackActionType
 import sefirah.domain.model.PlaybackSession
@@ -95,6 +97,17 @@ class HomeViewModel @Inject constructor(
                 PlaybackAction(
                     playbackActionType = PlaybackActionType.DefaultDevice,
                     source = device.deviceId
+                )
+            )
+        }
+    }
+
+    fun sendCommand(commandType: CommandType, value: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            sendMessage(
+                CommandMessage(
+                    commandType = commandType,
+                    value = value
                 )
             )
         }

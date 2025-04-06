@@ -15,8 +15,8 @@ import sefirah.domain.model.ClipboardMessage
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.DeviceRingerMode
 import sefirah.domain.model.FileTransfer
-import sefirah.domain.model.Misc
-import sefirah.domain.model.MiscType
+import sefirah.domain.model.CommandMessage
+import sefirah.domain.model.CommandType
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationMessage
 import sefirah.domain.model.NotificationType
@@ -36,7 +36,7 @@ import sefirah.network.util.ECDHHelper
 
 fun NetworkService.handleMessage(message: SocketMessage) {
     when (message) {
-        is Misc -> handleMisc(message)
+        is CommandMessage -> handleMisc(message)
         is NotificationMessage -> handleNotificationMessage(message)
         is NotificationAction -> notificationHandler.performNotificationAction(message)
         is ReplyAction -> notificationHandler.performReplyAction(message)
@@ -116,10 +116,10 @@ fun NetworkService.handleMediaInfo(session: PlaybackSession) {
     }
 }
 
-fun NetworkService.handleMisc(misc: Misc) {
-    when(misc.miscType) {
-        MiscType.Disconnect -> stop(true)
-        MiscType.ClearNotifications -> notificationHandler.removeAllNotification()
+fun NetworkService.handleMisc(commandMessage: CommandMessage) {
+    when(commandMessage.commandType) {
+        CommandType.Disconnect -> stop(true)
+        CommandType.ClearNotifications -> notificationHandler.removeAllNotification()
         else -> {}
     }
 }

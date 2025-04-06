@@ -47,13 +47,15 @@ enum class PlaybackActionType {
     VolumeUpdate
 }
 
-enum class MiscType {
+enum class CommandType {
     Disconnect,
     Lock,
     Shutdown,
     Sleep,
     Hibernate,
     ClearNotifications,
+    Restart,
+    Logoff,
 }
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -63,8 +65,9 @@ sealed class SocketMessage
 
 @Serializable
 @SerialName("0")
-data class Misc(
-    val miscType: MiscType
+data class CommandMessage(
+    val commandType: CommandType,
+    val value: String? = null
 ) : SocketMessage()
 
 @Serializable

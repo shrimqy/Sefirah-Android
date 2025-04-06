@@ -10,7 +10,7 @@ import sefirah.domain.model.ClipboardMessage
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.DeviceStatus
 import sefirah.domain.model.FileTransfer
-import sefirah.domain.model.Misc
+import sefirah.domain.model.CommandMessage
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationMessage
 import sefirah.domain.model.ReplyAction
@@ -33,7 +33,7 @@ class MessageSerializer @Inject constructor() {
                 subclass(BulkFileTransfer::class)
                 subclass(DeviceInfo::class)
                 subclass(DeviceStatus::class)
-                subclass(Misc::class)
+                subclass(CommandMessage::class)
                 subclass(NotificationAction::class)
                 subclass(ReplyAction::class)
                 subclass(PlaybackSession::class)
