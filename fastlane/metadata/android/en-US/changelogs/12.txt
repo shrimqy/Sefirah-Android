@@ -1,0 +1,4 @@
+• Add command buttons
+• Fix Ui
+• Avoid crashing if there're no audio devices
+• Fix backup device discovery method not working
