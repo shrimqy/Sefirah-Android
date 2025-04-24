@@ -107,7 +107,11 @@ class ConnectionViewModel @Inject constructor(
     private fun startService(action: Actions, device: RemoteDevice? = null) {
         val intent = Intent(getApplication(), NetworkService::class.java).apply {
             this.action = action.name
-            device?.let { putExtra(NetworkService.REMOTE_INFO, it) }
+            device?.let {
+                // Create a copy without the avatar to avoid size limit issues when passing intent
+                val remoteInfo = it.copy(avatar = null)
+                putExtra(NetworkService.REMOTE_INFO, remoteInfo)
+            }
         }
         
         try {
@@ -125,7 +129,6 @@ class ConnectionViewModel @Inject constructor(
                         connectionStateJob?.cancel()
                     }
                     is ConnectionState.Disconnected -> {
-                        Log.d("Connection", state.toString())
                         // Only stop refreshing if we initiated a STOP
                         if (action == Actions.STOP || state.forcedDisconnect) {
                             _isRefreshing.value = false
