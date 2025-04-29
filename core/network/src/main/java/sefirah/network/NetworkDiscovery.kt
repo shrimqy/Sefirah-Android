@@ -208,17 +208,8 @@ class NetworkDiscovery @Inject constructor(
                     }
                 }
 
-                _discoveredDevices.update { currentList ->
-                    // Merge NSD devices with existing UDP devices
-                    val udpDevices = currentList.filter { it.source == DiscoverySource.UDP }
-                    val merged = (udpDevices + nsdDevices)
-                        .distinctBy { it.deviceId }
-                        .sortedByDescending { it.timestamp }
-
-                    merged.filter { device ->
-                        device.deviceId != localDevice.deviceId &&
-                                device.publicKey.isNotBlank()
-                    }
+                nsdDevices.forEach { nsdDevice ->
+                    addOrUpdateDevice(nsdDevice)
                 }
             }
         }
@@ -391,7 +382,7 @@ class NetworkDiscovery @Inject constructor(
                             timestamp = System.currentTimeMillis(),
                             source = DiscoverySource.UDP
                         )
-                        updateDiscoveredDevices(discoveredDevice)
+                        addOrUpdateDevice(discoveredDevice)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in device listener on port $udpPort", e)
@@ -456,13 +447,33 @@ class NetworkDiscovery @Inject constructor(
         }
     }
 
-    private fun updateDiscoveredDevices(newDevice: DiscoveredDevice) {
+    private fun addOrUpdateDevice(newDevice: DiscoveredDevice) {
         _discoveredDevices.update { currentList ->
             val existing = currentList.find { it.deviceId == newDevice.deviceId }
-            when {
-                existing?.source == DiscoverySource.NSD -> currentList
-                else -> currentList.filterNot { it.deviceId == newDevice.deviceId } + newDevice
+            
+            if (existing == null) {
+                currentList + newDevice
+            } else {
+                currentList.map { 
+                    if (it.deviceId == newDevice.deviceId) {
+                        mergeDeviceData(it, newDevice)
+                    } else {
+                        it
+                    }
+                }
             }
+        }
+    }
+
+    private fun mergeDeviceData(existingDevice: DiscoveredDevice, newDevice: DiscoveredDevice): DiscoveredDevice {
+        val mergedIpAddresses = (existingDevice.ipAddresses + newDevice.ipAddresses).distinct()
+        val latestTimestamp = maxOf(existingDevice.timestamp, newDevice.timestamp)
+
+        // Prefer NSD source over UDP when merging
+        return when {
+            existingDevice.source == DiscoverySource.NSD && newDevice.source == DiscoverySource.UDP ->
+                existingDevice.copy(ipAddresses = mergedIpAddresses, timestamp = latestTimestamp)
+            else -> newDevice.copy(ipAddresses = mergedIpAddresses, timestamp = latestTimestamp)
         }
     }
 

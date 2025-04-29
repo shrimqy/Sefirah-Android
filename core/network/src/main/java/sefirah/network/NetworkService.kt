@@ -132,7 +132,7 @@ class NetworkService : Service() {
         scope.launch {
             _connectionState.value = ConnectionState.Connecting
             try {
-                Log.d(TAG, "last connected ${remoteInfo.lastConnected}")
+                Log.d(TAG, "Initializing connection requests")
                 var connected = false
 
                 if (remoteInfo.prefAddress != null) {
@@ -194,7 +194,6 @@ class NetworkService : Service() {
                 _connectionState.value = state
                 if (state == ConnectionState.Connected) {
                     startListening()
-                    Log.d(TAG, " last connected: ${remoteInfo.lastConnected}")
                     finalizeConnection(remoteInfo.lastConnected == null)
                 } else {
                     stop(true)
