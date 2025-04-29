@@ -45,14 +45,14 @@ class ShareDeepLinkActivity: BaseActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_SEND) {
+            Log.d("ShareDeepLinkActivity", "Handling intent: ${intent.type}")
             when {
-                intent.type?.startsWith("text/") == true -> handleText(intent)
+                intent.type?.startsWith("text/plain") == true -> handleText(intent)
                 intent.type?.startsWith("image/") == true -> handleFileTransfer(intent)
                 intent.type?.startsWith("video/") == true -> handleFileTransfer(intent)
                 intent.type?.startsWith("application/") == true -> handleFileTransfer(intent)
                 else -> {
-                    Log.e("ShareToPc", "Unsupported content type: ${intent.type}")
-                    finishAffinity()
+                    handleFileTransfer(intent)
                 }
             }
         } else {
