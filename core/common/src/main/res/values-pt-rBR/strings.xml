@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <!-- App -->
+    <string name="app_name" translatable="false">Sefirah</string>
+    <string name="version">Versão</string>
+    <string name="windows_app">Aplicativo para Windows</string>
+    <string name="share_deep_link">Enviar para o PC</string>
+
+    <!-- Notifications Groups-->
+    <string name="group_file_transfer">Transferência de arquivos</string>
+    <string name="group_network">Rede</string>
+    <string name="group_media">Mídia</string>
+
+    <!-- Channels -->
+    <string name="channel_transfer_progress">Progresso da transferência</string>
+    <string name="channel_transfer_complete">Transferência completa</string>
+    <string name="channel_device_connection">Conexão ao dispositivo</string>
+    <string name="channel_media_playback">Reprodução de mídia do PC</string>
+
+    <!-- Notification Content -->
+    <string name="notification_status_connecting">Conectando ao %s</string>
+    <string name="notification_status_disconnected">Não conectado</string>
+    <string name="notification_status_connected">Conectado ao %s</string>
+    <string name="notification_disconnect_action">Desconectado</string>
+    <string name="notification_stop_action">Parar</string>
+    <string name="notification_clipboard_action">Enviar área de transfência</string>
+    <string name="notification_media_playback">Reprodução de mídia do PC</string>
+    <string name="notification_file_transfer">Transferência de arquivos</string>
+    <string name="notification_file_transfer_error">File Transfer Error</string>
+    <string name="notification_file_transfer_progress">Transferência de arquivo em andamento</string>
+    <string name="notification_file_transfer_complete">Transferência de arquivo concluída</string>
+    <string name="notification_device_connection">Status de conexão ao dispositivo</string>
+
+    <!-- Screen Names -->
+    <string name="home">Início</string>
+    <string name="devices">Dispositivos</string>
+    <string name="settings">Configurações</string>
+    <string name="device_details">Detalhes do dispositivo</string>
+    <string name="about">Sobre</string>
+    <string name="permissions">Permissões</string>
+    <string name="network">Rede</string>
+
+    <!-- Common UI Elements -->
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Excluir</string>
+    <string name="next">Próximo</string>
+    <string name="finish">Finalizar</string>
+    <string name="add">Adicionar</string>
+    <string name="back_button">Voltar</string>
+    <string name="connect_button">Conectar</string>
+    <string name="grant">Permitir</string>
+    <string name="proceed">Continuar</string>
+    <string name="done">Concluir</string>
+
+    <!-- Permissions -->
+    <string name="notifications">Notificações</string>
+    <string name="notification_permission_rationale">Para atualizações do status da conexão</string>
+    <string name="location_permission">Permissão de localização</string>
+    <string name="location_permission_rationale">Necessário para descoberta de redes WiFi</string>
+    <string name="media_access">Acesso à mídia</string>
+    <string name="media_access_rationale">Necessário para acessar arquivos de mídia</string>
+    <string name="background_battery_usage">Uso da bateria em segundo plano</string>
+    <string name="background_battery_usage_rationale">Permite que o app mantenha conexões estáveis ​​desabilitando as otimizações da bateria</string>
+    <string name="storage_access">Acesso ao armazenamento</string>
+    <string name="storage_access_rationale">Necessário para acesso ao armazenamento do Android no PC remoto</string>
+    <string name="accessibility_service">Serviço de acessibilidade</string>
+    <string name="accessibility_service_rationale">Necessário para detectar a área de transferência</string>
+    <string name="notification_access">Acesso às notificações</string>
+    <string name="notification_access_rationale">Necessário para sincronização de notificações</string>
+    <string name="accessibility_settings">Configurações de acessibilidade</string>
+    <string name="app_info">Informações do aplicativo</string>
+    <string name="restricted_settings_instruction">Devido à restrições de segurança, você irá precisar: \n 1. Tentar ativar o \'%s\' \n 2. Tocar em \'ok\' no aviso e voltar \n 3. Ir nas Informações do aplicativo \n 4. Abrir o menu adicional (3 pontos) \n 5. Tocar em \'Permitir configurações restritas\' \n 6. Retornar e tentar novamente ativar o \'%s\'</string>
+
+    <!-- Device Management -->
+    <string name="status_connecting">Conectando</string>
+    <string name="status_disconnected">Desconectado</string>
+    <string name="status_connected">Conectado</string>
+    <string name="add_device">Adicionar dispositivo</string>
+    <string name="no_device">Nenhum dispositivo encontrado</string>
+    <string name="last_connected">Última conexão</string>
+    <string name="ip_addresses">Endereços IP</string>
+    <string name="no_ip">Nenhum endereço configurado</string>
+    <string name="add_custom_ip_button">Adicionar endereço IP personalizado</string>
+    <string name="custom_device_list">Lista de dispositivos personalizados</string>
+
+    <!-- Onboarding & Welcome -->
+    <string name="welcome">Bem-vindo</string>
+    <string name="welcome_instructions">Vamos começar, primeiro siga as instruções no GitHub para baixar e instalar o app para Windows</string>
+    <string name="welcome_instructions_2">Após isso, você pode conferir esta página no GitHub para obter mais informações sobre o app para Android:</string>
+    <string name="android_app_button">Aplicativo Android</string>
+    <string name="windows_app_button">Aplicativo Windows</string>
+
+    <!-- Preferences -->
+    <string name="clipboard_sync_preference">Sincronizar área de transferência com o PC</string>
+    <string name="clipboard_sync_subtitle">[Requer serviço de acessibilidade ativo] Detecta alterações na área de transferência e as sincroniza com o PC</string>
+    <string name="image_clipboard_preference">Adicionar imagens recebidas à área de transferência</string>
+    <string name="image_clipboard_subtitle">Copia os arquivos de imagem recebidos para sua área de transferência</string>
+    <string name="notification_sync_preference">Sincronizar notificações</string>
+    <string name="notification_sync_subtitle">Lê notificações de aplicativos e as sincroniza com a PC</string>
+    <string name="media_session_preference">Exibir Reprodução de Mídia do PC como uma Sessão de Mídia no Android</string>
+    <string name="media_session_subtitle">A reprodução de mídia será exibida na barra de notificação</string>
+    <string name="auto_device_discovery_preference">Descoberta automática de dispositivos</string>
+    <string name="auto_device_discovery_subtitle">Busca por dispositivos pareados enquanto estiver conectado a uma rede confiável</string>
+    <string name="storage_access_preference">Acesso ao armazenamento</string>
+    <string name="storage_access_subtitle">Permite que o Windows acesse o armazenamento do seu Android</string>
+    <string name="permissions_preference">Permissões do aplicativo</string>
+    <string name="network_preference">Configurações de rede</string>
+    <string name="network_subtitle">Personalize as preferências de conexão</string>
+    <string name="storage_location_preference">Local para armazenamento</string>
+
+    <!-- Dialogs -->
+    <string name="delete_dialog">Deseja excluir</string>
+    <string name="connection_options">Opções de conexão</string>
+    <string name="connection_options_subtitle">Deseja se conectar ao</string>
+    <string name="manual_connection">Conexão manual</string>
+    <string name="available_ip_addresses">Endereços IP disponíveis:</string>
+    <string name="custom_ip_placeholder">Ou insira um IP personalizado</string>
+    <string name="custom_ip_text_label">Nome do host/Endereço IP</string>
+    <string name="ip_example">Exemplo: 192.168.1.100</string>
+
+    <!-- Network -->
+    <string name="associated_networks">Redes associadas</string>
+    <string name="no_associated_network">Nenhuma rede associada</string>
+
+    <!-- Storage -->
+    <string name="choose_storage_location">Escolar local para armazenamentoChoose Storage Location</string>
+    <string name="storage_location_description">Selecione uma pasta onde o aplicativo irá armazenar os arquivos recebidos. A pasta Downloads será usada ​​como padrão.</string>
+    <string name="select_folder_button">Selecionar uma pasta</string>
+    <string name="selected_folder_label">Pasta selecionada</string>
+
+    <!-- Hyperlinks -->
+    <string name="help">Ajuda</string>
+    <string name="whats_new">O que há de novo</string>
+
+    <!-- Media Playback -->
+    <string name="no_media_playback">Nenhuma reprodução de mídia ativa</string>
+
+    <!-- Sync Screen -->
+    <string name="available_devices">Dispositivos disponíveis</string>
+    <string name="sync_screen_subtitle">Os dispositivos que executam o app para Windows aparecerão aqui:</string>
+    <string name="key">Chave</string>
+    <string name="manual_connect">Conexão manual</string>
+    <string name="auto_connect">Conexão automática</string>
+    <string name="restricted_settings_title">Configurações restritas</string>
+    <string name="connection_error">Falha na conexão: o dispositivo recusou o emparelhamento ou não está disponível</string>
+    <string name="device_name_preference">Nome do dispositivo</string>
+    <string name="rename_device">Renomear dispositivo</string>
+    <string name="rename">Renomear</string>
+
+    <string name="message_reply_label">RESPONDER</string>
+    <string name="mark_as_read_label">MARCAR COMO LIDO</string>
+    <string name="user_display_name">Você</string>
+    <string name="set_default_sms_app_title">Enviar MMS</string>
+    <string name="set_group_message_as_mms_title">Enviar Grupo de MMS</string>
+    <string name="set_group_message_as_mms" translatable="false">set_group_message_as_mms</string>
+    <string name="set_long_text_as_mms_title">Enviar texto longo como MMS</string>
+    <string name="set_long_text_as_mms" translatable="false">set_long_text_as_mms</string>
+    <string name="convert_to_mms_after_title">Converter para MMS</string>
+    <string name="convert_to_mms_after" translatable="false">convert_to_mms_after</string>
+    <string name="convert_to_mms_after_default" translatable="false">3</string>
+    <string name="messages_permission">Permissão de mensagens</string>
+    <string name="messages_permission_rationale">Para enviar e ler mensagens</string>
+    <string name="message_sync_preference">Sincronizar mensagens</string>
+    <string name="message_sync_subtitle">Permite ler e enviar mensagens de texto a partir do PC</string>
+    <string-array name="convert_to_mms_after_entries">
+        <item>Após uma mensagem</item>
+        <item>Após duas mensagens</item>
+        <item>Após três mensagens</item>
+        <item>Após quatro mensagens</item>
+        <item>Após cinco mensagens</item>
+    </string-array>
+    <string-array name="convert_to_mms_after_values" translatable="false">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+
+    <!-- Toast Messages -->
+    <string name="toast_network">Certifique-se de estar conectado à mesma rede que seu PC</string>
+    <string name="update_check_notification_update_available">Nova versão disponível!</string>
+    <string name="update_check_confirm">Download</string>
+    <string name="action_not_now">Agora não</string>
+    <string name="update_check_open">Abrir no GitHub</string>
+
+</resources>
