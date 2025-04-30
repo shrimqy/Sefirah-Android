@@ -14,10 +14,12 @@ If you have any feature requests as a whole or a bug report, open the issue in t
 
 ## Features
 
-- **Clipboard Sync**: Seamlessly share clipboard content between your Android device and Windows PC.
-- **Media Control**: Control media playback and the volume of your PC from your Android device.
-- **Notification Sync**: Allows to display (or 'toast') notifications from your Android device on your desktop.
-- **Storage Integration**: Integrate your Android storage with your PC to access files from your phone.
+- **Clipboard Sharing**: Seamlessly share clipboard content between your Android device and Windows PC.
+- **Media Control**: Control media playback and volume of your PC from android.
+- **File Sharing**: Share files between your devices easily.
+- **Storage Integration**: Integrate your Android storage into the Windows Explorer.
+- **Notification**: Allows toasting the notifications from your android in desktop.
+- **Screen mirroring**: Mirror and control the Android device via scrcpy.
 
 ## Limitations
 
@@ -57,6 +59,7 @@ If you have any feature requests as a whole or a bug report, open the issue in t
    - Initiate the connection on your Android device using either manual connect or auto connect. Manual connect is faster, while auto connect takes a bit more time to determine which IP address works for you.
    - Once the connection is initiated, Windows will receive a pop-up to accept or decline the connection. Ensure that the keys match on both devices.
    - After the authentication is done, you should be navigated to the home screens on both devices, wait a bit for the notifications on Windows to load up for the first time.
+   -  **Note:** Make sure you have excluded the app from Firewall and Antivirus restrictions.
 3. **Clipboard Sharing**:
    - When you copy content on your desktop, it will automatically sync with your Android device (provided you have enabled this feature in the settings). If you have also enabled image syncing, images should be sent as well. **Note:** You must enable the 'add received images to clipboard' option for image syncing to work.
    - To automatically share the clipboard, enable the corresponding preference in the settings (accessibility permission is required). **Note:** This method may not work in every scenario.

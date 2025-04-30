@@ -1,0 +1,5 @@
+• Fix reconnection issues
+• Fix file transfer not working for certain file types
+• Improve ip address listing during pairing
+• Add Brazilian portuguese translation
+• Show command name on timer dialog
