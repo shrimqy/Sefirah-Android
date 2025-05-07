@@ -291,15 +291,15 @@ class MediaHandler @Inject constructor(
                 ) {
                     override fun onSetVolumeTo(volume: Int) {
                         currentVolume = volume
-                        var normalizedVolume = volume.toDouble() / maxVolume
-                        normalizedVolume *= 100
+                        val normalizedVolume = volume.toDouble() / maxVolume
                         CoroutineScope(Dispatchers.IO).launch {
                             handleMediaAction(
                                 PlaybackAction(
-                                playbackActionType = PlaybackActionType.VolumeUpdate,
-                                source = currentAudioDevice?.deviceId,
-                                value = normalizedVolume
-                            ))
+                                    playbackActionType = PlaybackActionType.VolumeUpdate,
+                                    source = currentAudioDevice?.deviceId,
+                                    value = normalizedVolume
+                                )
+                            )
                         }
                     }
                 })
