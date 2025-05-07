@@ -1,6 +1,7 @@
 package sefirah.network.util
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.BitmapDrawable
@@ -10,39 +11,26 @@ import sefirah.presentation.util.drawableToBitmap
 
 @SuppressLint("QueryPermissionsNeeded")
 fun getInstalledApps(packageManager: PackageManager): List<ApplicationInfo> {
-    val appsWithPermission = mutableListOf<ApplicationInfo>()
-    val packageInfos: List<PackageInfo> = packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
+    val appsList = mutableListOf<ApplicationInfo>()
 
-    for (packageInfo in packageInfos) {
-        val packageName = packageInfo.packageName
-        
-        // Skip system apps
-        val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+    val intent = Intent(Intent.ACTION_MAIN, null)
+    intent.addCategory(Intent.CATEGORY_LAUNCHER)
+    val activities = packageManager.queryIntentActivities(intent, 0)
 
-        // Include all apps that can be launched
-        if (packageManager.getLaunchIntentForPackage(packageName) != null) {
-            val appName = try {
-                packageManager.getApplicationLabel(applicationInfo).toString()
-            } catch (e: PackageManager.NameNotFoundException) {
-                "Unknown App"
+    for (packageInfo in activities) {
+        val appName = packageInfo.loadLabel(packageManager).toString()
+        val packageName = packageInfo.activityInfo.packageName
+        val appIcon = try {
+            val appIconDrawable = packageInfo.loadIcon(packageManager)
+            if (appIconDrawable is BitmapDrawable) {
+                bitmapToBase64(appIconDrawable.bitmap)
+            } else {
+                bitmapToBase64(drawableToBitmap(appIconDrawable))
             }
-
-            // Get app icon
-            val appIcon = try {
-                val appIconDrawable = packageManager.getApplicationIcon(packageName)
-                if (appIconDrawable is BitmapDrawable) {
-                    bitmapToBase64(appIconDrawable.bitmap)
-                } else {
-                    bitmapToBase64(drawableToBitmap(appIconDrawable))
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-
-            appsWithPermission.add(ApplicationInfo(packageName, appName, appIcon))
+        } catch (e: Exception) {
+            null
         }
+        appsList.add(ApplicationInfo(packageName, appName, appIcon))
     }
-
-    return appsWithPermission.sortedBy { it.appName }
+    return appsList.sortedBy { it.appName }
 }
