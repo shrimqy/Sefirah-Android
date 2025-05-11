@@ -305,7 +305,7 @@ data class AudioDevice(
     val deviceId: String,
     var isSelected: Boolean,
     val deviceName: String,
-    val volume: Float,
+    var volume: Float,
 ) : SocketMessage(), Parcelable
 
 @Serializable

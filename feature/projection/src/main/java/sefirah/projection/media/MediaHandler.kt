@@ -61,6 +61,25 @@ class MediaHandler @Inject constructor(
         }
     }
 
+    fun updateAudioDeviceVolume(device: AudioDevice, volume: Float) {
+        _audioDevices.update { currentDevices ->
+            currentDevices.map {
+                if (it.deviceId == device.deviceId) {
+                    it.copy(volume = volume)
+                } else {
+                    it
+                }
+            }
+        }
+        handleMediaAction(
+            PlaybackAction(
+                playbackActionType = PlaybackActionType.VolumeUpdate,
+                source = device.deviceId,
+                value = volume.toDouble()
+            )
+        )
+    }
+
     fun defaultAudioDevice(audioDevice: AudioDevice) {
         _audioDevices.update { devices ->
             devices.map { device -> 
@@ -291,15 +310,11 @@ class MediaHandler @Inject constructor(
                 ) {
                     override fun onSetVolumeTo(volume: Int) {
                         currentVolume = volume
-                        val normalizedVolume = volume.toDouble() / maxVolume
+                        val normalizedVolume = volume.toFloat()  / maxVolume
                         CoroutineScope(Dispatchers.IO).launch {
-                            handleMediaAction(
-                                PlaybackAction(
-                                    playbackActionType = PlaybackActionType.VolumeUpdate,
-                                    source = currentAudioDevice?.deviceId,
-                                    value = normalizedVolume
-                                )
-                            )
+                            if (currentAudioDevice != null) {
+                                updateAudioDeviceVolume(currentAudioDevice, normalizedVolume)
+                            }
                         }
                     }
                 })
@@ -315,7 +330,6 @@ class MediaHandler @Inject constructor(
                     setContentText(playbackSession.artist)
                     setLargeIcon(playbackSession.thumbnail?.let { base64ToBitmap(it) })
 
-                    // Add the actions with resource IDs
                     addAction(
                         R.drawable.ic_previous,
                         "Previous",

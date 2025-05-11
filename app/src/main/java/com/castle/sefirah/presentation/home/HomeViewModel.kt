@@ -80,13 +80,7 @@ class HomeViewModel @Inject constructor(
     
     fun onVolumeChange(device: AudioDevice, volume: Float) {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(
-                PlaybackAction(
-                    playbackActionType = PlaybackActionType.VolumeUpdate,
-                    source = device.deviceId,
-                    value = volume.toDouble()
-                )
-            )
+            mediaHandler.updateAudioDeviceVolume(device, volume)
         }
     }
     

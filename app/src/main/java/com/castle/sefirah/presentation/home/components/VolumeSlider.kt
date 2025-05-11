@@ -1,6 +1,5 @@
 package com.castle.sefirah.presentation.home.components
 
-import android.util.Log
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,7 +61,6 @@ fun VolumeSlider(
 
                 val roundedValue = kotlin.math.round(newValue)
                 // Check if the change exceeds our threshold
-                Log.d("volumeSlider", "$roundedValue, $newValue, ${lastSentValue.floatValue}")
                 if (roundedValue != lastSentValue.floatValue) {
                     onVolumeChange(roundedValue)
                     lastSentValue.floatValue = roundedValue

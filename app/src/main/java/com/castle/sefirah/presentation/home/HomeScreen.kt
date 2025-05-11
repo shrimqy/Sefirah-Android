@@ -122,9 +122,8 @@ fun HomeScreen(
                     }
                 }
 
-                // Show audio device summary card if devices are available
                 if (audioDevices.isNotEmpty()) {
-                    item(key = "audio_device_summary") {
+                    item(key = "selected_audio_device") {
                         SelectedAudioDevice(
                             audioDevices = audioDevices,
                             onClick = {
