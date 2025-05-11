@@ -61,6 +61,7 @@ import com.castle.sefirah.navigation.SettingsRouteScreen
 import com.castle.sefirah.presentation.settings.components.LogoHeader
 import com.castle.sefirah.presentation.settings.components.SwitchPreferenceWidget
 import com.castle.sefirah.presentation.settings.components.TextPreferenceWidget
+import com.castle.sefirah.util.CrashLogUtil
 import kotlinx.coroutines.launch
 import sefirah.clipboard.ClipboardListener
 import sefirah.common.R
@@ -384,7 +385,22 @@ fun SettingsScreen(
                     uriHandler.openUri("https://github.com/shrimqy/Sekia/blob/master/README.MD")
                 }
             )
-
+        }
+        
+        item {
+            val scope = rememberCoroutineScope()
+            val crashLogUtil = remember { CrashLogUtil(context) }
+            
+            TextPreferenceWidget(
+                title = "Dump Logs",
+                subtitle = "Save diagnostic logs to your device",
+                icon = Icons.Default.Info,
+                onPreferenceClick = {
+                    scope.launch {
+                        crashLogUtil.dumpLogs()
+                    }
+                }
+            )
         }
     }
 
