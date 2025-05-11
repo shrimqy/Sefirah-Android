@@ -20,8 +20,6 @@ import io.ktor.network.sockets.Datagram
 import io.ktor.network.sockets.InetSocketAddress
 import io.ktor.network.sockets.isClosed
 import io.ktor.utils.io.core.buildPacket
-import io.ktor.utils.io.core.readUTF8Line
-import io.ktor.utils.io.streams.writerUTF8
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,6 +34,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
+import kotlinx.io.readLine
+import kotlinx.io.writeString
 import sefirah.common.util.checkLocationPermissions
 import sefirah.database.AppRepository
 import sefirah.database.model.DeviceNetworkCrossRef
@@ -80,7 +80,7 @@ class NetworkDiscovery @Inject constructor(
 
     var action = NetworkAction.NONE
 
-    fun register(networkAction: NetworkAction) {
+    suspend fun register(networkAction: NetworkAction) {
         Log.d(TAG, "Registering network action: $networkAction")
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU && action == NetworkAction.SAVE_NETWORK) saveCurrentNetworkAsTrusted()
         action = networkAction
@@ -231,7 +231,7 @@ class NetworkDiscovery @Inject constructor(
         }
     }
 
-    private fun startPairedDeviceListener() {
+    private suspend fun startPairedDeviceListener() {
         if (udpSocket == null) {
             try {
                 udpSocket = socketFactory.udpSocket(udpPort)
@@ -248,7 +248,7 @@ class NetworkDiscovery @Inject constructor(
                 unregister()
                 while (isActive) {
                     val datagram = udpSocket?.receive() ?: continue
-                    val udpBroadcast = datagram.packet.readUTF8Line()?.let {
+                    val udpBroadcast = datagram.packet.readLine()?.let {
                         messageSerializer.deserialize(it) as UdpBroadcast
                     } ?: continue
 
@@ -291,7 +291,7 @@ class NetworkDiscovery @Inject constructor(
         }
     }
 
-    private fun startBroadcasting(localDevice: LocalDevice) {
+    private suspend fun startBroadcasting(localDevice: LocalDevice) {
         if (udpSocket == null) {
             try {
                 udpSocket = socketFactory.udpSocket(this.udpPort)
@@ -321,7 +321,7 @@ class NetworkDiscovery @Inject constructor(
 
                 while (isActive) {
                     udpBroadcast.timestamp = System.currentTimeMillis()
-                    val serializedMessage = messageSerializer.serialize(udpBroadcast)
+                    val serializedMessage = messageSerializer.serialize(udpBroadcast) ?: return@launch
 
                     broadcastList.forEach { ipAddress ->
                         try {
@@ -331,7 +331,7 @@ class NetworkDiscovery @Inject constructor(
                             }
 
                             val bytePacket = buildPacket {
-                                writerUTF8().write(serializedMessage)
+                                writeString(serializedMessage)
                             }
 
                             udpSocket?.send(Datagram(
@@ -352,7 +352,7 @@ class NetworkDiscovery @Inject constructor(
         }
     }
 
-    private fun startDeviceListener(localDevice: LocalDevice) {
+    private suspend fun startDeviceListener(localDevice: LocalDevice) {
         try {
             if (udpSocket == null) {
                 try {
@@ -368,7 +368,7 @@ class NetworkDiscovery @Inject constructor(
                 try {
                     while (isActive) {
                         val datagram = udpSocket!!.receive()
-                        val udpBroadcast = datagram.packet.readUTF8Line()?.let {
+                        val udpBroadcast = datagram.packet.readLine()?.let {
                             messageSerializer.deserialize(it) as UdpBroadcast
                         } ?: continue
                         if (udpBroadcast.deviceId == localDevice.deviceId) continue

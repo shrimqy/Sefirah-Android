@@ -319,8 +319,10 @@ class NetworkService : Service() {
         deviceStatus = null
         sftpServer.stop()
         mediaHandler.release(true)
-        writeChannel?.close()
-        socket?.close()
+        CoroutineScope(Dispatchers.IO).launch {
+            writeChannel?.flushAndClose()
+            socket?.close()
+        }
     }
 
     private val mutex = Mutex() // Mutex to control write access

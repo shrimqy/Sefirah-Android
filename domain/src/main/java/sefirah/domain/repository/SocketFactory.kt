@@ -11,7 +11,7 @@ import javax.net.ssl.SSLServerSocket
 interface SocketFactory {
     suspend fun tcpClientSocket(type: SocketType, ipAddress: String, port: Int): Socket?
     suspend fun tcpServerSocket(port: Int, ipAddress: String): SSLServerSocket
-    fun udpSocket(port: Int): BoundDatagramSocket
+    suspend fun udpSocket(port: Int): BoundDatagramSocket
 }
 
 

@@ -73,7 +73,7 @@ class SocketFactoryImpl @Inject constructor(
         } as SSLServerSocket
     }
 
-    override fun udpSocket(port: Int): BoundDatagramSocket {
+    override suspend fun udpSocket(port: Int): BoundDatagramSocket {
         return try {
             val selectorManager = SelectorManager(Dispatchers.IO)
             aSocket(selectorManager).udp().bind(InetSocketAddress("0.0.0.0", port)) {
