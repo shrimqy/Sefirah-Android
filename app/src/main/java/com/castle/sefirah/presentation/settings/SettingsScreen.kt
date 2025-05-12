@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DesktopWindows
@@ -394,7 +395,7 @@ fun SettingsScreen(
             TextPreferenceWidget(
                 title = "Dump Logs",
                 subtitle = "Save diagnostic logs to your device",
-                icon = Icons.Default.Info,
+                icon = Icons.Default.BugReport,
                 onPreferenceClick = {
                     scope.launch {
                         crashLogUtil.dumpLogs()
