@@ -46,11 +46,10 @@ If you have any feature requests as a whole or a bug report, open the issue in t
 ### Android App
 
 [<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" width="220">](https://apt.izzysoft.de/fdroid/index/apk/com.castle.sefirah)
-[<img src="https://www.openapk.net/images/openapk-badge.png" alt="Get it on OpenApk" width="220">](https://www.openapk.net/sefirah/com.castle.sefirah/)
 
 ## How to Use
 
-1. **Download and Install the [Windows app](https://github.com/shrimqy/Sefirah)**
+1. **Download and Install the [Android app](https://github.com/shrimqy/Sefirah-Android)**
 
 2. **Setting Up**:
    - On the Android device, allow the necessary permissions on the onboarding page. (**Note:** Allow restricted settings from App Info after attempting to grant notification access or accessibility permission, as Android blocks side-loaded apps from requesting sensitive permissions.)
@@ -59,22 +58,23 @@ If you have any feature requests as a whole or a bug report, open the issue in t
    - Initiate the connection on your Android device using either manual connect or auto connect. Manual connect is faster, while auto connect takes a bit more time to determine which IP address works for you.
    - Once the connection is initiated, Windows will receive a pop-up to accept or decline the connection. Ensure that the keys match on both devices.
    - After the authentication is done, you should be navigated to the home screens on both devices, wait a bit for the notifications on Windows to load up for the first time.
-   -  **Note:** Make sure you have excluded the app from Firewall and Antivirus restrictions.
 3. **Clipboard Sharing**:
    - When you copy content on your desktop, it will automatically sync with your Android device (provided you have enabled this feature in the settings). If you have also enabled image syncing, images should be sent as well. **Note:** You must enable the 'add received images to clipboard' option for image syncing to work.
    - To automatically share the clipboard, enable the corresponding preference in the settings (accessibility permission is required). **Note:** This method may not work in every scenario.
    - To manually share the clipboard, there are two primary methods: using the persistent device status notification or the share sheet.
 4. **File Transfer**:
    - Use the share sheet on your Android or Windows device and select the app to share files between the devices.
-5. **Windows Explorer Storage**:
+5. **Android Storage**:
    - You would need Android 11 or higher
+   - Enable storage access permission in Android app's settings and the desktop app will create a link to the Android storage in the File Explorer.
    - **Note:** This feature is still a bit experimental and may not work on all Windows versions especially older versions of Windows 10 and other unofficial debloated Windows 11 versions.
+   - **WARNING**: DO NOT set the remote storage location to a pre-existing folder as it will delete the contents of that folder.
 6. **SMS Texting**:
-   - Grant all the permissions required from the permissions page in Android. After that, reconnect and the messages should appear in the Messages tab in the Desktop app. You can now view and send texts as sms. You can also switch sims if your device has dual sims. Attachments have not been implemented yet.
+   - Grant all the permissions required from the permissions page in Android. After that, reconnect and the messages should appear in the Messages tab in the Desktop app. You can now view and send texts as sms. You can also switch sims if your device has dual sims. Attachments have not been implemented and the messages are not cached to local storage  (yet).
 7. **Screen Mirroring using [Scrcpy](https://github.com/Genymobile/scrcpy)**:
    - You would need to [download](https://github.com/Genymobile/scrcpy/releases), extract and set the scrcpy location in App settings.
    - You can specify your preferences for the scrcpy to launch with in the screen mirroring section.
-   - For initiating screen mirroring, the easiest way would be to plug your device through usb and start using the button next to the ringer mode (In the arugments text box add "--tcpip" if you want to make the connection wireless and you don't need to specify anymore arugments if you don't know what you're doing).
+   - For initiating screen mirroring, the easiest way would be to plug your device through usb and start it by clicking on Phone frame.
    - Sefirah will try to connect to your device if the default tcpip port is open for subsequent connections.
    - If you have any doubts or problems in connecting scrcpy, refer [scrcpy docs](https://github.com/Genymobile/scrcpy/blob/master/doc/connection.md) and [Scrcpy FAQ](https://github.com/Genymobile/scrcpy/blob/master/FAQ.md).
    - If you like their project, please consider supporting the author [rom1v](https://blog.rom1v.com/about/#support-my-open-source-work)
