@@ -7,9 +7,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import sefirah.domain.model.ActionMessage
+import sefirah.domain.model.ActionType
 import sefirah.domain.model.AudioDevice
-import sefirah.domain.model.CommandMessage
-import sefirah.domain.model.CommandType
 import sefirah.domain.model.PlaybackAction
 import sefirah.domain.model.PlaybackActionType
 import sefirah.domain.model.PlaybackSession
@@ -96,11 +96,11 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun sendCommand(commandType: CommandType, value: String) {
+    fun sendCommand(actionType: ActionType, value: String) {
         viewModelScope.launch(Dispatchers.IO) {
             sendMessage(
-                CommandMessage(
-                    commandType = commandType,
+                ActionMessage(
+                    actionType = actionType,
                     value = value
                 )
             )

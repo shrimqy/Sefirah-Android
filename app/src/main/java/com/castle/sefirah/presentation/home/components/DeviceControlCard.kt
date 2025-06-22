@@ -29,14 +29,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import sefirah.domain.model.ActionType
 import sefirah.domain.model.CommandType
 import sefirah.presentation.components.Button
 import sefirah.presentation.components.TextButton
 
 @Composable
 fun DeviceControlCard(
-    onCommandSend: (CommandType) -> Unit,
-    onLongClick: (CommandType) -> Unit,
+    onCommandSend: (ActionType) -> Unit,
+    onLongClick: (ActionType) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -47,34 +48,34 @@ fun DeviceControlCard(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             DeviceControlButton(
-                onClick = { onCommandSend(CommandType.Lock) },
-                onLongClick = { onLongClick(CommandType.Lock) },
+                onClick = { onCommandSend(ActionType.Lock) },
+                onLongClick = { onLongClick(ActionType.Lock) },
                 icon = Icons.Default.Lock,
             )
 
             DeviceControlButton(
-                onClick = { onCommandSend(CommandType.Hibernate) },
-                onLongClick = { onLongClick(CommandType.Hibernate) },
+                onClick = { onCommandSend(ActionType.Hibernate) },
+                onLongClick = { onLongClick(ActionType.Hibernate) },
                 icon = Icons.Default.Schedule,
             )
 
 
             DeviceControlButton(
-                onClick = { onCommandSend(CommandType.Logoff) },
-                onLongClick = { onLongClick(CommandType.Logoff) },
+                onClick = { onCommandSend(ActionType.Logoff) },
+                onLongClick = { onLongClick(ActionType.Logoff) },
                 icon = Icons.AutoMirrored.Filled.Logout,
             )
 
 
             DeviceControlButton(
-                onClick = { onCommandSend(CommandType.Restart) },
-                onLongClick = { onLongClick(CommandType.Restart) },
+                onClick = { onCommandSend(ActionType.Restart) },
+                onLongClick = { onLongClick(ActionType.Restart) },
                 icon = Icons.Default.RestartAlt,
             )
 
             DeviceControlButton(
-                onClick = { onCommandSend(CommandType.Shutdown) },
-                onLongClick = { onLongClick(CommandType.Shutdown) },
+                onClick = { onCommandSend(ActionType.Shutdown) },
+                onLongClick = { onLongClick(ActionType.Shutdown) },
                 icon = Icons.Default.PowerSettingsNew,
             )
         }

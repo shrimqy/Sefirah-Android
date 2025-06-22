@@ -30,7 +30,7 @@ import com.castle.sefirah.presentation.home.components.SelectedAudioDevice
 import com.castle.sefirah.presentation.home.components.TimerDialog
 import com.castle.sefirah.presentation.main.ConnectionViewModel
 import kotlinx.coroutines.launch
-import sefirah.domain.model.CommandType
+import sefirah.domain.model.ActionType
 import sefirah.domain.model.ConnectionState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,7 +50,7 @@ fun HomeScreen(
     val activeSessions by viewModel.activeSessions.collectAsState()
     val audioDevices by viewModel.audioDevices.collectAsState()
 
-    var dialogCommand: CommandType? by remember { mutableStateOf(null) }
+    var dialogCommand: ActionType? by remember { mutableStateOf(null) }
     var showTimerDialog by remember { mutableStateOf(false) }
     var hours by remember { mutableStateOf("0") }
     var minutes by remember { mutableStateOf("0") }

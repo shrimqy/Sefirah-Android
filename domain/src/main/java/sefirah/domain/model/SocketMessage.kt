@@ -53,11 +53,11 @@ enum class CommandType {
     RequestAppList
 }
 
+enum class ActionType {
     Lock,
     Shutdown,
     Sleep,
     Hibernate,
-    ClearNotifications,
     Restart,
     Logoff,
 }
@@ -70,8 +70,7 @@ sealed class SocketMessage
 @Serializable
 @SerialName("0")
 data class CommandMessage(
-    val commandType: CommandType,
-    val value: String? = null
+    val commandType: CommandType
 ) : SocketMessage()
 
 @Serializable
@@ -246,7 +245,7 @@ data class DeviceRingerMode(
 @Serializable
 @SerialName("14")
 data class TextMessage(
-    val addresses: List<SmsAddress>,
+    val addresses: List<String>,
     val contacts: List<Contact> = emptyList(),
     val body: String,
     val timestamp: Long = 0,
@@ -275,11 +274,6 @@ data class ThreadRequest(
     val rangeStartTimestamp: Long = -1,
     val numberToRequest: Long = -1
 ) : SocketMessage()
-
-@Serializable
-data class SmsAddress(
-    val address: String,
-)
 
 @Serializable
 data class Contact(
@@ -324,4 +318,19 @@ data class PlaybackAction(
 @SerialName("19")
 data class ApplicationList(
     val appList: List<ApplicationInfo>
+) : SocketMessage()
+
+@Serializable
+@SerialName("20")
+data class ActionMessage(
+    val actionType: ActionType,
+    val value: String? = null
+) : SocketMessage()
+
+
+@Serializable
+@SerialName("21")
+data class CustomAction(
+    val path: String,
+    val args: String? = null
 ) : SocketMessage()

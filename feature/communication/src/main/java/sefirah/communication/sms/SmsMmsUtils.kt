@@ -45,7 +45,6 @@ import sefirah.common.R
 import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.communication.utils.TelephonyHelper.LocalPhoneNumber
-import sefirah.domain.model.SmsAddress
 import sefirah.domain.model.SmsAttachment
 import sefirah.domain.model.TextMessage
 import java.io.ByteArrayOutputStream
@@ -497,7 +496,7 @@ object SmsMmsUtils {
 
 
     fun SMSHelper.Message.toTextMessage(context: Context): TextMessage {
-        val addresses = this.addresses.map { SmsAddress(it.getAddress()) }
+        val addresses = this.addresses.map { it.getAddress() }
         val contacts = this.addresses.mapNotNull {
             ContactsHelper().getContactInfo(context, it.getAddress())
         }
@@ -536,11 +535,11 @@ object SmsMmsUtils {
     }
 
 
-    fun List<SmsAddress>.toHelperSmsAddress(context: Context) : MutableList<SMSHelper.Address> {
+    fun List<String>.toHelperSmsAddress(context: Context) : MutableList<SMSHelper.Address> {
         return this.map {
             SMSHelper.Address(
                 context,
-                address = it.address
+                address = it
             )
         }.toMutableList()
     }
