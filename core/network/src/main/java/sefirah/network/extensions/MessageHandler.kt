@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sefirah.database.model.toEntity
+import sefirah.domain.model.ApplicationList
 import sefirah.domain.model.AudioDevice
 import sefirah.domain.model.BulkFileTransfer
 import sefirah.domain.model.ClipboardMessage
@@ -33,6 +34,7 @@ import sefirah.network.FileTransferService.Companion.EXTRA_FILE_TRANSFER
 import sefirah.network.NetworkService
 import sefirah.network.NetworkService.Companion.TAG
 import sefirah.network.util.ECDHHelper
+import sefirah.network.util.getInstalledApps
 
 fun NetworkService.handleMessage(message: SocketMessage) {
     when (message) {
@@ -120,7 +122,16 @@ fun NetworkService.handleMisc(commandMessage: CommandMessage) {
     when(commandMessage.commandType) {
         CommandType.Disconnect -> stop(true)
         CommandType.ClearNotifications -> notificationHandler.removeAllNotification()
+        CommandType.RequestAppList -> handleAppListRequest()
         else -> {}
+    }
+}
+
+private fun NetworkService.handleAppListRequest() {
+    val appList = getInstalledApps(packageManager)
+    val appListMessage = ApplicationList(appList)
+    CoroutineScope(Dispatchers.IO).launch {
+        sendMessage(appListMessage)
     }
 }
 

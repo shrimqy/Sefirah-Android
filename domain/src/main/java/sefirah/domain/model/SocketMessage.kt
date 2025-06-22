@@ -49,6 +49,10 @@ enum class PlaybackActionType {
 
 enum class CommandType {
     Disconnect,
+    ClearNotifications,
+    RequestAppList
+}
+
     Lock,
     Shutdown,
     Sleep,
@@ -314,4 +318,10 @@ data class PlaybackAction(
     val playbackActionType: PlaybackActionType,
     val source: String? = null,
     val value: Double? = null
+) : SocketMessage()
+
+@Serializable
+@SerialName("19")
+data class ApplicationList(
+    val appList: List<ApplicationInfo>
 ) : SocketMessage()
