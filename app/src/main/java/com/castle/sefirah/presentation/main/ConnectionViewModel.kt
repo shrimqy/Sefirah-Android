@@ -102,6 +102,10 @@ class ConnectionViewModel @Inject constructor(
         }
     }
 
+    fun connect(device: RemoteDevice) {
+        startService(Actions.START, device)
+    }
+
     private var connectionStateJob: Job? = null
 
     private fun startService(action: Actions, device: RemoteDevice? = null) {

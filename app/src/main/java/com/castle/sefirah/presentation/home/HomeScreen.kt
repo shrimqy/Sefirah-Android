@@ -37,11 +37,8 @@ import sefirah.domain.model.ConnectionState
 @Composable
 fun HomeScreen(
     rootNavController: NavHostController,
+    connectionViewModel: ConnectionViewModel
 ) {
-    val backStackState = rootNavController.currentBackStackEntryAsState().value
-    val backStackEntry = remember(key1 = backStackState) { rootNavController.getBackStackEntry(Graph.MainScreenGraph) }
-    val connectionViewModel: ConnectionViewModel = hiltViewModel(backStackEntry)
-
     val viewModel: HomeViewModel = hiltViewModel()
     val deviceDetails by connectionViewModel.deviceDetails.collectAsState()
     val connectionState by connectionViewModel.connectionState.collectAsState()

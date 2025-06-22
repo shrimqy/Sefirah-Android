@@ -159,7 +159,8 @@ fun MainScreen(
                 rootNavController = rootNavController,
                 homeNavController = homeNavController,
                 innerPadding = innerPadding,
-                searchQuery = searchQuery
+                searchQuery = searchQuery,
+                connectionViewModel = viewModel
             )
         }
     }

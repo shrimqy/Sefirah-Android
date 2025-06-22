@@ -13,6 +13,7 @@ import com.castle.sefirah.navigation.SettingsRouteScreen
 import com.castle.sefirah.navigation.transitions.NavigationTransitions
 import com.castle.sefirah.presentation.devices.DeviceScreen
 import com.castle.sefirah.presentation.home.HomeScreen
+import com.castle.sefirah.presentation.main.ConnectionViewModel
 import com.castle.sefirah.presentation.settings.update.NewUpdateScreen
 import com.castle.sefirah.presentation.settings.SettingsScreen
 
@@ -21,7 +22,8 @@ fun MainNavGraph(
     rootNavController: NavHostController,
     homeNavController: NavHostController,
     innerPadding: PaddingValues,
-    searchQuery: String
+    searchQuery: String,
+    connectionViewModel: ConnectionViewModel
 ) {
     NavHost(
         navController = homeNavController,
@@ -52,7 +54,7 @@ fun MainNavGraph(
                 }
             }
         ) {
-            HomeScreen(rootNavController)
+            HomeScreen(rootNavController, connectionViewModel)
         }
 
         composable(
@@ -76,7 +78,7 @@ fun MainNavGraph(
                 }
             }
         ) {
-            DeviceScreen(rootNavController, searchQuery)
+            DeviceScreen(rootNavController, searchQuery, connectionViewModel)
         }
 
         composable(

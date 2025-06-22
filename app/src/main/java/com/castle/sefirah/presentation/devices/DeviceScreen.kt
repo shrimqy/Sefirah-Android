@@ -19,13 +19,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.castle.sefirah.presentation.devices.components.DeviceListCard
-import sefirah.presentation.screens.EmptyScreen
+import com.castle.sefirah.presentation.main.ConnectionViewModel
 import sefirah.common.R
+import sefirah.presentation.screens.EmptyScreen
 
 @Composable
 fun DeviceScreen(
     rootNavController: NavHostController,
-    searchQuery: String = ""
+    searchQuery: String = "",
+    connectionViewModel: ConnectionViewModel
 ) {
     val devicesViewModel: DeviceViewModel = hiltViewModel()
 
@@ -60,6 +62,7 @@ fun DeviceScreen(
                         device = device,
                         syncStatus = syncStatus,
                         onSyncAction = {
+                            connectionViewModel.connect(device)
                         },
                         modifier = Modifier.padding(bottom = 8.dp),
                         onCardClick = {
