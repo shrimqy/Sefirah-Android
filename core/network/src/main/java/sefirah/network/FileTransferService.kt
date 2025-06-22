@@ -19,7 +19,7 @@ import androidx.documentfile.provider.DocumentFile
 import dagger.hilt.android.AndroidEntryPoint
 import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
-import io.ktor.utils.io.jvm.javaio.copyTo
+import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -249,6 +249,9 @@ class FileTransferService : Service() {
             )
             writeChannel.writeStringUtf8("Success")
             writeChannel.flush()
+
+            showCompletedNotification(fileUri = fileUri, mimeType = fileTransfer.fileMetadata.mimeType)
+            
             if (preferencesRepository.readImageClipboardSettings().first()) {
                 val clipboardManager = this.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboardManager.setPrimaryClip(ClipData.newUri(contentResolver, "received file", fileUri))
@@ -286,7 +289,7 @@ class FileTransferService : Service() {
                     ))
                     
                     receiveFileInternal(
-                        readChannel = readChannel,  // Pass the existing readChannel
+                        readChannel = readChannel,
                         metadata = metadata,
                         totalReceived = totalReceived,
                         totalSize = totalSize
@@ -318,7 +321,7 @@ class FileTransferService : Service() {
     }
 
     private suspend fun receiveFileInternal(
-        readChannel: io.ktor.utils.io.ByteReadChannel,  // Now passed as parameter
+        readChannel: io.ktor.utils.io.ByteReadChannel,
         metadata: FileMetadata,
         totalReceived: Long = 0,
         totalSize: Long = metadata.fileSize
@@ -352,21 +355,28 @@ class FileTransferService : Service() {
             contentResolver.openOutputStream(fileUri)?.use { output ->
                 val fileSize = metadata.fileSize
                 var currentFileReceived = 0L
+                var lastProgressUpdate = 0L
+                val progressThreshold = 524288L // 512KB
 
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                 while (currentFileReceived < fileSize) {
-                    val bytesToRead = minOf(DEFAULT_BUFFER_SIZE.toLong(), fileSize - currentFileReceived)
-                    val bytesRead = readChannel.copyTo(output, bytesToRead)
+                    val bytesToRead = minOf(buffer.size.toLong(), fileSize - currentFileReceived).toInt()
+                    val bytesRead = readChannel.readAvailable(buffer, 0, bytesToRead)
 
-                    if (bytesRead == 0L) break
+                    if (bytesRead <= 0) break
+                    output.write(buffer, 0, bytesRead)
                     currentFileReceived += bytesRead
-                    
-                    // Update both current file and total progress
-                    updateTransferProgress(
-                        currentFileReceived = currentFileReceived,
-                        currentFileSize = fileSize,
-                        totalReceived = totalReceived + currentFileReceived,
-                        totalSize = totalSize
-                    )
+
+                    if (currentFileReceived - lastProgressUpdate >= progressThreshold || currentFileReceived >= fileSize) {
+                        updateTransferProgress(
+                            currentFileReceived = currentFileReceived,
+                            currentFileSize = fileSize,
+                            totalReceived = totalReceived + currentFileReceived,
+                            totalSize = totalSize
+                        )
+                        lastProgressUpdate = currentFileReceived
+                        Log.d(TAG, "Progress: $currentFileReceived/$fileSize bytes (${(currentFileReceived * 100 / fileSize)}%)")
+                    }
                 }
 
                 if (currentFileReceived != fileSize) {
@@ -374,7 +384,6 @@ class FileTransferService : Service() {
                 }
                 Log.d(TAG, "Transfer completed successfully: $currentFileReceived/$fileSize bytes")
             }
-            showCompletedNotification(fileUri = fileUri, mimeType = metadata.mimeType)
             return fileUri
         } catch (e: Exception) {
             Log.e(TAG, "File transfer failed: ${e.message}", e)
@@ -583,7 +592,7 @@ class FileTransferService : Service() {
         private const val TAG = "FileTransferService"
 
         private val PORT_RANGE = 5152..5169
-        private const val DEFAULT_BUFFER_SIZE = 81920 * 5
+        private const val DEFAULT_BUFFER_SIZE = 81920 * 5 // 400KB
 
         private const val CANCEL_REQUEST_CODE = 100
     }
