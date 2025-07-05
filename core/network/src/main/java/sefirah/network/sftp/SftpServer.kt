@@ -29,6 +29,7 @@ import org.apache.sshd.sftp.server.FileHandle
 import org.apache.sshd.sftp.server.SftpFileSystemAccessor
 import org.apache.sshd.sftp.server.SftpSubsystemFactory
 import org.apache.sshd.sftp.server.SftpSubsystemProxy
+import sefirah.database.AppRepository
 import sefirah.domain.model.SftpServerInfo
 import sefirah.network.util.MediaStoreHelper
 import sefirah.network.util.TrustManager
@@ -48,7 +49,8 @@ import javax.inject.Inject
 
 class SftpServer @Inject constructor(
     private val context: Context,
-    private val customTrustManager: TrustManager
+    private val customTrustManager: TrustManager,
+    private val appRepository: AppRepository,
 ) {
     private var sshd: SshServer? = null
     private var isRunning = false
@@ -177,10 +179,12 @@ class SftpServer @Inject constructor(
         this.sshd = sshd
     }
 
-    fun start() : SftpServerInfo? {
+    suspend fun start() : SftpServerInfo? {
         if (isRunning) return serverInfo
 
         val pwd = generateRandomPassword()
+        val localDevice = appRepository.getLocalDevice()
+        val username = localDevice.deviceName
 
         PORT_RANGE.forEach { port ->
             try {
@@ -189,8 +193,8 @@ class SftpServer @Inject constructor(
                     keyPairProvider = PfxKeyPairProvider()
 
                     publickeyAuthenticator = PublickeyAuthenticator { _, _, _ -> true }
-                    passwordAuthenticator = PasswordAuthenticator { username, password, _ ->
-                        username == USER && password == pwd
+                    passwordAuthenticator = PasswordAuthenticator { user, password, _ ->
+                        user == username && password == pwd
                     }
                     fileSystemFactory = SimpleFileSystemFactory()
                     subsystemFactories = listOf(SftpSubsystemFactory())
@@ -203,7 +207,7 @@ class SftpServer @Inject constructor(
 
                 serverInfo = ipAddress?.let {
                     SftpServerInfo(
-                        username = USER,
+                        username = username,
                         password = pwd,
                         ipAddress = it,
                         port = port
