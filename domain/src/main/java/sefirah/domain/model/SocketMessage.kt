@@ -259,6 +259,7 @@ data class TextMessage(
     val hasMultipleRecipients: Boolean = false
 ) : SocketMessage()
 
+
 @Serializable
 @SerialName("15")
 data class TextConversation(
@@ -323,14 +324,6 @@ data class ApplicationList(
 @Serializable
 @SerialName("20")
 data class ActionMessage(
-    val actionType: ActionType,
-    val value: String? = null
-) : SocketMessage()
-
-
-@Serializable
-@SerialName("21")
-data class CustomAction(
-    val path: String,
-    val args: String? = null
+    val actionId: String,
+    val actionName: String,
 ) : SocketMessage()

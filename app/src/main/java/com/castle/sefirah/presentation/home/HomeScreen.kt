@@ -11,26 +11,19 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.presentation.home.components.AudioDeviceBottomSheet
 import com.castle.sefirah.presentation.home.components.DeviceCard
 import com.castle.sefirah.presentation.home.components.DeviceControlCard
 import com.castle.sefirah.presentation.home.components.MediaCard
 import com.castle.sefirah.presentation.home.components.SelectedAudioDevice
-import com.castle.sefirah.presentation.home.components.TimerDialog
 import com.castle.sefirah.presentation.main.ConnectionViewModel
 import kotlinx.coroutines.launch
-import sefirah.domain.model.ActionType
 import sefirah.domain.model.ConnectionState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,12 +39,7 @@ fun HomeScreen(
     // Collect the new state flows
     val activeSessions by viewModel.activeSessions.collectAsState()
     val audioDevices by viewModel.audioDevices.collectAsState()
-
-    var dialogCommand: ActionType? by remember { mutableStateOf(null) }
-    var showTimerDialog by remember { mutableStateOf(false) }
-    var hours by remember { mutableStateOf("0") }
-    var minutes by remember { mutableStateOf("0") }
-    var seconds by remember { mutableStateOf("0") }
+    val actions by viewModel.actions.collectAsState()
 
     // Bottom sheet state
     val scope = rememberCoroutineScope()
@@ -93,15 +81,12 @@ fun HomeScreen(
                     )
                 }
 
-                if (connectionState == ConnectionState.Connected) {
+                if (connectionState == ConnectionState.Connected && actions.isNotEmpty()) {
                     item(key = "device_control") {
                         DeviceControlCard(
-                            onCommandSend = { command ->
-                                viewModel.sendCommand(command, "0")
-                            },
-                            onLongClick = {
-                                dialogCommand = it
-                                showTimerDialog = true
+                            actions = actions,
+                            onActionClick = { action ->
+                                viewModel.sendAction(action)
                             }
                         )
                     }
@@ -135,26 +120,6 @@ fun HomeScreen(
                         )
                     }
                 }
-            }
-
-            if (showTimerDialog) {
-                TimerDialog(
-                    title = dialogCommand!!.name,
-                    hours = hours,
-                    minutes = minutes,
-                    seconds = seconds,
-                    onHoursChange = { hours = it },
-                    onMinutesChange = { minutes = it },
-                    onSecondsChange = { seconds = it },
-                    onConfirm = {
-                        val totalSeconds = (hours.toIntOrNull() ?: 0) * 3600 + (minutes.toIntOrNull() ?: 0) * 60 + (seconds.toIntOrNull() ?: 0)
-                        if (totalSeconds > 0) {
-                            viewModel.sendCommand(dialogCommand!!, totalSeconds.toString())
-                        }
-                        showTimerDialog = false
-                    },
-                    onDismiss = { showTimerDialog = false }
-                )
             }
         }
     )

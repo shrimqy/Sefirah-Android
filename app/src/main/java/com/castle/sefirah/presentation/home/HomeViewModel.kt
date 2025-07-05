@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import sefirah.domain.model.ActionMessage
-import sefirah.domain.model.ActionType
 import sefirah.domain.model.AudioDevice
 import sefirah.domain.model.PlaybackAction
 import sefirah.domain.model.PlaybackActionType
@@ -17,16 +16,19 @@ import sefirah.domain.model.SocketMessage
 import sefirah.domain.repository.NetworkManager
 import sefirah.projection.media.MediaHandler
 import javax.inject.Inject
+import sefirah.network.extensions.ActionHandler
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val networkManager: NetworkManager,
     private val mediaHandler: MediaHandler,
+    private val actionHandler: ActionHandler,
     application: Application
 ) : AndroidViewModel(application) {
 
     val activeSessions: StateFlow<List<PlaybackSession>> = mediaHandler.activeSessions
     val audioDevices: StateFlow<List<AudioDevice>> = mediaHandler.audioDevices
+    val actions: StateFlow<List<ActionMessage>> = actionHandler.actions
 
     fun onPlayPause(session: PlaybackSession) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -96,14 +98,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun sendCommand(actionType: ActionType, value: String) {
+    fun sendAction(action: ActionMessage) {
         viewModelScope.launch(Dispatchers.IO) {
-            sendMessage(
-                ActionMessage(
-                    actionType = actionType,
-                    value = value
-                )
-            )
+            sendMessage(action)
         }
     }
 

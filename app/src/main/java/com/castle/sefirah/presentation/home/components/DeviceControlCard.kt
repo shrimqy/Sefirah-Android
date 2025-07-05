@@ -1,9 +1,11 @@
 package com.castle.sefirah.presentation.home.components
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,6 +14,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.RestartAlt
@@ -23,88 +28,154 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import sefirah.domain.model.ActionType
-import sefirah.domain.model.CommandType
+import sefirah.domain.model.ActionMessage
 import sefirah.presentation.components.Button
 import sefirah.presentation.components.TextButton
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.PaddingValues
 
 @Composable
 fun DeviceControlCard(
-    onCommandSend: (ActionType) -> Unit,
-    onLongClick: (ActionType) -> Unit,
+    actions: List<ActionMessage>,
+    onActionClick: (ActionMessage) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDialog by remember { mutableStateOf(false) }
+    var selectedAction by remember { mutableStateOf<ActionMessage?>(null) }
+    var expanded by remember { mutableStateOf(false) }
+
+    if (showDialog && selectedAction != null) {
+        ActionConfirmationDialog(
+            actionName = selectedAction!!.actionName,
+            onConfirm = {
+                onActionClick(selectedAction!!)
+                showDialog = false
+                selectedAction = null
+            },
+            onDismiss = {
+                showDialog = false
+                selectedAction = null
+            }
+        )
+    }
+
     Card(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+        Column(
+            modifier = Modifier.animateContentSize()
         ) {
-            DeviceControlButton(
-                onClick = { onCommandSend(ActionType.Lock) },
-                onLongClick = { onLongClick(ActionType.Lock) },
-                icon = Icons.Default.Lock,
-            )
+            Column(
+                modifier = Modifier.padding(top = 16.dp, bottom = if (actions.size > 5) 0.dp else 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val itemsToShow = if (expanded || actions.size <= 5) actions else actions.take(5)
+                itemsToShow.chunked(5).forEach { rowActions ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        for (i in 0 until 5) {
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (i < rowActions.size) {
+                                    val action = rowActions[i]
+                                    DeviceControlButton(
+                                        icon = getIconForAction(action.actionId),
+                                        name = action.actionName,
+                                        onClick = {
+                                            selectedAction = action
+                                            showDialog = true
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
-            DeviceControlButton(
-                onClick = { onCommandSend(ActionType.Hibernate) },
-                onLongClick = { onLongClick(ActionType.Hibernate) },
-                icon = Icons.Default.Schedule,
-            )
-
-
-            DeviceControlButton(
-                onClick = { onCommandSend(ActionType.Logoff) },
-                onLongClick = { onLongClick(ActionType.Logoff) },
-                icon = Icons.AutoMirrored.Filled.Logout,
-            )
-
-
-            DeviceControlButton(
-                onClick = { onCommandSend(ActionType.Restart) },
-                onLongClick = { onLongClick(ActionType.Restart) },
-                icon = Icons.Default.RestartAlt,
-            )
-
-            DeviceControlButton(
-                onClick = { onCommandSend(ActionType.Shutdown) },
-                onLongClick = { onLongClick(ActionType.Shutdown) },
-                icon = Icons.Default.PowerSettingsNew,
-            )
+            if (actions.size > 5) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { expanded = !expanded }
+                        .padding(bottom = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (expanded) "Show less" else "Show more"
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun RowScope.DeviceControlButton(
+private fun getIconForAction(actionId: String): ImageVector {
+    return when (actionId) {
+        "lock" -> Icons.Default.Lock
+        "hibernate" -> Icons.Default.Schedule
+        "logoff" -> Icons.AutoMirrored.Filled.Logout
+        "restart" -> Icons.Default.RestartAlt
+        "shutdown" -> Icons.Default.PowerSettingsNew
+        "sleep" -> Icons.Default.Schedule
+        else -> Icons.Default.Info
+    }
+}
+
+@Composable
+fun DeviceControlButton(
     icon: ImageVector,
+    name: String,
     color: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
 ) {
-    TextButton (
+    TextButton(
         onClick = onClick,
-        modifier = Modifier.weight(1f),
-        onLongClick = onLongClick,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.width(56.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = name,
                 tint = color,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(24.dp),
+            )
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
-
 
 @Composable
 fun TimerDialog(
@@ -158,6 +229,29 @@ fun TimerDialog(
                 }
             }
         },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Confirm")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun ActionConfirmationDialog(
+    actionName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Action") },
+        text = { Text("Are you sure you want to perform the action: $actionName?") },
         confirmButton = {
             Button(onClick = onConfirm) {
                 Text("Confirm")

@@ -58,6 +58,7 @@ import sefirah.domain.model.SocketType
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.NetworkDiscovery.NetworkAction
+import sefirah.network.extensions.ActionHandler
 import sefirah.network.extensions.handleDeviceInfo
 import sefirah.network.extensions.handleMessage
 import sefirah.network.extensions.setNotification
@@ -83,6 +84,7 @@ class NetworkService : Service() {
     @Inject lateinit var sftpServer: SftpServer
     @Inject lateinit var preferencesRepository: PreferencesRepository
     @Inject lateinit var smsHandler: SmsHandler
+    @Inject lateinit var actionHandler: ActionHandler
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
@@ -130,6 +132,7 @@ class NetworkService : Service() {
 
     private fun start(remoteInfo: RemoteDevice) {
         scope.launch {
+            actionHandler.clearActions()
             _connectionState.value = ConnectionState.Connecting
             try {
                 Log.d(TAG, "Initializing connection requests")
@@ -319,6 +322,7 @@ class NetworkService : Service() {
         deviceStatus = null
         sftpServer.stop()
         mediaHandler.release(true)
+        actionHandler.clearActions()
         CoroutineScope(Dispatchers.IO).launch {
             writeChannel?.flushAndClose()
             socket?.close()

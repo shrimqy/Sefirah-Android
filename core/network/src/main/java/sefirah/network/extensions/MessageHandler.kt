@@ -27,6 +27,7 @@ import sefirah.domain.model.ReplyAction
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.TextMessage
 import sefirah.domain.model.ThreadRequest
+import sefirah.domain.model.ActionMessage
 import sefirah.network.FileTransferService
 import sefirah.network.FileTransferService.Companion.ACTION_RECEIVE_FILE
 import sefirah.network.FileTransferService.Companion.EXTRA_BULK_TRANSFER
@@ -53,6 +54,7 @@ fun NetworkService.handleMessage(message: SocketMessage) {
         is ThreadRequest -> smsHandler.handleThreadRequest(message)
         is TextMessage -> smsHandler.sendTextMessage(message)
         is AudioDevice -> mediaHandler.addAudioDevice(message)
+        is ActionMessage -> actionHandler.addAction(message)
         else -> {}
     }
 }

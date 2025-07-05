@@ -16,6 +16,7 @@ import sefirah.common.notifications.NotificationCenter
 import sefirah.data.repository.AppUpdateChecker
 import sefirah.data.repository.PreferencesDatastore
 import sefirah.data.repository.ReleaseRepository
+import sefirah.database.AppRepository
 import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
@@ -31,6 +32,7 @@ import sefirah.notification.NotificationHandler
 import sefirah.notification.NotificationService
 import sefirah.projection.media.MediaHandler
 import javax.inject.Singleton
+import sefirah.network.extensions.ActionHandler
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -163,5 +165,11 @@ object AppModule {
         networkHelper: NetworkHelper
     ) : ReleaseRepository {
         return ReleaseRepository(preferencesRepository, networkHelper)
+    }
+
+    @Provides
+    @Singleton
+    fun providesActionHandler(): ActionHandler {
+        return ActionHandler()
     }
 }
