@@ -38,7 +38,6 @@ fun DeviceScreen(
 
     val deviceDetails by devicesViewModel.deviceDetails.collectAsState()
     val syncStatus by devicesViewModel.syncStatus.collectAsState()
-    val lastConnected by devicesViewModel.lastConnected.collectAsState()
 
     if (deviceDetails.isEmpty()) {
         EmptyScreen(message = stringResource(R.string.no_device))

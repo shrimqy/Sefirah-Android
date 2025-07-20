@@ -7,5 +7,17 @@ sealed class ConnectionState {
     data class Error(val message: String) : ConnectionState()
 
     val isDisconnected: Boolean
-        get() = this is Disconnected
+        get() = this is Disconnected || this is Error
+    val isConnected: Boolean
+        get() = this is Connected
+    val isConnecting : Boolean
+        get() = this is Connecting
+    val isError: Boolean
+        get() = this is Error
+
+    val isForcedDisconnect: Boolean
+        get() = this is Disconnected && forcedDisconnect
+
+    val isConnectedOrConnecting : Boolean
+        get() = isConnected || isConnecting
 }

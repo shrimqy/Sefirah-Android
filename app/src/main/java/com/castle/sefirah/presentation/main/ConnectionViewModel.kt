@@ -3,10 +3,12 @@ package com.castle.sefirah.presentation.main
 import android.app.Application
 import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import com.komu.sekia.di.AppCoroutineScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +16,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import sefirah.data.repository.AppUpdateChecker
 import sefirah.data.repository.ReleaseRepository
 import sefirah.database.AppRepository
@@ -77,24 +81,23 @@ class ConnectionViewModel @Inject constructor(
 
     fun toggleSync(syncRequest: Boolean) {
        appScope.launch {
+           Log.d("Viewmodel", "sync request is $syncRequest and connection state is ${connectionState.value}")
             _deviceDetails.value?.let { device ->
                 _isRefreshing.value = true
                 when {
                     syncRequest && _connectionState.value.isDisconnected -> {
-                        _connectionState.value = ConnectionState.Disconnected()
                         startService(Actions.START, device)
                     }
-                    syncRequest && _connectionState.value == ConnectionState.Connected -> {
+                    syncRequest && _connectionState.value.isConnected -> {
+                        _connectionState.value = ConnectionState.Disconnected()
                         startService(Actions.STOP)
                         delay(200)
                         startService(Actions.START, device)
                     }
-                    !syncRequest && (_connectionState.value == ConnectionState.Connected
-                            || _connectionState.value == ConnectionState.Connecting) -> {
-                        startService(Actions.STOP)
+                    !syncRequest && (_connectionState.value.isConnectedOrConnecting) -> {
+                        _connectionState.value.isDisconnected
+                        startService(Actions.STOP, device)
                     }
-
-                    else -> {}
                 }
             } ?: run {
                 _isRefreshing.value = false  // Ensure refreshing stops if no device
@@ -117,45 +120,48 @@ class ConnectionViewModel @Inject constructor(
                 putExtra(NetworkService.REMOTE_INFO, remoteInfo)
             }
         }
-        
+
         try {
             getApplication<Application>().startService(intent)
         } catch (e: Exception) {
             _isRefreshing.value = false
             return
         }
-
-        connectionStateJob = appScope.launch {
-            connectionState.collect { state ->
-                when (state) {
-                    is ConnectionState.Connected -> {
-                        _isRefreshing.value = false
-                        connectionStateJob?.cancel()
-                    }
-                    is ConnectionState.Disconnected -> {
-                        // Only stop refreshing if we initiated a STOP
-                        if (action == Actions.STOP || state.forcedDisconnect) {
+        try {
+            connectionStateJob = appScope.launch {
+                connectionState.collect { state ->
+                    when {
+                        state.isConnected -> {
                             _isRefreshing.value = false
                             connectionStateJob?.cancel()
                         }
+                        state.isForcedDisconnect -> {
+                            _isRefreshing.value = false
+                            connectionStateJob?.cancel()
+                        }
+                        state.isConnecting -> {
+                            if (!_isRefreshing.value) {
+                                _isRefreshing.value = true
+                            }
+                        }
+                        state.isError -> {
+                            _isRefreshing.value = false
+                            _connectionState.value = ConnectionState.Disconnected()
+                            withContext(Dispatchers.Main.immediate) {
+                                Toast.makeText(
+                                    getApplication(),
+                                    (state as ConnectionState.Error).message,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                            connectionStateJob?.cancel()
+                        }
                     }
-                    ConnectionState.Connecting -> {
-                        _isRefreshing.value = true
-                    }
-                    is ConnectionState.Error -> {
-                        _isRefreshing.value = false
-//                        withContext(Dispatchers.Main.immediate) {
-//                            Toast.makeText(
-//                                getApplication(),
-//                                "Error: ${state.message}",
-//                                Toast.LENGTH_LONG
-//                            ).show()
-//                        }
-                        connectionStateJob?.cancel()
-                    }
-                    else -> {}
                 }
             }
+        } catch (e: Exception) {
+            Log.e("ConnectionViewModel", "Job cancelled probably", e)
+            _isRefreshing.value = false
         }
     }
 

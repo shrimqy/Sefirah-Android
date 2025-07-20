@@ -29,6 +29,7 @@ import io.ktor.utils.io.readUTF8Line
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +47,7 @@ import sefirah.common.notifications.NotificationCenter
 import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.smsPermissionGranted
 import sefirah.communication.sms.SmsHandler
+import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.database.AppRepository
 import sefirah.domain.model.ConnectionState
@@ -113,6 +115,8 @@ class NetworkService : Service() {
 
     private var deviceStatus: DeviceStatus? = null
 
+    private var connectionJob: Job? = null
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             Actions.START.name -> {
@@ -124,6 +128,7 @@ class NetworkService : Service() {
                 }
             }
             Actions.STOP.name -> {
+                if (connectionJob?.isActive == true) connectionJob?.cancel()
                 stop(true)
             }
         }
@@ -131,24 +136,19 @@ class NetworkService : Service() {
     }
 
     private fun start(remoteInfo: RemoteDevice) {
-        scope.launch {
-            actionHandler.clearActions()
-            _connectionState.value = ConnectionState.Connecting
-            try {
-                Log.d(TAG, "Initializing connection requests")
-                var connected = false
+        try {
+            connectionJob = scope.launch {
+                actionHandler.clearActions()
 
+                var connected = false
                 if (remoteInfo.prefAddress != null) {
                     connected = initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port)
                 }
                 if (!connected) {
-                    // Create a list of unique IP addresses with preferred address first
-                    val uniqueIpAddresses: MutableList<String> = remoteInfo.ipAddresses.toMutableList()
-                    
-                    uniqueIpAddresses.remove(remoteInfo.prefAddress)
-                
-                    // Try connecting to each address
-                    for (ipAddress in uniqueIpAddresses) {
+                    val addresses: MutableList<String> = remoteInfo.ipAddresses.toMutableList()
+                    addresses.remove(remoteInfo.prefAddress)
+
+                    for (ipAddress in addresses) {
                         if (initializeConnection(ipAddress, remoteInfo.port)) {
                             connected = true
                             break
@@ -168,7 +168,7 @@ class NetworkService : Service() {
                 sendDeviceInfo(remoteInfo)
 
                 // Wait for device info
-                val state = withTimeoutOrNull(30000) { // 30 seconds timeout
+                _connectionState.value = withTimeoutOrNull(30000) { // 30 seconds timeout
                     readChannel?.readUTF8Line()?.let { jsonMessage ->
                         val message = messageSerializer.deserialize(jsonMessage)
                         if (message == null) {
@@ -181,30 +181,33 @@ class NetworkService : Service() {
                                 handleDeviceInfo(message, remoteInfo, connectedIpAddress!!)
                                 return@withTimeoutOrNull ConnectionState.Connected
                             }
+
                             else -> {
                                 Log.w(TAG, "Authentication rejected")
                                 return@withTimeoutOrNull ConnectionState.Error(getString(R.string.connection_error))
                             }
                         }
                     }
-                    null 
+                    null
                 } ?: run {
                     Log.e(TAG, "Timeout waiting for device info")
-                    _connectionState.value = ConnectionState.Error(getString(R.string.connection_error))
                     stop(false)
+                    _connectionState.value = ConnectionState.Error(getString(R.string.connection_error))
                     return@launch
                 }
-                _connectionState.value = state
-                if (state == ConnectionState.Connected) {
+
+                if (_connectionState.value.isConnected) {
                     startListening()
                     finalizeConnection(remoteInfo.lastConnected == null)
-                } else {
-                    stop(true)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error in connecting", e)
-                _connectionState.value = ConnectionState.Disconnected()
+            }
+        } catch (e: Exception) {
+            if (_connectionState.value.isForcedDisconnect) {
+                stop(true)
+            } else {
                 stop(false)
+                Log.e(TAG, "Error in connecting", e)
+                _connectionState.value = ConnectionState.Error(getString(R.string.connection_error))
             }
         }
     }
@@ -261,7 +264,6 @@ class NetworkService : Service() {
 
         val localPhoneNumbers : List<PhoneNumber> = try {
             TelephonyHelper.getAllPhoneNumbers(this).map { it.toDto() }
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get local phone numbers", e)
             emptyList()

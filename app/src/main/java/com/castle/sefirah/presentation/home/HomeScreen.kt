@@ -75,7 +75,7 @@ fun HomeScreen(
                             rootNavController.navigate(route = "device?deviceId=${it}")
                         } },
                         device = deviceDetails,
-                        onSyncAction = { connectionViewModel.toggleSync(connectionState.isDisconnected) },
+                        onSyncAction = { connectionViewModel.toggleSync(!connectionState.isConnectedOrConnecting) },
                         connectionState = connectionState,
                         navController = rootNavController
                     )
