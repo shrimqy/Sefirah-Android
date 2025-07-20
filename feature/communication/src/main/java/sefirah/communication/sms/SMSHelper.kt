@@ -18,11 +18,13 @@ import android.net.Uri
 import android.os.Build
 import android.os.Looper
 import android.provider.Telephony
+import android.provider.Telephony.Threads
 import android.telephony.PhoneNumberUtils
 import android.telephony.TelephonyManager
 import android.util.Log
 import android.util.Pair
 import androidx.core.graphics.scale
+import androidx.core.net.toUri
 import com.google.android.mms.pdu_alt.MultimediaMessagePdu
 import com.google.android.mms.pdu_alt.PduPersister
 import com.google.android.mms.util_alt.PduCache
@@ -34,6 +36,8 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import sefirah.common.util.MimeType
+import sefirah.communication.utils.ContactsHelper
+import sefirah.communication.utils.TelephonyHelper
 import sefirah.communication.utils.TelephonyHelper.LocalPhoneNumber
 import java.io.IOException
 import java.util.Objects
@@ -42,8 +46,6 @@ import java.util.TreeMap
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.text.Charsets.UTF_8
-import androidx.core.net.toUri
-import sefirah.communication.utils.TelephonyHelper
 
 @SuppressLint("InlinedApi")
 object SMSHelper {
@@ -276,7 +278,7 @@ object SMSHelper {
                             // Try to determine using other information
                             val messageBoxColumn = myCursor.getColumnIndex(Telephony.Mms.MESSAGE_BOX)
                             // MessageBoxColumn is defined for MMS only
-                            val messageBoxExists = !myCursor.isNull(messageBoxColumn)
+                            val messageBoxExists = messageBoxColumn >= 0 && !myCursor.isNull(messageBoxColumn)
                             if (messageBoxExists) {
                                 TransportType.MMS
                             } else {
@@ -425,9 +427,9 @@ object SMSHelper {
      * Otherwise ordering is undefined.
      *
      * @param context android.content.Context running the request
-     * @return Non-blocking iterable of the first message in each conversation
+     * @return Non-blocking iterable of conversation info (message with recipients)
      */
-    fun getConversations(context: Context): Sequence<Message> {
+    fun getConversations(context: Context): Sequence<ConversationInfo> {
         val uri = getConversationUri()
 
         // Used to avoid spewing logs in case there is an overall problem with fetching thread IDs
@@ -441,7 +443,7 @@ object SMSHelper {
         // query. If someone wanted to squeeze better UI performance out of this method, they could
         // iterate over the threadIdCursor instead of getting all the threads before beginning to
         // return conversations, but I doubt anyone will ever find it necessary.
-        var threadIds: List<ThreadID>
+        var threadInfoList: List<ThreadInfo>
         context.contentResolver.query(
             uri,
             null,
@@ -449,16 +451,19 @@ object SMSHelper {
             null,
             null
         ).use { threadIdCursor ->
-            val threadTimestampPair: MutableList<Pair<ThreadID, Long>> = ArrayList()
+            val threadInfos: MutableList<ThreadInfo> = ArrayList()
             while (threadIdCursor != null && threadIdCursor.moveToNext()) {
                 // The "_id" column returned from the `content://sms-mms/conversations?simple=true` URI
                 // is actually what the rest of the world calls a thread_id.
                 // In my limited experimentation, the other columns are not populated, so don't bother
                 // looking at them here.
-                val idColumn = threadIdCursor.getColumnIndex("_id")
-                val dateColumn = threadIdCursor.getColumnIndex("date")
+                val idColumn = threadIdCursor.getColumnIndex(Threads._ID)
+                val dateColumn = threadIdCursor.getColumnIndex(Threads.DATE)
+                val recipientsColumn = threadIdCursor.getColumnIndex(Threads.RECIPIENT_IDS)
                 var threadID: ThreadID? = null
                 var messageDate: Long = -1
+                var recipients: MutableList<String> = ArrayList()
+                
                 if (!threadIdCursor.isNull(idColumn)) {
                     threadID = ThreadID(threadIdCursor.getLong(idColumn))
                 }
@@ -469,6 +474,19 @@ object SMSHelper {
                     // conversations URI returns sorted anyway).
                     messageDate = threadIdCursor.getLong(dateColumn)
                 }
+                if (!threadIdCursor.isNull(recipientsColumn)) {
+                    var recipientIDs = threadIdCursor.getString(recipientsColumn).split(" ")
+                    for (recipient in recipientIDs) {
+                        context.contentResolver.query("content://mms-sms/canonical-addresses".toUri(), null, "_id = ?", arrayOf(recipient.trim()), null).use { cursor ->
+                            if (cursor != null && cursor.moveToFirst()) {
+                                // The canonical-addresses table typically has columns: _id, address
+                                val address = cursor.getString(1)
+                                address?.let { recipients.add(it) }
+                            }
+                        }
+                    }
+                }
+                
                 if (messageDate <= 0) {
                     if (!warnedForUnorderedOutputs) {
                         Log.w(
@@ -488,33 +506,28 @@ object SMSHelper {
                     }
                     continue
                 }
-                threadTimestampPair.add(Pair(threadID, messageDate))
+                
+                threadInfos.add(ThreadInfo(threadID, messageDate, recipients.toList()))
             }
-            threadIds = threadTimestampPair
+            threadInfoList = threadInfos
                 // Sort oldest-to-newest (smallest to largest)
-                .sortedWith { left: Pair<ThreadID, Long>, right: Pair<ThreadID, Long> ->
-                    left.second.compareTo(right.second)
-                }
-                .map { threadTimestampPairElement: Pair<ThreadID, Long> -> threadTimestampPairElement.first }
+                .sortedBy { it.messageDate }
         }
 
-        // Step 2: Get the actual message object from each thread ID
+        // Step 2: Get the actual message object from each thread ID with recipients
         // Do this in a sequence, so that the caller can choose to interrupt us as frequently as desired
         return sequence {
-            var threadIdsIndex = 0
-            while (threadIdsIndex < threadIds.size) {
-                val nextThreadId = threadIds[threadIdsIndex]
-                threadIdsIndex++
-                val firstMessage = getMessagesInThread(context, nextThreadId, 1L)
+            for (threadInfo in threadInfoList) {
+                val firstMessage = getMessagesInThread(context, threadInfo.threadId, 1L)
                 if (firstMessage.size > 1) {
-                    Log.w("SMSHelper", "getConversations got two messages for the same ThreadID: $nextThreadId")
+                    Log.w("SMSHelper", "getConversations got two messages for the same ThreadID: ${threadInfo.threadId}")
                 }
                 if (firstMessage.isEmpty()) {
-                    Log.e("SMSHelper", "ThreadID: $nextThreadId did not return any messages")
+                    Log.e("SMSHelper", "ThreadID: ${threadInfo.threadId} did not return any messages")
                     // This is a strange issue, but I don't know how to say what is wrong, so just continue along
                     continue
                 }
-                yield(firstMessage[0])
+                yield(ConversationInfo(firstMessage[0], threadInfo.recipients))
             }
         }
     }
@@ -845,6 +858,23 @@ object SMSHelper {
         }
         return addresses
     }
+
+    /**
+     * Represents thread information with recipients
+     */
+    data class ThreadInfo(
+        val threadId: ThreadID,
+        val messageDate: Long,
+        val recipients: List<String>
+    )
+
+    /**
+     * Represents a conversation with its latest message and recipients
+     */
+    data class ConversationInfo(
+        val message: Message,
+        val recipients: List<String>
+    )
 
     /**
      * Represent an ID used to uniquely identify a message thread

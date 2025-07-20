@@ -42,7 +42,6 @@ import com.klinker.android.send_message.Transaction
 import com.klinker.android.send_message.Utils
 import org.apache.commons.io.IOUtils
 import sefirah.common.R
-import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.communication.utils.TelephonyHelper.LocalPhoneNumber
 import sefirah.domain.model.SmsAttachment
@@ -495,15 +494,11 @@ object SmsMmsUtils {
     }
 
 
-    fun SMSHelper.Message.toTextMessage(context: Context): TextMessage {
+    fun SMSHelper.Message.toTextMessage(): TextMessage {
         val addresses = this.addresses.map { it.getAddress() }
-        val contacts = this.addresses.mapNotNull {
-            ContactsHelper().getContactInfo(context, it.getAddress())
-        }
 
         return TextMessage(
             addresses = addresses,
-            contacts = contacts,
             body = this.body,
             timestamp = this.date,
             messageType = this.type,

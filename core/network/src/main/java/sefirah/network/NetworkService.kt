@@ -285,6 +285,14 @@ class NetworkService : Service() {
         }
     }
 
+
+    private suspend fun sendContacts() {
+        ContactsHelper().getAllContacts(this).forEach { contact ->
+            sendMessage(contact)
+            delay(10)
+        }
+    }
+
     private suspend fun finalizeConnection(isNewDevice: Boolean) {
         networkDiscovery.register(NetworkAction.SAVE_NETWORK)
         sendDeviceStatus()
@@ -301,6 +309,7 @@ class NetworkService : Service() {
         }
         if (isNewDevice) {
             sendInstalledApps()
+            sendContacts()
         }
         networkDiscovery.unregister()
     }

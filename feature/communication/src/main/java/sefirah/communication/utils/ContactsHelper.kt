@@ -3,30 +3,31 @@ package sefirah.communication.utils
 import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract
+import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.PhoneLookup
+import android.telephony.PhoneNumberUtils
 import android.util.Base64
 import android.util.Base64OutputStream
 import android.util.Log
 import androidx.core.net.toUri
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.StringUtils
-import sefirah.domain.model.Contact
+import sefirah.domain.model.ContactMessage
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import kotlin.text.Charsets.UTF_8
 
 class ContactsHelper {
-
         /**
      * Get contact information including name, phone number and photo (if available)
      * @param context Context in which the method is called
      * @param phoneNumber Phone number to look up contact information for
      * @return Contact object containing name, phone number and base64 encoded photo
      */
-    fun getContactInfo(context: Context, phoneNumber: String): Contact? {
+    fun getContactInfo(context: Context, phoneNumber: String): ContactMessage? {
         // Check if the number is valid
         val isValidNumber = try {
-            android.telephony.PhoneNumberUtils.isGlobalPhoneNumber(phoneNumber)
+            PhoneNumberUtils.isGlobalPhoneNumber(phoneNumber)
         } catch (e: Exception) {
             false
         }
@@ -37,61 +38,33 @@ class ContactsHelper {
         }
 
         // Look up contact info for valid numbers
-        val contactInfo = phoneNumberLookup(context, phoneNumber)
-        if (contactInfo != null) {
-            val name = contactInfo["name"] ?: phoneNumber
-            val photoBase64 = contactInfo["photoID"]?.let { photoId ->
-                try {
-                    photoId64Encoded(context, photoId)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to encode contact photo", e)
-                    null
-                }
-            }
-            return Contact(
-                phoneNumber = phoneNumber,
-                contactName = name,
-                photoBase64 = photoBase64
-            )
-        }
-        return null
-    }
+        val uri = Uri.withAppendedPath(PhoneLookup.CONTENT_FILTER_URI, Uri.encode(phoneNumber))
 
-    /**
-     * Lookup the name and photoID of a contact given a phone number
-     */
-    private fun phoneNumberLookup(context: Context, number: String?): MutableMap<String, String>? {
-        val contactInfo: MutableMap<String, String> = HashMap()
-
-        val uri = Uri.withAppendedPath(PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number))
-        val columns = arrayOf(
-            PhoneLookup.DISPLAY_NAME,
-            PhoneLookup.PHOTO_URI /*, PhoneLookup.TYPE
-                  , PhoneLookup.LABEL
-                  , PhoneLookup.ID */
-        )
         try {
-            context.contentResolver.query(uri, columns, null, null, null).use { cursor ->
-                // Take the first match only
+            context.contentResolver.query(uri, PROJECTION, null, null, null).use { cursor ->
                 if (cursor != null && cursor.moveToFirst()) {
-                    var nameIndex = cursor.getColumnIndex(PhoneLookup.DISPLAY_NAME)
-                    if (nameIndex != -1) {
-                        contactInfo["name"] = cursor.getString(nameIndex)
-                    }
-
-                    nameIndex = cursor.getColumnIndex(PhoneLookup.PHOTO_URI)
-                    if (nameIndex != -1) {
-                        contactInfo["photoID"] = cursor.getString(nameIndex)
-                    }
+                    val id = cursor.getString(COLUMN_ID)           
+                    val lookupKey = cursor.getString(COLUMN_LOOKUP_KEY)    
+                    val number = cursor.getString(COLUMN_NUMBER)    
+                    val displayName = cursor.getString(COLUMN_DISPLAY_NAME)  
+                    val photoBase64 = photoId64Encoded(context, cursor.getString(COLUMN_PHOTO_URI))
+                    return ContactMessage(
+                        id = id,
+                        lookupKey = lookupKey,
+                        number = number,
+                        displayName = displayName,
+                        photoBase64 = photoBase64
+                    )
                 }
             }
         } catch (ignored: Exception) {
             return null
         }
-        return contactInfo
+
+        return null
     }
 
-    private fun photoId64Encoded(context: Context, photoId: String?): String {
+    private fun photoId64Encoded(context: Context, photoId: String?): String? {
         if (photoId == null) {
             return ""
         }
@@ -112,51 +85,51 @@ class ContactsHelper {
     }
 
     /**
-     * Return all the NAME_RAW_CONTACT_IDS which contribute an entry to a Contact in the database
-     *
-     *
-     * If the user has, for example, joined several contacts, on the phone, the IDs returned will
-     * be representative of the joined contact
-     *
-     *
-     * See here: https://developer.android.com/reference/android/provider/ContactsContract.Contacts.html
-     * for more information about the connection between contacts and raw contacts
+     * Return all contacts with full information including photo, display name, and phone number
      *
      * @param context android.content.Context running the request
-     * @return List of each NAME_RAW_CONTACT_ID in the Contacts database
+     * @return List of ContactMessage objects with complete contact information
      */
-    fun getAllContactContactIDs(context: Context): List<UID> {
-        val toReturn: ArrayList<UID> = ArrayList<UID>()
+    fun getAllContacts(context: Context): List<ContactMessage> {
+        val toReturn: ArrayList<ContactMessage> = ArrayList()
 
-        // Define the columns we want to read from the Contacts database
-        val columns = arrayOf(
-            ContactsContract.Contacts.LOOKUP_KEY
-        )
+        // Query the Phone content URI to get all phone numbers with contact info
+        val contactsUri = Phone.CONTENT_URI 
+        try {
+            context.contentResolver.query(contactsUri, PROJECTION, null, null, Phone.DISPLAY_NAME + " ASC")
+                .use { cursor ->
+                    if (cursor != null && cursor.moveToFirst()) {
+                        do {
+                            val id = cursor.getString(COLUMN_ID)           
+                            val lookupKey = cursor.getString(COLUMN_LOOKUP_KEY)    
+                            val number = cursor.getString(COLUMN_NUMBER)    
+                            val displayName = cursor.getString(COLUMN_DISPLAY_NAME)  
+                            val photoUri = cursor.getString(COLUMN_PHOTO_URI)     
 
-        val contactsUri = ContactsContract.Contacts.CONTENT_URI
-        context.contentResolver.query(contactsUri, columns, null, null, null)
-            .use { contactsCursor ->
-                if (contactsCursor != null && contactsCursor.moveToFirst()) {
-                    do {
-                        val contactID: UID
+                            if (id == null || number == null) {
+                                Log.w(TAG, "Skipping contact with missing essential information")
+                                continue
+                            }
 
-                        val idIndex =
-                            contactsCursor.getColumnIndex(ContactsContract.Contacts.LOOKUP_KEY)
-                        if (idIndex != -1) {
-                            contactID = UID(contactsCursor.getString(idIndex))
-                        } else {
-                            // Something went wrong with this contact
-                            // If you are experiencing this, please open a bug report indicating how you got here
-                            Log.e(TAG, "Got a contact which does not have a LOOKUP_KEY")
-                            continue
-                        }
+                            val photoBase64 = photoId64Encoded(context, photoUri)
 
-                        if (!toReturn.contains(contactID)) {
-                            toReturn.add(contactID)
-                        }
-                    } while (contactsCursor.moveToNext())
+                            val contactMessage = ContactMessage(
+                                id = id,
+                                lookupKey = lookupKey,
+                                number = number,
+                                displayName = displayName,
+                                photoBase64 = photoBase64
+                            )
+
+                            toReturn.add(contactMessage)
+
+                        } while (cursor.moveToNext())
+                    }
                 }
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying contacts", e)
+        }
+
         return toReturn
     }
 
@@ -375,5 +348,19 @@ class ContactsHelper {
 
     companion object {
         const val TAG = "ContactsHelper"
+
+        val PROJECTION = arrayOf(
+            Phone._ID,
+            Phone.LOOKUP_KEY,
+            Phone.NUMBER,
+            Phone.DISPLAY_NAME,
+            Phone.PHOTO_URI,
+        )
+
+        const val COLUMN_ID = 0
+        const val COLUMN_LOOKUP_KEY = 1
+        const val COLUMN_NUMBER = 2
+        const val COLUMN_DISPLAY_NAME = 3
+        const val COLUMN_PHOTO_URI = 4
     }
 }

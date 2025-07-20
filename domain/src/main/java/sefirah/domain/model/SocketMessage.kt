@@ -246,7 +246,6 @@ data class DeviceRingerMode(
 @SerialName("14")
 data class TextMessage(
     val addresses: List<String>,
-    val contacts: List<Contact> = emptyList(),
     val body: String,
     val timestamp: Long = 0,
     val messageType: Int = 0,
@@ -265,6 +264,7 @@ data class TextMessage(
 data class TextConversation(
     val conversationType: ConversationType,
     val threadId: Long,
+    val recipients: List<String> = emptyList(),
     val messages: List<TextMessage> = emptyList()
 ) : SocketMessage()
 
@@ -275,13 +275,6 @@ data class ThreadRequest(
     val rangeStartTimestamp: Long = -1,
     val numberToRequest: Long = -1
 ) : SocketMessage()
-
-@Serializable
-data class Contact(
-    val phoneNumber: String,
-    val contactName: String,
-    val photoBase64: String? = null
-)
 
 @Serializable
 data class SmsAttachment(
@@ -326,4 +319,14 @@ data class ApplicationList(
 data class ActionMessage(
     val actionId: String,
     val actionName: String,
+) : SocketMessage()
+
+@Serializable
+@SerialName("21")
+data class ContactMessage(
+    val id: String,
+    val lookupKey: String,
+    val number: String,
+    val displayName: String,
+    val photoBase64: String?,
 ) : SocketMessage()

@@ -23,6 +23,7 @@ import sefirah.domain.model.AudioDevice
 import sefirah.domain.model.PlaybackSession
 import sefirah.domain.model.PlaybackAction
 import sefirah.domain.model.ActionMessage
+import sefirah.domain.model.ContactMessage
 import javax.inject.Inject
 
 class MessageSerializer @Inject constructor() {
@@ -47,6 +48,7 @@ class MessageSerializer @Inject constructor() {
                 subclass(AudioDevice::class)
                 subclass(PlaybackAction::class)
                 subclass(ActionMessage::class)
+                subclass(ContactMessage::class)
             }
         }
         isLenient = true

@@ -119,13 +119,6 @@ class SmsHandler @Inject constructor(
         // moment we update it. This is because reading the Messages DB can take long.
         mostRecentTimestampLock.lock()
 
-        if (!haveMessagesBeenRequested) {
-            // Since the user has not requested a message, there is most likely nobody listening
-            // for message updates, so just drop them rather than spending battery/time sending
-            // updates that don't matter.
-            mostRecentTimestampLock.unlock()
-            return
-        }
         val messages: List<SMSHelper.Message> = getMessagesInRange(context, null, mostRecentTimestamp, null, false)
         var newMostRecentTimestamp: Long = mostRecentTimestamp
         for (message: SMSHelper.Message? in messages) {
@@ -141,27 +134,28 @@ class SmsHandler @Inject constructor(
         if (messages.isEmpty()) {
             return
         }
-        val threadId = messages[0].threadID.threadID
 
-        val textMessages = messages.map {
-            val text = it.toTextMessage(context)
-            text
+        // Group messages by thread ID since they can belong to different threads
+        val messagesByThread = messages.groupBy { it.threadID.threadID }
+        
+        // Send a separate conversation for each thread
+        messagesByThread.forEach { (threadId, messagesInThread) ->
+            val textMessages = messagesInThread.map {
+                it.toTextMessage()
+            }
+
+            val isNew = !existingThreadIds.contains(threadId)
+
+            val conversation = TextConversation(
+                conversationType = if (isNew) ConversationType.New else ConversationType.ActiveUpdated,
+                threadId = threadId,
+                messages = textMessages
+            )
+            existingThreadIds = existingThreadIds.plus(threadId)
+
+            Log.d(TAG, "conversation: $conversation")
+            sendToDesktop(conversation)
         }
-
-        val isNew = !existingThreadIds.contains(threadId)
-        Log.d(TAG, "isNew: $isNew, threadId: $threadId")
-        Log.d(TAG, "existingThreadIds: $existingThreadIds")
-
-        val conversation = TextConversation(
-            conversationType = if (isNew) ConversationType.New else ConversationType.ActiveUpdated,
-            threadId = threadId,
-            messages = textMessages
-        )
-        existingThreadIds = existingThreadIds.plus(threadId)
-
-        // Send the conversation packet
-        Log.d(TAG, "conversation: $conversation")
-        sendToDesktop(conversation)
     }
 
     /**
@@ -169,25 +163,24 @@ class SmsHandler @Inject constructor(
      */
     private fun sendAllConversations() {
         val conversations = getConversations(this.context)
-        
         // Build a set of thread IDs while we process the conversations
         val currentThreadIds = mutableSetOf<Long>()
         
         // For each conversation (already one message per thread from getConversations)
-        conversations.forEach { message ->
-            val threadId = message.threadID.threadID
+        conversations.forEach { conversationInfo ->
+            val threadId = conversationInfo.message.threadID.threadID
             currentThreadIds.add(threadId)
             
-            val textMessage = message.toTextMessage(context)
+            val textMessage = conversationInfo.message.toTextMessage()
 
             // Create a TextConversation with just this one message
             val conversation = TextConversation(
                 conversationType = ConversationType.Active,
                 threadId = threadId,
+                recipients = conversationInfo.recipients,
                 messages = listOf(textMessage)
             )
             Log.d(TAG, "conversation: $conversation")
-            // Send as a conversation container
             sendToDesktop(conversation)
         }
         
@@ -211,9 +204,9 @@ class SmsHandler @Inject constructor(
             getMessagesInRange(context, threadID, request.rangeStartTimestamp,
                 if (request.numberToRequest < 0) null else request.numberToRequest, true)
         }
-        
+
         // Convert all messages to TextMessage objects
-        val textMessages = messages.map { it.toTextMessage(context) }
+        val textMessages = messages.map { it.toTextMessage() }
 
         // Create a TextConversation containing all messages from this thread
         val conversation = TextConversation(
@@ -259,8 +252,8 @@ class SmsHandler @Inject constructor(
     private fun checkForDeletedThreads() {
         // Get current threads
         val currentThreadIds = mutableSetOf<Long>()
-        getConversations(context).forEach { message ->
-            currentThreadIds.add(message.threadID.threadID)
+        getConversations(context).forEach { conversationInfo ->
+            currentThreadIds.add(conversationInfo.message.threadID.threadID)
         }
 
         // Find deleted threads
