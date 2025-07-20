@@ -356,7 +356,6 @@ class FileTransferService : Service() {
                 val fileSize = metadata.fileSize
                 var currentFileReceived = 0L
                 var lastProgressUpdate = 0L
-                val progressThreshold = 524288L // 512KB
 
                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                 while (currentFileReceived < fileSize) {
@@ -367,6 +366,7 @@ class FileTransferService : Service() {
                     output.write(buffer, 0, bytesRead)
                     currentFileReceived += bytesRead
 
+                    val progressThreshold = maxOf(DEFAULT_BUFFER_SIZE.toLong(), fileSize / 100)
                     if (currentFileReceived - lastProgressUpdate >= progressThreshold || currentFileReceived >= fileSize) {
                         updateTransferProgress(
                             currentFileReceived = currentFileReceived,
@@ -592,7 +592,7 @@ class FileTransferService : Service() {
         private const val TAG = "FileTransferService"
 
         private val PORT_RANGE = 5152..5169
-        private const val DEFAULT_BUFFER_SIZE = 81920 * 5 // 400KB
+        private const val DEFAULT_BUFFER_SIZE = 131072 * 4 // 512 KB
 
         private const val CANCEL_REQUEST_CODE = 100
     }
