@@ -99,7 +99,7 @@ class SyncViewModel @Inject constructor(
                             _isRefreshing.value = false
                             connectionStateJob?.cancel() // Stop collecting after failure
                         }
-                        ConnectionState.Connecting -> {
+                        is ConnectionState.Connecting -> {
                             _isRefreshing.value = true
                         }
                         is ConnectionState.Error -> {
@@ -111,7 +111,6 @@ class SyncViewModel @Inject constructor(
 //                            ).show()
                             connectionStateJob?.cancel()
                         }
-                        else -> {}
                     }
                 }
             } catch (e: Exception) {

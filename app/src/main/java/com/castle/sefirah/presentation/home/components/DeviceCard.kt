@@ -101,7 +101,7 @@ fun DeviceCard(
                             }
                             val connectionStateText : String = when (connectionState) {
                                 ConnectionState.Connected -> stringResource(R.string.status_connected)
-                                ConnectionState.Connecting -> stringResource(R.string.status_connecting)
+                                is ConnectionState.Connecting -> stringResource(R.string.status_connecting)
                                 is ConnectionState.Disconnected -> { stringResource(R.string.status_disconnected) }
                                 is ConnectionState.Error -> { stringResource(R.string.status_disconnected) }
                             }
