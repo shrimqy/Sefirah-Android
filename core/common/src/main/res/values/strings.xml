@@ -183,5 +183,7 @@
     <string name="update_check_confirm">Download</string>
     <string name="action_not_now">Not now</string>
     <string name="update_check_open">Open on Github</string>
+    <string name="error">Error</string>
+    <string name="connection_toggle">Connection toggle</string>
 
 </resources>
