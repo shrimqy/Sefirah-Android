@@ -24,6 +24,7 @@ import sefirah.network.NetworkHelper
 import sefirah.network.NetworkManagerImpl
 import sefirah.network.NsdService
 import sefirah.network.SocketFactoryImpl
+import sefirah.network.extensions.ActionHandler
 import sefirah.network.sftp.SftpServer
 import sefirah.network.util.MessageSerializer
 import sefirah.network.util.TrustManager
@@ -32,7 +33,6 @@ import sefirah.notification.NotificationHandler
 import sefirah.notification.NotificationService
 import sefirah.projection.media.MediaHandler
 import javax.inject.Singleton
-import sefirah.network.extensions.ActionHandler
 
 @Module
 @InstallIn(SingletonComponent::class)
