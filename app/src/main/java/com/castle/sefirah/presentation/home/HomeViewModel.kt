@@ -85,7 +85,19 @@ class HomeViewModel @Inject constructor(
             mediaHandler.updateAudioDeviceVolume(device, volume)
         }
     }
-    
+
+    fun toggleMute(device: AudioDevice) {
+        viewModelScope.launch(Dispatchers.IO) {
+            mediaHandler.toggleMute(device)
+            sendMessage(
+                PlaybackAction(
+                    playbackActionType = PlaybackActionType.ToggleMute,
+                    source = device.deviceId
+                )
+            )
+        }
+    }
+
     fun setDefaultDevice(device: AudioDevice) {
         viewModelScope.launch(Dispatchers.IO) {
             mediaHandler.defaultAudioDevice(device)

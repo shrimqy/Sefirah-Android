@@ -44,7 +44,8 @@ enum class PlaybackActionType {
     Repeat,
     PlaybackRate,
     DefaultDevice,
-    VolumeUpdate
+    VolumeUpdate,
+    ToggleMute
 }
 
 enum class CommandType {
@@ -298,6 +299,7 @@ data class AudioDevice(
     var isSelected: Boolean,
     val deviceName: String,
     var volume: Float,
+    val isMuted: Boolean,
 ) : SocketMessage(), Parcelable
 
 @Serializable

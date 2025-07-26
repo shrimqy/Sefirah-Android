@@ -98,6 +98,18 @@ class MediaHandler @Inject constructor(
         }
     }
 
+    fun toggleMute(device: AudioDevice) {
+        _audioDevices.update { currentDevices ->
+            currentDevices.map {
+                if (it.deviceId == device.deviceId) {
+                    device.copy(isMuted = !device.isMuted)
+                } else {
+                    device
+                }
+            }
+        }
+    }
+
     fun handlePlaybackSessionUpdates(playbackSession: PlaybackSession) {
         when (playbackSession.sessionType) {
             SessionType.Session -> addSession(playbackSession)

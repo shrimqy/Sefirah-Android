@@ -104,10 +104,11 @@ fun HomeScreen(
                     }
                 }
 
-                if (audioDevices.isNotEmpty()) {
+                val selectedDevice = audioDevices.find { it.isSelected } ?: audioDevices.firstOrNull()
+                selectedDevice?.let {
                     item(key = "selected_audio_device") {
                         SelectedAudioDevice(
-                            audioDevices = audioDevices,
+                            device = selectedDevice,
                             onClick = {
                                 scope.launch {
                                     if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden)
@@ -116,7 +117,8 @@ fun HomeScreen(
                                         scaffoldState.bottomSheetState.hide()
                                 }
                             },
-                            onVolumeChange = viewModel::onVolumeChange
+                            onVolumeChange = viewModel::onVolumeChange,
+                            toggleMute = { viewModel.toggleMute(it) },
                         )
                     }
                 }

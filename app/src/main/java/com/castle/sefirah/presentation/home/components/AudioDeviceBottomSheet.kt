@@ -48,12 +48,11 @@ fun AudioDeviceBottomSheet(
 
 @Composable
 fun SelectedAudioDevice(
-    audioDevices: List<AudioDevice>,
+    device: AudioDevice,
     onClick: () -> Unit,
+    toggleMute: () -> Unit,
     onVolumeChange: (AudioDevice, Float) -> Unit,
 ) {
-    val selectedDevice = audioDevices.find { it.isSelected } ?: audioDevices.firstOrNull()
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -71,7 +70,7 @@ fun SelectedAudioDevice(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = selectedDevice?.deviceName ?: "None",
+                    text = device.deviceName,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -82,15 +81,15 @@ fun SelectedAudioDevice(
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
+            VolumeSlider(
+                volume = device.volume * 100,
+                onVolumeChange = { newVolume->
+                    onVolumeChange(device, newVolume / 100f)
+                },
+                isMuted = device.isMuted,
+                toggleMute = toggleMute
+            )
 
-            selectedDevice?.let {
-                VolumeSlider(
-                    volume = it.volume * 100,
-                    onVolumeChange = { newVolume->
-                        onVolumeChange(it, newVolume / 100f)
-                    }
-                )
-            }
         }
     }
 }
@@ -146,7 +145,9 @@ fun AudioDeviceItem(
                 onVolumeChange = { newVolume ->
                     onVolumeChange(device, newVolume / 100f)
                 },
-                modifier = Modifier.padding(start = 12.dp)
+                isMuted = device.isMuted,
+                modifier = Modifier.padding(start = 12.dp),
+                toggleMute = {}
             )
         }
     }
@@ -161,19 +162,22 @@ fun AudioDeviceBottomSheetPreview() {
                 deviceId = "1",
                 isSelected = true,
                 deviceName = "Living Room Speaker",
-                volume = 0.7f
+                volume = 0.7f,
+                isMuted = false
             ),
             AudioDevice(
                 deviceId = "2",
                 isSelected = false,
                 deviceName = "Kitchen Speaker",
-                volume = 0.5f
+                volume = 0.5f,
+                isMuted = true,
             ),
             AudioDevice(
                 deviceId = "3",
                 isSelected = false,
                 deviceName = "Bedroom Speaker",
-                volume = 0.3f
+                volume = 0.3f,
+                isMuted = true
             )
         )
         

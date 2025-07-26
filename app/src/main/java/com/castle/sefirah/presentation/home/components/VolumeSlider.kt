@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Label
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
@@ -29,7 +31,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun VolumeSlider(
     volume: Float,
+    isMuted: Boolean,
     onVolumeChange: (Float) -> Unit,
+    toggleMute: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var sliderPosition by remember { mutableFloatStateOf(volume) }
@@ -48,12 +52,14 @@ fun VolumeSlider(
             .fillMaxWidth()
             .padding(top = 8.dp)
     ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-            contentDescription = "Volume Icon",
-            tint = MaterialTheme.colorScheme.surfaceTint,
-            modifier = Modifier.size(24.dp).padding(start = 0.dp)
-        )
+        IconButton(onClick = toggleMute) {
+            Icon(
+                imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                contentDescription = "Volume Icon",
+                tint = MaterialTheme.colorScheme.surfaceTint,
+                modifier = Modifier.size(24.dp).padding(start = 0.dp)
+            )
+        }
         Slider(
             value = sliderPosition,
             onValueChange = { newValue ->
