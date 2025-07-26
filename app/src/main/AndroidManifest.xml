@@ -79,7 +79,15 @@
             android:excludeFromRecents="true"
             android:theme="@style/TranslucentTheme.Dark" />
 
-        <service android:name="sefirah.network.NetworkService" android:foregroundServiceType="connectedDevice"/>
+        <service android:name="sefirah.network.NetworkService"
+            android:exported="true"
+            android:foregroundServiceType="connectedDevice">
+            <intent-filter>
+                <action android:name="START" />
+                <action android:name="STOP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
         <service android:name="sefirah.network.FileTransferService" android:foregroundServiceType="connectedDevice" />
 
         <service

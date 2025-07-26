@@ -50,9 +50,11 @@ import sefirah.communication.sms.SmsHandler
 import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.database.AppRepository
+import sefirah.database.model.toDomain
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.DeviceStatus
+import sefirah.domain.model.DiscoveryMode
 import sefirah.domain.model.PhoneNumber
 import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.SocketMessage
@@ -125,6 +127,17 @@ class NetworkService : Service() {
                     deviceName = remoteInfo.deviceName
                     _connectionState.value = ConnectionState.Connecting(deviceName)
                     start(remoteInfo)
+                } else if (remoteInfo == null && _connectionState.value.isDisconnected) {
+                    scope.launch {
+                        val lastDevice = appRepository.getLastConnectedDevice()
+                        if (lastDevice != null) {
+                            deviceName = lastDevice.deviceName
+                            _connectionState.value = ConnectionState.Connecting(deviceName)
+                            start(lastDevice.toDomain())
+                        } else {
+                            Log.w(TAG, "No last connected device found for Tasker action")
+                        }
+                    }
                 }
             }
             Actions.STOP.name -> {
@@ -323,9 +336,7 @@ class NetworkService : Service() {
             _connectionState.value = ConnectionState.Disconnected(true)
         } else {
             scope.launch {
-                val autoDiscovery = preferencesRepository.readAutoDiscoverySettings()
-                Log.d(TAG, "Auto discovery: $autoDiscovery")
-                if (autoDiscovery)
+                if (preferencesRepository.readDiscoveryMode() != DiscoveryMode.DISABLED)
                     networkDiscovery.register(NetworkAction.START_DEVICE_DISCOVERY)
             }
             _connectionState.value = ConnectionState.Disconnected()
