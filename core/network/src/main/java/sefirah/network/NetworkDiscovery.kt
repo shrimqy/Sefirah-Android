@@ -41,8 +41,10 @@ import sefirah.database.AppRepository
 import sefirah.database.model.DeviceNetworkCrossRef
 import sefirah.database.model.NetworkEntity
 import sefirah.database.model.toDomain
+import sefirah.domain.model.DiscoveryMode
 import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.UdpBroadcast
+import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.NetworkService.Companion.REMOTE_INFO
 import sefirah.network.util.MessageSerializer
@@ -53,6 +55,7 @@ import javax.inject.Inject
 class NetworkDiscovery @Inject constructor(
     private val nsdService: NsdService,
     private val messageSerializer: MessageSerializer,
+    private val preferencesRepository: PreferencesRepository,
     private val appRepository: AppRepository,
     private val socketFactory: SocketFactory,
     private val context: Context,
@@ -91,7 +94,7 @@ class NetworkDiscovery @Inject constructor(
             && (pairedDeviceListener?.isActive == false || pairedDeviceListener == null)
             && (listenerJob?.isActive == false || listenerJob == null)) {
             // Enable device listener if hotspot is enabled or location permission is not granted
-            if (isHotspotEnabled() || !checkLocationPermissions(context)) {
+            if (isHotspotEnabled() || !checkLocationPermissions(context) || preferencesRepository.readDiscoveryMode() == DiscoveryMode.ALWAYS_ON) {
                 Log.d(TAG, "Starting paired device listener")
                 startPairedDeviceListener()
                 return

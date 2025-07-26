@@ -28,8 +28,10 @@ import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
 import sefirah.common.util.smsPermissionGranted
 import sefirah.database.AppRepository
+import sefirah.database.model.NetworkEntity
 import sefirah.database.model.toDomain
 import sefirah.database.model.toEntity
+import sefirah.domain.model.DiscoveryMode
 import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.PreferencesSettings
 import sefirah.domain.repository.PreferencesRepository
@@ -50,6 +52,12 @@ class SettingsViewModel @Inject constructor(
 
     private val _localDevice = MutableStateFlow<LocalDevice?>(null)
     val localDevice: StateFlow<LocalDevice?> = _localDevice
+
+    private val _networkList = MutableStateFlow<List<NetworkEntity>>(emptyList())
+    val networkList: StateFlow<List<NetworkEntity>> = _networkList
+
+    private val _discoveryMode = MutableStateFlow(DiscoveryMode.AUTO)
+    val discoveryMode: StateFlow<DiscoveryMode> = _discoveryMode
 
     var appEntryValue by mutableStateOf(false)
 
@@ -75,6 +83,18 @@ class SettingsViewModel @Inject constructor(
             appRepository.getLocalDeviceFlow().collectLatest { device ->
                 _localDevice.value = device?.toDomain()
             }
+        }
+
+        // Load network list and discovery mode
+        viewModelScope.launch {
+            appRepository.getAllNetworksFlow().collectLatest { networks ->
+                _networkList.value = networks
+            }
+        }
+
+        viewModelScope.launch {
+            val mode = preferencesRepository.readDiscoveryMode()
+            _discoveryMode.value = mode
         }
     }
 
@@ -171,13 +191,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-
-    fun saveAutoDiscoverySettings(boolean: Boolean) {
-        viewModelScope.launch {
-            preferencesRepository.saveAutoDiscoverySettings(boolean)
-        }
-    }
-
     fun saveImageClipboardSettings(boolean: Boolean) {
         viewModelScope.launch {
             preferencesRepository.saveImageClipboardSettings(boolean)
@@ -204,6 +217,26 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d(TAG, "Saving remoteStorage setting: $boolean")
             preferencesRepository.saveRemoteStorageSettings(boolean)
+        }
+    }
+
+    // Network-related methods
+    fun updateNetwork(network: NetworkEntity) {
+        viewModelScope.launch {
+            appRepository.updateNetwork(network)
+        }
+    }
+
+    fun deleteNetwork(network: NetworkEntity) {
+        viewModelScope.launch {
+            appRepository.deleteNetwork(network)
+        }
+    }
+
+    fun saveDiscoveryMode(discoveryMode: DiscoveryMode) {
+        viewModelScope.launch {
+            preferencesRepository.saveDiscoveryMode(discoveryMode)
+            _discoveryMode.value = discoveryMode
         }
     }
 }

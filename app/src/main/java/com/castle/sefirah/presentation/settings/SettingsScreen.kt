@@ -21,7 +21,6 @@ import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
@@ -257,39 +256,6 @@ fun SettingsScreen(
                 },
                 viewModel = viewModel
             )
-        }
-
-        item {
-            SwitchPermissionPrefWidget(
-                title = stringResource(R.string.auto_device_discovery_preference),
-                subtitle = stringResource(R.string.auto_device_discovery_subtitle),
-                icon = Icons.Default.DesktopWindows,
-                checked = preferencesSettings?.autoDiscovery == true,
-                permission = Manifest.permission.ACCESS_FINE_LOCATION,
-                onCheckedChanged = { checked ->
-                    viewModel.saveAutoDiscoverySettings(checked)
-                },
-                onRequest = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        // First request foreground permissions
-                        foregroundLocationRequester.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
-                        )
-                    } else {
-                        // For Android 9 and below, request only foreground location
-                        foregroundLocationRequester.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
-                        )
-                    }
-                },
-                viewModel = viewModel
-            )   
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

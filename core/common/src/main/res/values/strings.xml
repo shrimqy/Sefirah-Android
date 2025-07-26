@@ -185,5 +185,10 @@
     <string name="update_check_open">Open on Github</string>
     <string name="error">Error</string>
     <string name="connection_toggle">Connection toggle</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="auto_discovery">Auto discovery</string>
+    <string name="always_on">Always on</string>
+    <string name="disabled">Disabled</string>
+    <string name="device_discovery">Device discovery</string>
 
 </resources>

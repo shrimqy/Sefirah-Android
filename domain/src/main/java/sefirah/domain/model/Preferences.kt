@@ -1,8 +1,14 @@
 package sefirah.domain.model
 
+enum class DiscoveryMode {
+    AUTO,
+    ALWAYS_ON,
+    DISABLED
+}
+
 data class PreferencesSettings( 
     val language: String,
-    val autoDiscovery: Boolean,
+    val discoveryMode: DiscoveryMode,
     val storageLocation: String,
     val readSensitiveNotifications: Boolean,
     val notificationSync: Boolean,

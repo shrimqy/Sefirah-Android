@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import sefirah.domain.model.DiscoveryMode
 import sefirah.domain.model.PreferencesSettings
 import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
@@ -26,7 +27,7 @@ class PreferencesDatastore @Inject constructor(
 
     override suspend fun readAppEntry(): Boolean {
         return datastore.data.map { preferences ->
-            preferences[APP_ENTRY] ?: false
+            preferences[APP_ENTRY] == true
         }.first()
     }
 
@@ -42,7 +43,7 @@ class PreferencesDatastore @Inject constructor(
 
     override fun readSyncStatus(): Flow<Boolean> {
         return datastore.data.map { status ->
-            status[SYNC_STATUS] ?: false
+            status[SYNC_STATUS] == true
         }
     }
 
@@ -58,15 +59,27 @@ class PreferencesDatastore @Inject constructor(
         }
     }
 
-    override suspend fun readAutoDiscoverySettings(): Boolean {
+    override suspend fun readDiscoveryMode(): DiscoveryMode {
         return datastore.data.map { preferences ->
-            preferences[AUTO_DISCOVERY] ?: true
+            val modeString = preferences[DISCOVERY_MODE] ?: DiscoveryMode.AUTO.name
+            try {
+                DiscoveryMode.valueOf(modeString)
+            } catch (e: IllegalArgumentException) {
+                DiscoveryMode.AUTO
+            }
         }.first()
     }
 
+    override fun readDiscoveryModeFlow(): Flow<DiscoveryMode> {
+        return datastore.data.map { preferences ->
+            val modeString = preferences[DISCOVERY_MODE] ?: DiscoveryMode.AUTO.name
+            DiscoveryMode.valueOf(modeString)
+        }
+    }
 
-    override suspend fun saveAutoDiscoverySettings(discoverySettings: Boolean) {
-        AUTO_DISCOVERY.update(discoverySettings)
+
+    override suspend fun saveDiscoveryMode(discoveryMode: DiscoveryMode) {
+        DISCOVERY_MODE.update(discoveryMode.name)
     }
 
 
@@ -77,7 +90,7 @@ class PreferencesDatastore @Inject constructor(
 
     override fun readClipboardSyncSettings(): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            preferences[CLIPBOARD_SYNC] ?: true
+            preferences[CLIPBOARD_SYNC] != false
         }
     }
 
@@ -87,7 +100,7 @@ class PreferencesDatastore @Inject constructor(
 
     override fun readNotificationSyncSettings(): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            preferences[NOTIFICATION_SYNC] ?: true
+            preferences[NOTIFICATION_SYNC] != false
         }
     }
 
@@ -97,7 +110,7 @@ class PreferencesDatastore @Inject constructor(
 
     override fun readMediaSessionSettings(): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            preferences[MEDIA_SESSION] ?: true
+            preferences[MEDIA_SESSION] != false
         }
     }
 
@@ -108,7 +121,7 @@ class PreferencesDatastore @Inject constructor(
 
     override fun readImageClipboardSettings(): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            preferences[IMAGE_CLIPBOARD] ?: true
+            preferences[IMAGE_CLIPBOARD] != false
         }
     }
 
@@ -129,7 +142,7 @@ class PreferencesDatastore @Inject constructor(
 
     override fun readMessageSyncSettings(): Flow<Boolean> { 
         return datastore.data.map { preferences ->
-            preferences[MESSAGE_SYNC] ?: true
+            preferences[MESSAGE_SYNC] != false
         }
     }
 
@@ -165,7 +178,7 @@ class PreferencesDatastore @Inject constructor(
 
     override fun readRemoteStorageSettings(): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            preferences[REMOTE_STORAGE] ?: true
+            preferences[REMOTE_STORAGE] != false
         }
     }
 
@@ -177,7 +190,7 @@ class PreferencesDatastore @Inject constructor(
 
     override fun readPassiveDiscoverySettings(): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            preferences[PASSIVE_DISCOVERY] ?: true
+            preferences[PASSIVE_DISCOVERY] != false
         }
     }
 
@@ -202,19 +215,19 @@ class PreferencesDatastore @Inject constructor(
             emit(emptyPreferences())
         }.map { preferences->
             val language = preferences[LANGUAGE] ?: "system"
-            val discovery = preferences[AUTO_DISCOVERY] ?: true
+            val discoveryMode = DiscoveryMode.valueOf(preferences[DISCOVERY_MODE] ?: DiscoveryMode.AUTO.name)
             val storageLocation = preferences[STORAGE_LOCATION] ?: ""
-            val readSensitiveNotifications = preferences[READ_SENSITIVE_NOTIFICATIONS] ?: false
-            val notificationSync =  preferences[NOTIFICATION_SYNC] ?: true
-            val imageClipboard = preferences[IMAGE_CLIPBOARD] ?: true
-            val messageSync = preferences[MESSAGE_SYNC] ?: true
-            val clipboardSync = preferences[CLIPBOARD_SYNC] ?: true
-            val mediaSession = preferences[MEDIA_SESSION] ?: true
-            val remoteStorage = preferences[REMOTE_STORAGE] ?: true
+            val readSensitiveNotifications = preferences[READ_SENSITIVE_NOTIFICATIONS] == true
+            val notificationSync = preferences[NOTIFICATION_SYNC] != false
+            val imageClipboard = preferences[IMAGE_CLIPBOARD] != false
+            val messageSync = preferences[MESSAGE_SYNC] != false
+            val clipboardSync = preferences[CLIPBOARD_SYNC] != false
+            val mediaSession = preferences[MEDIA_SESSION] != false
+            val remoteStorage = preferences[REMOTE_STORAGE] != false
 
             PreferencesSettings(
                 language = language,
-                autoDiscovery =  discovery,
+                discoveryMode = discoveryMode,
                 storageLocation =  storageLocation,
                 readSensitiveNotifications = readSensitiveNotifications,
                 notificationSync = notificationSync,
@@ -233,7 +246,7 @@ class PreferencesDatastore @Inject constructor(
         val LANGUAGE = stringPreferencesKey("language")
         val SYNC_STATUS = booleanPreferencesKey("syncStatus")
         val LAST_CONNECTED = stringPreferencesKey("lastConnected")
-        val AUTO_DISCOVERY = booleanPreferencesKey("autoDiscovery")
+        val DISCOVERY_MODE = stringPreferencesKey("discoveryMode")
         val CLIPBOARD_SYNC = booleanPreferencesKey("clipboardSync")
         val READ_SENSITIVE_NOTIFICATIONS = booleanPreferencesKey("readSensitiveNotifications")
         val MEDIA_SESSION = booleanPreferencesKey("mediaSession")

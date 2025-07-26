@@ -1,6 +1,7 @@
 package sefirah.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import sefirah.domain.model.DiscoveryMode
 import sefirah.domain.model.PreferencesSettings
 
 interface PreferencesRepository {
@@ -19,8 +20,9 @@ interface PreferencesRepository {
     suspend fun saveLastConnected(hostAddress: String)
     fun readLastConnected(): Flow<String?>
 
-    suspend fun saveAutoDiscoverySettings(discoverySettings: Boolean)
-    suspend fun readAutoDiscoverySettings(): Boolean
+    suspend fun saveDiscoveryMode(discoveryMode: DiscoveryMode)
+    suspend fun readDiscoveryMode(): DiscoveryMode
+    fun readDiscoveryModeFlow(): Flow<DiscoveryMode>
 
     suspend fun updateStorageLocation(uri: String)
     suspend fun getStorageLocation(): Flow<String>
