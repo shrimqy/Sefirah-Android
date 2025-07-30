@@ -51,6 +51,7 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.lang.Thread.sleep
 import java.net.Socket
 import javax.inject.Inject
 import javax.net.ssl.SSLServerSocket
@@ -109,6 +110,22 @@ class FileTransferService : Service() {
                 }
             }
 
+            ACTION_SEND_BULK_FILES -> {
+                val fileUris = intent.getParcelableArrayListExtra<Uri>(EXTRA_FILE_URIS) ?: run {
+                    Log.e(TAG, "No URIs provided in intent")
+                    return START_NOT_STICKY
+                }
+                serviceScope.launch {
+                    try {
+                        Log.d(TAG, "Starting bulk file transfer process for ${fileUris.size} files")
+                        sendBulkFiles(fileUris)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Bulk file transfer failed", e)
+                        updateNotificationForError(e.message ?: "Bulk transfer failed")
+                    }
+                }
+            }
+
             ACTION_RECEIVE_FILE -> {
                 val fileTransfer = intent.getParcelableExtra<FileTransfer>(EXTRA_FILE_TRANSFER)
                 val bulkTransfer = intent.getParcelableExtra<BulkFileTransfer>(EXTRA_BULK_TRANSFER)
@@ -143,62 +160,109 @@ class FileTransferService : Service() {
     }
 
     private suspend fun sendFile(fileUri: Uri) {
-        val fileName = getFileMetadata(this, fileUri).fileName
-        setupNotification(TransferType.Sending(fileName))
+        val fileMetadata = getFileMetadata(this, fileUri)
+        setupNotification(TransferType.Sending(fileMetadata.fileName))
+        
+        val password = generateRandomPassword()
+        val serverInfo = initializeServer(password) ?: return
+        networkManager.sendMessage(FileTransfer(serverInfo, fileMetadata))
+        
+        sendFileInternal(
+            fileUris = listOf(fileUri),
+            filesMetadata = listOf(fileMetadata),
+            password = password,
+            isBulk = false
+        )
+    }
+
+    private suspend fun sendBulkFiles(fileUris: List<Uri>) {
+        val filesMetadata = fileUris.map { getFileMetadata(this, it) }
+        setupNotification(TransferType.Sending("${filesMetadata.size} files"))
+        
+        val password = generateRandomPassword()
+        val serverInfo = initializeServer(password) ?: return
+        networkManager.sendMessage(BulkFileTransfer(serverInfo, filesMetadata))
+        
+        sendFileInternal(
+            fileUris = fileUris,
+            filesMetadata = filesMetadata,
+            password = password,
+            isBulk = true
+        )
+    }
+
+    private suspend fun sendFileInternal(
+        fileUris: List<Uri>,
+        filesMetadata: List<FileMetadata>,
+        password: String,
+        isBulk: Boolean
+    ) {
         try {
-            val password = generateRandomPassword()
-            val serverInfo = initializeServer(password) ?: return
-            fileInputStream = this.contentResolver.openInputStream(fileUri)
-            val fileMetadata = getFileMetadata(this, fileUri)
-
-            val message = FileTransfer(serverInfo, fileMetadata)
-            networkManager.sendMessage(message)
-
             withContext(Dispatchers.IO) {
                 socket = serverSocket?.accept() as? SSLSocket
                     ?: throw IOException("Failed to accept SSL connection")
 
                 val outputStream = socket!!.getOutputStream()
                 val inputStream = socket!!.getInputStream()
-
                 val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
 
                 withTimeout(5000) {
                     if (reader.readLine() != password) throw IOException("Invalid password")
                 }
 
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                var bytesRead: Int
+                val totalSize = filesMetadata.sumOf { it.fileSize }
                 var totalBytesTransferred = 0L
 
-                try {
-                    // Send the file data
+                fileUris.forEachIndexed { index, fileUri ->
+                    val fileMetadata = filesMetadata[index]
+
+                    if (isBulk) {
+                        setupNotification(TransferType.Sending("${fileMetadata.fileName} (${index + 1}/${fileUris.size})"))
+                    }
+                    fileInputStream = contentResolver.openInputStream(fileUri)
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    var bytesRead: Int
+                    outputStream.flush()
+
                     while (fileInputStream?.read(buffer).also { bytesRead = it ?: -1 } != -1) {
                         outputStream.write(buffer, 0, bytesRead)
                         outputStream.flush()
 
                         totalBytesTransferred += bytesRead
-                        updateTransferProgress(totalBytesTransferred, fileMetadata.fileSize)
+                        updateTransferProgress(totalBytesTransferred, totalSize)
                     }
-
-                    // Signal end of file stream
                     outputStream.flush()
-                    socket?.shutdownOutput()
+                    fileInputStream?.close()
+                    fileInputStream = null
 
                     withTimeout(5000) {
-                        if (reader.readLine() == "Complete") {
-                            delay(1000)
-                            withContext(Dispatchers.Main) {
-                                showCompletedNotification()
-                            }
-                        } else {
-                            throw IOException("Invalid confirmation received")
-                        }
+                        val message = reader.readLine()
+                        if (message != FILE_TRANSFER_COMPLETION)
+                            throw IOException("Invalid bulk transfer confirmation received: '$message'")
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error during file transfer", e)
-                    throw IOException("File transfer interrupted", e)
+                    sleep(150)
                 }
+
+                // Signal end of transfer
+                outputStream.flush()
+
+                withTimeout(5000) {
+                    val finalMessage = reader.readLine()
+                    if (finalMessage == FILE_TRANSFER_COMPLETION) {
+                        delay(100)
+                        withContext(Dispatchers.Main) {
+                            showBulkTransferCompletedNotification(fileUris.size)
+                        }
+                    } else {
+                        throw IOException("Invalid bulk transfer confirmation received")
+                    }
+                }
+                
+                // Shutdown output after receiving final confirmation
+                socket?.shutdownOutput()
+            }
+            withContext(Dispatchers.Main) {
+                showCompletedNotification()
             }
         } catch (e: Exception) {
             Log.e(TAG, "File transfer failed", e)
@@ -216,8 +280,6 @@ class FileTransferService : Service() {
             try {
                 serverSocket = ipAddress?.let { socketFactory.tcpServerSocket(port, it) } ?: return null
                 Log.d(TAG, "Server socket created on ${ipAddress}:${port}, waiting for client to connect")
-
-
                 return ServerInfo(ipAddress, port, password)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to create server socket on port $port, trying next port", e)
@@ -247,13 +309,13 @@ class FileTransferService : Service() {
                 readChannel = readChannel,
                 metadata = fileTransfer.fileMetadata
             )
-            writeChannel.writeStringUtf8("Success")
+            writeChannel.writeStringUtf8(FILE_TRANSFER_COMPLETION)
             writeChannel.flush()
 
             showCompletedNotification(fileUri = fileUri, mimeType = fileTransfer.fileMetadata.mimeType)
             
             if (preferencesRepository.readImageClipboardSettings().first()) {
-                val clipboardManager = this.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clipboardManager = this.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                 clipboardManager.setPrimaryClip(ClipData.newUri(contentResolver, "received file", fileUri))
             }
         } finally {
@@ -294,7 +356,7 @@ class FileTransferService : Service() {
                         totalReceived = totalReceived,
                         totalSize = totalSize
                     )
-                    writeChannel.writeStringUtf8("Success")
+                    writeChannel.writeStringUtf8(FILE_TRANSFER_COMPLETION)
                     writeChannel.flush()
                     totalReceived += metadata.fileSize
                     
@@ -584,10 +646,13 @@ class FileTransferService : Service() {
     companion object {
 
         const val ACTION_SEND_FILE = "sefirah.network.action.SEND_FILE"
+        const val ACTION_SEND_BULK_FILES = "sefirah.network.action.SEND_BULK_FILES"
         const val ACTION_RECEIVE_FILE = "sefirah.network.action.RECEIVE_FILE"
         const val EXTRA_FILE_TRANSFER = "sefirah.network.extra.FILE_TRANSFER"
         const val EXTRA_BULK_TRANSFER = "sefirah.network.extra.BULK_TRANSFER"
+        const val EXTRA_FILE_URIS = "sefirah.network.extra.FILE_URIS"
         const val ACTION_CANCEL_TRANSFER = "sefirah.network.action.CANCEL_TRANSFER"
+        const val FILE_TRANSFER_COMPLETION = "Complete"
 
         private const val TAG = "FileTransferService"
 
@@ -597,3 +662,4 @@ class FileTransferService : Service() {
         private const val CANCEL_REQUEST_CODE = 100
     }
 }
+

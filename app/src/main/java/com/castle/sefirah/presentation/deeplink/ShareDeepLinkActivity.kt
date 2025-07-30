@@ -12,6 +12,8 @@ import kotlinx.coroutines.launch
 import sefirah.domain.model.ClipboardMessage
 import sefirah.network.FileTransferService
 import sefirah.network.FileTransferService.Companion.ACTION_SEND_FILE
+import sefirah.network.FileTransferService.Companion.ACTION_SEND_BULK_FILES
+import sefirah.network.FileTransferService.Companion.EXTRA_FILE_URIS
 
 @AndroidEntryPoint
 class ShareDeepLinkActivity: BaseActivity() {
@@ -44,20 +46,35 @@ class ShareDeepLinkActivity: BaseActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_SEND) {
-            Log.d("ShareDeepLinkActivity", "Handling intent: ${intent.type}")
-            when {
-                intent.type?.startsWith("text/plain") == true -> handleText(intent)
-                intent.type?.startsWith("image/") == true -> handleFileTransfer(intent)
-                intent.type?.startsWith("video/") == true -> handleFileTransfer(intent)
-                intent.type?.startsWith("application/") == true -> handleFileTransfer(intent)
-                else -> {
-                    handleFileTransfer(intent)
+        when (intent?.action) {
+            Intent.ACTION_SEND -> {
+                Log.d("ShareDeepLinkActivity", "Handling single share intent: ${intent.type}")
+                when {
+                    intent.type?.startsWith("text/plain") == true -> handleText(intent)
+                    intent.type?.startsWith("image/") == true -> handleSingleFileTransfer(intent)
+                    intent.type?.startsWith("video/") == true -> handleSingleFileTransfer(intent)
+                    intent.type?.startsWith("application/") == true -> handleSingleFileTransfer(intent)
+                    else -> {
+                        handleSingleFileTransfer(intent)
+                    }
                 }
             }
-        } else {
-            Log.e("ShareToPc", "Unsupported intent action: ${intent?.action}")
-            finishAffinity()
+            Intent.ACTION_SEND_MULTIPLE -> {
+                Log.d("ShareDeepLinkActivity", "Handling multiple share intent: ${intent.type}")
+                when {
+                    intent.type?.startsWith("text/plain") == true -> handleText(intent)
+                    intent.type?.startsWith("image/") == true -> handleMultipleFileTransfer(intent)
+                    intent.type?.startsWith("video/") == true -> handleMultipleFileTransfer(intent)
+                    intent.type?.startsWith("application/") == true -> handleMultipleFileTransfer(intent)
+                    else -> {
+                        handleMultipleFileTransfer(intent)
+                    }
+                }
+            }
+            else -> {
+                Log.e("ShareToPc", "Unsupported intent action: ${intent?.action}")
+                finishAffinity()
+            }
         }
     }
 
@@ -73,9 +90,9 @@ class ShareDeepLinkActivity: BaseActivity() {
         }
     }
 
-    private fun handleFileTransfer(intent: Intent) {
+    private fun handleSingleFileTransfer(intent: Intent) {
         val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-        Log.d("ShareToPc", "Handling file share: $uri")
+        Log.d("ShareToPc", "Handling single file share: $uri")
 
         if (uri != null) {
             val serviceIntent = Intent(applicationContext, FileTransferService::class.java).apply {
@@ -85,6 +102,22 @@ class ShareDeepLinkActivity: BaseActivity() {
             startForegroundService(serviceIntent)
         } else {
             Log.e("ShareToPc", "Received null URI")
+            finishAffinity()
+        }
+    }
+
+    private fun handleMultipleFileTransfer(intent: Intent) {
+        val uris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+        Log.d("ShareToPc", "Handling multiple file share: ${uris?.size} files")
+
+        if (!uris.isNullOrEmpty()) {
+            val serviceIntent = Intent(applicationContext, FileTransferService::class.java).apply {
+                action = ACTION_SEND_BULK_FILES
+                putParcelableArrayListExtra(EXTRA_FILE_URIS, uris)
+            }
+            startForegroundService(serviceIntent)
+        } else {
+            Log.e("ShareToPc", "Received null or empty URIs")
             finishAffinity()
         }
     }
