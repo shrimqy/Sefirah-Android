@@ -142,7 +142,7 @@ class ConnectionToggleTileService : TileService() {
                     TileData(
                         label = "Unknown",
                         tileState = Tile.STATE_UNAVAILABLE,
-                        icon = Icon.createWithResource(this@ConnectionToggleTileService, R.drawable.ic_connection),
+                        icon = Icon.createWithResource(this@ConnectionToggleTileService, sefirah.presentation.R.drawable.sync_problem),
                     )
                 }
             }
