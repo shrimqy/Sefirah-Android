@@ -29,7 +29,7 @@ interface AppDatabase {
     companion object {
         private const val DATABASE_NAME = "sefirah.db"
         
-        // Migration from version 2 to 3 (removing wallpaperBase64 from LocalDeviceEntity)
+        // Migration from version 1 to 2 (removing wallpaperBase64 from LocalDeviceEntity)
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -48,10 +48,30 @@ interface AppDatabase {
             }
         }
         
+        // Migration from version 2 to 3 (adding model field to LocalDeviceEntity)
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS LocalDeviceEntity_new (" +
+                    "deviceId TEXT NOT NULL PRIMARY KEY, " +
+                    "deviceName TEXT NOT NULL, " +
+                    "model TEXT NOT NULL, " +
+                    "publicKey TEXT NOT NULL, " +
+                    "privateKey TEXT NOT NULL)"
+                )
+                db.execSQL(
+                    "INSERT INTO LocalDeviceEntity_new (deviceId, deviceName, model, publicKey, privateKey) " +
+                    "SELECT deviceId, deviceName, 'Unknown', publicKey, privateKey FROM LocalDeviceEntity"
+                )
+                db.execSQL("DROP TABLE LocalDeviceEntity")
+                db.execSQL("ALTER TABLE LocalDeviceEntity_new RENAME TO LocalDeviceEntity")
+            }
+        }
+        
         fun createRoom(context: Context): AppDatabase = Room
             .databaseBuilder(context, AppRoomDatabase::class.java, DATABASE_NAME)
             .fallbackToDestructiveMigration()
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 }
@@ -66,7 +86,7 @@ interface AppDatabase {
         CustomIpEntity::class,
         DeviceCustomIpCrossRef::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

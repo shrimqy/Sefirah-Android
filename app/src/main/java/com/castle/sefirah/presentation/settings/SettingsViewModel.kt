@@ -2,6 +2,7 @@ package com.castle.sefirah.presentation.settings
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.os.Build
 import android.provider.Settings.Global
 import android.provider.Settings.Secure
 import android.util.Log
@@ -142,6 +143,7 @@ class SettingsViewModel @Inject constructor(
                     LocalDevice(
                         deviceId = androidId,
                         deviceName = deviceName,
+                        model = Build.MODEL,
                         publicKey = publicKey,
                         privateKey = privateKey,
                     ).toEntity()

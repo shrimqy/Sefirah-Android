@@ -285,6 +285,7 @@ class NetworkService : Service() {
         sendMessage(DeviceInfo(
             deviceId = localDevice.deviceId,
             deviceName = localDevice.deviceName,
+            model = localDevice.model,
             publicKey = localDevice.publicKey,
             avatar = wallpaperBase64,
             nonce = nonce,

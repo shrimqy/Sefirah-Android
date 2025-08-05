@@ -80,6 +80,7 @@ data class CommandMessage(
 data class DeviceInfo(
     val deviceId: String,
     val deviceName: String,
+    val model: String? = null,
     val avatar: String? = null,
     val publicKey: String? = null,
     val nonce: String? = null,
@@ -299,7 +300,7 @@ data class AudioDevice(
     var isSelected: Boolean,
     val deviceName: String,
     var volume: Float,
-    val isMuted: Boolean,
+    var isMuted: Boolean,
 ) : SocketMessage(), Parcelable
 
 @Serializable

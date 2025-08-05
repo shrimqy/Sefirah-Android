@@ -8,6 +8,7 @@ import sefirah.domain.model.LocalDevice
 data class LocalDeviceEntity (
     @PrimaryKey val deviceId: String,
     val deviceName: String,
+    val model: String,
     val publicKey: String,
     val privateKey: String,
 )
@@ -15,6 +16,7 @@ data class LocalDeviceEntity (
 fun LocalDeviceEntity.toDomain(): LocalDevice = LocalDevice(
     deviceId = deviceId,
     deviceName = deviceName,
+    model = model,
     publicKey = publicKey,
     privateKey = privateKey,
 )
@@ -22,6 +24,7 @@ fun LocalDeviceEntity.toDomain(): LocalDevice = LocalDevice(
 fun LocalDevice.toEntity(): LocalDeviceEntity = LocalDeviceEntity(
     deviceId = deviceId,
     deviceName = deviceName,
+    model = model,
     publicKey = publicKey,
     privateKey = privateKey,
 )
