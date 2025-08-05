@@ -60,6 +60,9 @@ fun HomeScreen(
                 onVolumeChange = viewModel::onVolumeChange,
                 onDefaultDeviceSelected = { device ->
                     viewModel.setDefaultDevice(device)
+                },
+                onToggleMute = { device ->
+                    viewModel.toggleMute(device)
                 }
             )
         },

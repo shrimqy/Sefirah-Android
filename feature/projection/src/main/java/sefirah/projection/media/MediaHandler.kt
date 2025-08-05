@@ -99,12 +99,12 @@ class MediaHandler @Inject constructor(
     }
 
     fun toggleMute(device: AudioDevice) {
-        _audioDevices.update { currentDevices ->
-            currentDevices.map {
+        _audioDevices.update { devices ->
+            devices.map {
                 if (it.deviceId == device.deviceId) {
-                    device.copy(isMuted = !device.isMuted)
+                    it.copy(isMuted = !it.isMuted)
                 } else {
-                    device
+                    it
                 }
             }
         }

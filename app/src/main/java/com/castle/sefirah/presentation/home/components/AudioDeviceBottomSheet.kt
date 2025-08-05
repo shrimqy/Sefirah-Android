@@ -25,7 +25,8 @@ import sefirah.domain.model.AudioDevice
 fun AudioDeviceBottomSheet(
     audioDevices: List<AudioDevice>,
     onVolumeChange: (AudioDevice, Float) -> Unit,
-    onDefaultDeviceSelected: (AudioDevice) -> Unit
+    onDefaultDeviceSelected: (AudioDevice) -> Unit,
+    onToggleMute: (AudioDevice) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -39,7 +40,8 @@ fun AudioDeviceBottomSheet(
                 AudioDeviceItem(
                     device = device,
                     onVolumeChange = onVolumeChange,
-                    onDeviceSelected = onDefaultDeviceSelected
+                    onDeviceSelected = onDefaultDeviceSelected,
+                    onToggleMute = onToggleMute
                 )
             }
         }
@@ -50,7 +52,7 @@ fun AudioDeviceBottomSheet(
 fun SelectedAudioDevice(
     device: AudioDevice,
     onClick: () -> Unit,
-    toggleMute: () -> Unit,
+    toggleMute: (AudioDevice) -> Unit,
     onVolumeChange: (AudioDevice, Float) -> Unit,
 ) {
     Card(
@@ -87,7 +89,7 @@ fun SelectedAudioDevice(
                     onVolumeChange(device, newVolume / 100f)
                 },
                 isMuted = device.isMuted,
-                toggleMute = toggleMute
+                toggleMute = { toggleMute(device) }
             )
 
         }
@@ -98,7 +100,8 @@ fun SelectedAudioDevice(
 fun AudioDeviceItem(
     device: AudioDevice,
     onVolumeChange: (AudioDevice, Float) -> Unit,
-    onDeviceSelected: (AudioDevice) -> Unit
+    onDeviceSelected: (AudioDevice) -> Unit,
+    onToggleMute: (AudioDevice) -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -147,7 +150,7 @@ fun AudioDeviceItem(
                 },
                 isMuted = device.isMuted,
                 modifier = Modifier.padding(start = 12.dp),
-                toggleMute = {}
+                toggleMute = { onToggleMute(device) }
             )
         }
     }
@@ -184,7 +187,8 @@ fun AudioDeviceBottomSheetPreview() {
         AudioDeviceBottomSheet(
             audioDevices = sampleDevices,
             onVolumeChange = { _, _ -> },
-            onDefaultDeviceSelected = { }
+            onDefaultDeviceSelected = { },
+            onToggleMute = { }
         )
     }
 } 
