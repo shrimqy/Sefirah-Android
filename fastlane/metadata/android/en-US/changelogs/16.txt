@@ -1,0 +1,13 @@
+• feat: Allow manual refresh of the app list
+• feat: Implement receiving bulk file transfers
+• feat: Add Quick Settings tile to toggle connection
+• feat: Add mute toggle for audio devices
+• feat: Add network discovery options (for mesh VPN users, switch to "Always on" for auto-reconnection)
+• feat: Add custom actions support (temporarily removed long-press for timer)
+• feat: Add a public intent for Tasker and other automation apps (START action connects to the last connected device, STOP disconnects)
+• refactor: Optimize image loading in DeviceCard
+• refactor: Improve SMS services data handling
+• refactor: Use saved local device name for the SFTP server
+• fix: File transfer notification updates properly
+• fix: Added missing "Connect" action implementation on the device screen
+• fix: Improve connection state handling
