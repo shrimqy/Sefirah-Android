@@ -13,6 +13,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.text.SpannableString
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.core.os.bundleOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -214,6 +215,7 @@ class NotificationService @Inject constructor(
         // Check if the notification is ongoing, media-style, or belongs to the 'progress' category
         if ((notification.flags and Notification.FLAG_ONGOING_EVENT) != 0
             || (notification.flags and Notification.FLAG_FOREGROUND_SERVICE) != 0
+            || (notification.flags and NotificationCompat.FLAG_GROUP_SUMMARY) != 0
             || notification.isMediaStyle()
             || hasProgress) {
             return
@@ -341,8 +343,7 @@ class NotificationService @Inject constructor(
                 notificationType = notificationType
             )
 
-            if (notificationMessage.appName == "WhatsApp" && notificationMessage.messages?.isEmpty() == true
-                || notificationMessage.appName == "Spotify" && notificationMessage.timestamp == "1970-01-01 05:30:00") {
+            if (notificationMessage.appName == "Spotify" && notificationMessage.timestamp == "1970-01-01 05:30:00") {
                 Log.d(TAG, "Duplicate notification, ignoring...")
                 return@launch
             }
