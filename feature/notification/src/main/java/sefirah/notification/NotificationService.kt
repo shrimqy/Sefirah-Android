@@ -31,6 +31,7 @@ import sefirah.domain.model.ReplyAction
 import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.presentation.util.bitmapToBase64
+import sefirah.presentation.util.drawableToBase64
 import sefirah.presentation.util.drawableToBitmap
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -262,8 +263,7 @@ class NotificationService @Inject constructor(
 
             // Get the notification large icon
             val largeIcon = notification.getLargeIcon()?.let { icon ->
-                val largeIconBitmap = icon.loadDrawable(context)?.let { (it as BitmapDrawable).bitmap }
-                largeIconBitmap?.let { bitmapToBase64(it) }
+                icon.loadDrawable(context)?.let { drawableToBase64(it) }
             }
 
             // Get picture (if available)
@@ -300,25 +300,17 @@ class NotificationService @Inject constructor(
             )
 
             val actions = notification.actions?.mapIndexedNotNull { index, action ->
-                try {
-                    val actionLabel = action.title.toString()
+                val actionLabel = action.title.toString()
+                // Store replyResultKey for the first remote input, if available
+                val isReplyAction = action.remoteInputs?.firstOrNull()?.resultKey
 
-                    // Store replyResultKey for the first remote input, if available
-                    val isReplyAction = action.remoteInputs?.firstOrNull()?.resultKey
-
-                    NotificationAction(
-                        notificationKey = sbn.key,
-                        label = actionLabel,
-                        actionIndex = index,
-                        isReplyAction = !isReplyAction.isNullOrEmpty()
-                    )
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error retrieving action: ${e.localizedMessage}")
-                    null
-                }
+                NotificationAction(
+                    notificationKey = sbn.key,
+                    label = actionLabel,
+                    actionIndex = index,
+                    isReplyAction = !isReplyAction.isNullOrEmpty()
+                )
             } ?: emptyList()
-
-            Log.d(TAG, "$appName $title $text messages: $messages actions: $actions")
 
             val replyResultKey = notification.actions
                 ?.firstNotNullOfOrNull { action ->

@@ -7,8 +7,11 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.util.Base64
 import android.util.Log
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
+import androidx.core.graphics.scale
 import java.io.ByteArrayOutputStream
+
 
 fun bitmapToBase64(bitmap: Bitmap): String {
     val outputStream = ByteArrayOutputStream()
@@ -21,13 +24,19 @@ fun drawableToBitmap(drawable: Drawable): Bitmap {
     if (drawable is BitmapDrawable) {
         return drawable.bitmap
     }
-    val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 1
-    val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 1
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight)
     val canvas = Canvas(bitmap)
     drawable.setBounds(0, 0, canvas.width, canvas.height)
     drawable.draw(canvas)
     return bitmap
+}
+
+fun drawableToBase64(drawable: Drawable): String? {
+    val bitmap =  drawableToBitmap(drawable)
+    val outputStream = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+    val byteArray = outputStream.toByteArray()
+    return Base64.encodeToString(byteArray, Base64.NO_WRAP)
 }
 
 fun base64ToBitmap(base64String: String?): Bitmap? {
@@ -49,18 +58,6 @@ fun base64ToIconCompat(base64String: String?): IconCompat? {
     else {
         null
     }
-}
-
-// Helper function to convert Drawable to Base64 String (optional)
-fun drawableToBase64(drawable: Drawable): String? {
-    if (drawable is BitmapDrawable) {
-        val bitmap = drawable.bitmap
-        val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-        val byteArray = outputStream.toByteArray()
-        return Base64.encodeToString(byteArray, Base64.NO_WRAP)
-    }
-    return null
 }
 
 fun drawableToBase64Compressed(
@@ -92,12 +89,7 @@ fun drawableToBase64Compressed(
     val targetHeight = (originalBitmap.height * scale).toInt()
     
     // Create scaled bitmap
-    val scaledBitmap = Bitmap.createScaledBitmap(
-        originalBitmap,
-        targetWidth,
-        targetHeight,
-        true
-    )
+    val scaledBitmap = originalBitmap.scale(targetWidth, targetHeight)
     
     // Compress to bytes
     val outputStream = ByteArrayOutputStream()
