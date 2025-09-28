@@ -63,19 +63,21 @@ fun MediaCard(
 ) {
     if (sessions.isEmpty()) return
 
-    val activeSessionIndex = sessions.indexOfFirst { it.isCurrentSession }.coerceAtLeast(0)
+    val activeSessionIndex = sessions.indexOfFirst { it.isPlaying }.coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = activeSessionIndex) { sessions.size }
     val scope = rememberCoroutineScope()
 
-    // When active session changes, scroll to it
+    // When playing session changes, scroll to it
     LaunchedEffect(sessions) {
-        val newActiveIndex = sessions.indexOfFirst { it.isCurrentSession }.coerceAtLeast(0)
-        // Only scroll if current page isn't already showing a current session
-        val currentPageIsActive = pagerState.currentPage < sessions.size && 
-                                  sessions[pagerState.currentPage].isCurrentSession
-        if (newActiveIndex != pagerState.currentPage && !currentPageIsActive) {
-            scope.launch {
-                pagerState.animateScrollToPage(newActiveIndex)
+        val newActiveIndex = sessions.indexOfFirst { it.isPlaying }
+        // Only scroll if there's a playing session and current page isn't already showing it
+        if (newActiveIndex >= 0) {
+            val currentPageIsPlaying = pagerState.currentPage < sessions.size && 
+                                      sessions[pagerState.currentPage].isPlaying
+            if (newActiveIndex != pagerState.currentPage && !currentPageIsPlaying) {
+                scope.launch {
+                    pagerState.animateScrollToPage(newActiveIndex)
+                }
             }
         }
     }

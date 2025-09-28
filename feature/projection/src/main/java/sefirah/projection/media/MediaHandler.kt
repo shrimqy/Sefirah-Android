@@ -155,29 +155,12 @@ class MediaHandler @Inject constructor(
     private fun addSession(session: PlaybackSession) {
         _activeSessions.update { currentSessions ->
             // First, get the modified list with the new/updated session
-            val sessionsList = if (currentSessions.any { it.source == session.source }) {
+            if (currentSessions.any { it.source == session.source }) {
                 currentSessions.map { 
                     if (it.source == session.source) session else it 
                 }
             } else {
                 currentSessions + session
-            }
-            
-            // If the new session is marked as current, make non-playing sessions not current
-            if (session.isCurrentSession) {
-                lastPositionUpdateTimeMap[session.source!!] = System.currentTimeMillis()
-                updateMediaSession(session)
-
-                sessionsList.map { existingSession ->
-                    if (existingSession.source != session.source && !existingSession.isPlaying) {
-                        // Make non-playing sessions not current
-                        existingSession.copy(isCurrentSession = false)
-                    } else {
-                        existingSession
-                    }
-                }
-            } else {
-                sessionsList
             }
         }
     }
