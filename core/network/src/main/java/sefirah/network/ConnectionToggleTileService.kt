@@ -47,8 +47,8 @@ class ConnectionToggleTileService : TileService() {
         // Start observing connection state
         connectionStateJob = serviceScope.launch {
             networkManager.connectionState.collectLatest { state ->
-                updateTile()
                 _connectionState.value = state
+                updateTile()
             }
         }
     }
