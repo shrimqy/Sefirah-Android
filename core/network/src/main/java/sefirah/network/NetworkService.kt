@@ -346,6 +346,7 @@ class NetworkService : Service() {
         sftpServer.stop()
         mediaHandler.release(true)
         actionHandler.clearActions()
+        smsHandler.stop()
         CoroutineScope(Dispatchers.IO).launch {
             writeChannel?.flushAndClose()
             socket?.close()
@@ -472,11 +473,11 @@ class NetworkService : Service() {
 //        val wifiManager = getSystemService(Context.WIFI_SERVICE) as WifiManager
 //        val wifi = wifiManager.isWifiEnabled
 
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val bluetooth = bluetoothManager.adapter.isEnabled
 
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
 
         // Get DND state
         val isDndEnabled = notificationManager.currentInterruptionFilter != 
@@ -512,6 +513,7 @@ class NetworkService : Service() {
         unregisterReceiver(interruptionFilterReceiver)
         sftpServer.stop()
         mediaHandler.release(true)
+        smsHandler.stop()
         writeChannel?.close()
         socket?.close()
     }

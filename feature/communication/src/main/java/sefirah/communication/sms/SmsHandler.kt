@@ -40,14 +40,21 @@ class SmsHandler @Inject constructor(
     private val preferencesRepository: PreferencesRepository
 ) {
     private var smsReceiver: BroadcastReceiver? = null
+    private var messageObserver: ContentObserver? = null
 
     // Cache of existing thread IDs
     private var existingThreadIds: Set<Long> = emptySet()
 
     fun start() {
+        // Prevent multiple observers
+        if (messageObserver != null) {
+            Log.w(TAG, "SMS handler already started, stopping first")
+            stop()
+        }
+        
         val helperLooper: Looper? = getLooper()
-        val messageObserver: ContentObserver = MessageContentObserver(Handler(helperLooper!!))
-        registerObserver(messageObserver, context)
+        messageObserver = MessageContentObserver(Handler(helperLooper!!))
+        registerObserver(messageObserver!!, context)
 
         mostRecentTimestampLock.lock()
         mostRecentTimestamp = getNewestMessageTimestamp(context)
@@ -59,6 +66,29 @@ class SmsHandler @Inject constructor(
         }
     }
     
+    fun stop() {
+        if (messageObserver == null && smsReceiver == null) return
+
+        messageObserver?.let { observer ->
+            try {
+                context.contentResolver.unregisterContentObserver(observer)
+                messageObserver = null
+            } catch (e: Exception) {
+                Log.w(TAG, "Error unregistering content observer", e)
+            }
+        }
+        
+        // Clean up SMS receiver
+        unregisterSmsReceiver()
+        
+        // Reset state
+        mostRecentTimestampLock.lock()
+        mostRecentTimestamp = 0
+        mostRecentTimestampLock.unlock()
+        existingThreadIds = emptySet()
+        haveMessagesBeenRequested = false
+    }
+
     fun registerSmsReceiver() {
         smsReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -77,6 +107,14 @@ class SmsHandler @Inject constructor(
         filter.priority = 500
         context.registerReceiver(smsReceiver, filter)
     }
+
+    fun unregisterSmsReceiver() {
+        smsReceiver?.let {
+            context.unregisterReceiver(it)
+            smsReceiver = null
+        }
+    }
+
 
     /**
      * Keep track of the most-recently-seen message so that we can query for later ones as they arrive
@@ -226,13 +264,6 @@ class SmsHandler @Inject constructor(
         }
     }
 
-    fun unregisterSmsReceiver() {
-        smsReceiver?.let {
-            context.unregisterReceiver(it)
-            smsReceiver = null
-        }
-    }
-    
     fun sendTextMessage(message: TextMessage) {
         Log.d(TAG, "Sending message: ${message.body}")
         val addresses = message.addresses.toHelperSmsAddress(context)
