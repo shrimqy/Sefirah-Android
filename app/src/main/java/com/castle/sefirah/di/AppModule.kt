@@ -127,9 +127,11 @@ object AppModule {
     @Provides
     @Singleton
     fun providesClipboardHandler(
-        context: Context
+        context: Context,
+        socketFactory: SocketFactory,
+        appRepository: AppRepository
     ): ClipboardHandler {
-        return ClipboardHandler(context)
+        return ClipboardHandler(context, socketFactory, appRepository)
     }
 
     @Provides

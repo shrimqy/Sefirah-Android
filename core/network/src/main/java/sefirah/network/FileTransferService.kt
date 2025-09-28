@@ -5,7 +5,6 @@ import android.app.Service
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -37,22 +36,17 @@ import sefirah.database.AppRepository
 import sefirah.domain.model.BulkFileTransfer
 import sefirah.domain.model.FileMetadata
 import sefirah.domain.model.FileTransfer
-import sefirah.domain.model.ServerInfo
 import sefirah.domain.model.SocketType
 import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
 import sefirah.network.util.MessageSerializer
-import sefirah.network.util.generateRandomPassword
-import sefirah.network.util.getDeviceIpAddress
 import sefirah.network.util.getFileMetadata
 import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
 import java.io.InputStreamReader
 import java.lang.Thread.sleep
-import java.net.Socket
 import javax.inject.Inject
 import javax.net.ssl.SSLServerSocket
 import javax.net.ssl.SSLSocket
@@ -66,10 +60,6 @@ class FileTransferService : Service() {
     @Inject lateinit var preferencesRepository: PreferencesRepository
     @Inject lateinit var appRepository: AppRepository
 
-    private var serverSocket: SSLServerSocket? = null
-    private var socket: Socket? = null
-    private var clientSocket: io.ktor.network.sockets.Socket? = null
-    private var fileInputStream: InputStream? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
@@ -86,11 +76,9 @@ class FileTransferService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when(intent?.action) {
             ACTION_CANCEL_TRANSFER -> {
-                cleanup()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -111,7 +99,12 @@ class FileTransferService : Service() {
             }
 
             ACTION_SEND_BULK_FILES -> {
-                val fileUris = intent.getParcelableArrayListExtra<Uri>(EXTRA_FILE_URIS) ?: run {
+                val fileUris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableArrayListExtra(EXTRA_FILE_URIS, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableArrayListExtra(EXTRA_FILE_URIS)
+                } ?: run {
                     Log.e(TAG, "No URIs provided in intent")
                     return START_NOT_STICKY
                 }
@@ -127,9 +120,19 @@ class FileTransferService : Service() {
             }
 
             ACTION_RECEIVE_FILE -> {
-                val fileTransfer = intent.getParcelableExtra<FileTransfer>(EXTRA_FILE_TRANSFER)
-                val bulkTransfer = intent.getParcelableExtra<BulkFileTransfer>(EXTRA_BULK_TRANSFER)
-                
+                val fileTransfer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(EXTRA_FILE_TRANSFER, FileTransfer::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(EXTRA_FILE_TRANSFER)
+                }
+                val bulkTransfer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(EXTRA_BULK_TRANSFER, BulkFileTransfer::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(EXTRA_BULK_TRANSFER)
+                }
+
                 when {
                     fileTransfer != null -> {
                         serviceScope.launch {
@@ -162,15 +165,15 @@ class FileTransferService : Service() {
     private suspend fun sendFile(fileUri: Uri) {
         val fileMetadata = getFileMetadata(this, fileUri)
         setupNotification(TransferType.Sending(fileMetadata.fileName))
-        
-        val password = generateRandomPassword()
-        val serverInfo = initializeServer(password) ?: return
+
+        val (serverInfo, serverSocket) = socketFactory.tcpServerSocket(PORT_RANGE) ?: return
         networkManager.sendMessage(FileTransfer(serverInfo, fileMetadata))
         
         sendFileInternal(
+            serverSocket,
             fileUris = listOf(fileUri),
             filesMetadata = listOf(fileMetadata),
-            password = password,
+            password = serverInfo.password,
             isBulk = false
         )
     }
@@ -178,20 +181,21 @@ class FileTransferService : Service() {
     private suspend fun sendBulkFiles(fileUris: List<Uri>) {
         val filesMetadata = fileUris.map { getFileMetadata(this, it) }
         setupNotification(TransferType.Sending("${filesMetadata.size} files"))
-        
-        val password = generateRandomPassword()
-        val serverInfo = initializeServer(password) ?: return
+
+        val (serverInfo, serverSocket) = socketFactory.tcpServerSocket(PORT_RANGE) ?: return
         networkManager.sendMessage(BulkFileTransfer(serverInfo, filesMetadata))
         
         sendFileInternal(
+            serverSocket,
             fileUris = fileUris,
             filesMetadata = filesMetadata,
-            password = password,
+            password = serverInfo.password,
             isBulk = true
         )
     }
 
     private suspend fun sendFileInternal(
+        serverSocket: SSLServerSocket,
         fileUris: List<Uri>,
         filesMetadata: List<FileMetadata>,
         password: String,
@@ -199,11 +203,11 @@ class FileTransferService : Service() {
     ) {
         try {
             withContext(Dispatchers.IO) {
-                socket = serverSocket?.accept() as? SSLSocket
+                val socket = serverSocket.accept() as? SSLSocket
                     ?: throw IOException("Failed to accept SSL connection")
 
-                val outputStream = socket!!.getOutputStream()
-                val inputStream = socket!!.getInputStream()
+                val outputStream = socket.getOutputStream()
+                val inputStream = socket.getInputStream()
                 val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
 
                 withTimeout(5000) {
@@ -219,7 +223,7 @@ class FileTransferService : Service() {
                     if (isBulk) {
                         setupNotification(TransferType.Sending("${fileMetadata.fileName} (${index + 1}/${fileUris.size})"))
                     }
-                    fileInputStream = contentResolver.openInputStream(fileUri)
+                    val fileInputStream = contentResolver.openInputStream(fileUri)
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                     var bytesRead: Int
                     outputStream.flush()
@@ -233,7 +237,6 @@ class FileTransferService : Service() {
                     }
                     outputStream.flush()
                     fileInputStream?.close()
-                    fileInputStream = null
 
                     withTimeout(5000) {
                         val message = reader.readLine()
@@ -259,7 +262,7 @@ class FileTransferService : Service() {
                 }
                 
                 // Shutdown output after receiving final confirmation
-                socket?.shutdownOutput()
+                socket.shutdownOutput()
             }
             withContext(Dispatchers.Main) {
                 showCompletedNotification()
@@ -269,39 +272,22 @@ class FileTransferService : Service() {
             updateNotificationForError(e.message ?: "Transfer failed")
             throw e
         } finally {
-            cleanup()
             stopSelf()
         }
     }
 
-    private suspend fun initializeServer(password: String): ServerInfo? {
-        val ipAddress = getDeviceIpAddress()
-        PORT_RANGE.forEach { port ->
-            try {
-                serverSocket = ipAddress?.let { socketFactory.tcpServerSocket(port, it) } ?: return null
-                Log.d(TAG, "Server socket created on ${ipAddress}:${port}, waiting for client to connect")
-                return ServerInfo(ipAddress, port, password)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to create server socket on port $port, trying next port", e)
-            }
-        }
-        Log.e(TAG, "Server socket creation failed")
-        return null
-    }
-
     private suspend fun receiveSingleFile(fileTransfer: FileTransfer) {
         setupNotification(TransferType.Receiving(fileTransfer.fileMetadata.fileName))
-        
-        // For single file, establish connection here
+
         val lastConnectedDevice = appRepository.getLastConnectedDevice()
-        clientSocket = socketFactory.tcpClientSocket(
+        val clientSocket = socketFactory.tcpClientSocket(
             SocketType.FILE_TRANSFER,
             lastConnectedDevice!!.prefAddress!!,
             fileTransfer.serverInfo.port,
         ) ?: throw IOException("Failed to establish connection")
 
-        val readChannel = clientSocket!!.openReadChannel()
-        val writeChannel = clientSocket!!.openWriteChannel()
+        val readChannel = clientSocket.openReadChannel()
+        val writeChannel = clientSocket.openWriteChannel()
         try {
             writeChannel.writeStringUtf8(fileTransfer.serverInfo.password)
             writeChannel.flush()
@@ -319,7 +305,6 @@ class FileTransferService : Service() {
                 clipboardManager.setPrimaryClip(ClipData.newUri(contentResolver, "received file", fileUri))
             }
         } finally {
-            cleanup()
             stopSelf()
         }
     }
@@ -330,14 +315,14 @@ class FileTransferService : Service() {
         
         // Establish connection once for all files
         val lastConnectedDevice = appRepository.getLastConnectedDevice()
-        clientSocket = socketFactory.tcpClientSocket(
+        val clientSocket = socketFactory.tcpClientSocket(
             SocketType.FILE_TRANSFER,
             lastConnectedDevice!!.prefAddress!!,
             bulkTransfer.serverInfo.port,
         ) ?: throw IOException("Failed to establish connection")
 
-        val readChannel = clientSocket!!.openReadChannel()
-        val writeChannel = clientSocket!!.openWriteChannel()
+        val readChannel = clientSocket.openReadChannel()
+        val writeChannel = clientSocket.openWriteChannel()
 
         try {
             writeChannel.writeStringUtf8(bulkTransfer.serverInfo.password)
@@ -377,7 +362,6 @@ class FileTransferService : Service() {
             }
             showBulkTransferCompletedNotification(bulkTransfer.files.size)
         } finally {
-            cleanup()
             stopSelf()
         }
     }
@@ -629,22 +613,9 @@ class FileTransferService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
-        cleanup()
-    }
-
-    private fun cleanup() {
-        try {
-            fileInputStream?.close()
-            clientSocket?.close()
-            socket?.close()
-            serverSocket?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during cleanup", e)
-        }
     }
 
     companion object {
-
         const val ACTION_SEND_FILE = "sefirah.network.action.SEND_FILE"
         const val ACTION_SEND_BULK_FILES = "sefirah.network.action.SEND_BULK_FILES"
         const val ACTION_RECEIVE_FILE = "sefirah.network.action.RECEIVE_FILE"
@@ -656,7 +627,7 @@ class FileTransferService : Service() {
 
         private const val TAG = "FileTransferService"
 
-        private val PORT_RANGE = 5152..5169
+        val PORT_RANGE = 5152..5169
         private const val DEFAULT_BUFFER_SIZE = 131072 * 4 // 512 KB
 
         private const val CANCEL_REQUEST_CODE = 100

@@ -63,6 +63,11 @@ enum class ActionType {
     Logoff,
 }
 
+enum class TransferType {
+    File,
+    Clipboard
+}
+
 @OptIn(ExperimentalSerializationApi::class)
 @JsonClassDiscriminator("type")
 @Serializable
@@ -156,7 +161,6 @@ data class Message(
 @Parcelize
 data class PlaybackSession(
     var sessionType: SessionType,
-    var isCurrentSession: Boolean = false,
     val source: String? = null,
     val trackTitle: String? = null,
     val artist: String? = null,
@@ -176,7 +180,8 @@ data class PlaybackSession(
 @SerialName("8")
 data class FileTransfer(
     val serverInfo: ServerInfo,
-    val fileMetadata: FileMetadata
+    val fileMetadata: FileMetadata,
+    val transferType: TransferType = TransferType.File,
 ) : Parcelable, SocketMessage()
 
 @Serializable
@@ -201,14 +206,7 @@ data class FileMetadata(
     val fileName: String,
     val mimeType: String,
     val fileSize: Long,
-    val uri: String? = null,
 ) : Parcelable
-
-//@Serializable
-//@SerialName("9")
-//data class InteractiveControlMessage(
-//    val control: InteractiveControl
-//) : SocketMessage()
 
 @Serializable
 @SerialName("10")

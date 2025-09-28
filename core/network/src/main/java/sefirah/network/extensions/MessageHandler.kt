@@ -28,6 +28,7 @@ import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.TextMessage
 import sefirah.domain.model.ThreadRequest
 import sefirah.domain.model.ActionMessage
+import sefirah.domain.model.TransferType
 import sefirah.network.FileTransferService
 import sefirah.network.FileTransferService.Companion.ACTION_RECEIVE_FILE
 import sefirah.network.FileTransferService.Companion.EXTRA_BULK_TRANSFER
@@ -60,11 +61,18 @@ fun NetworkService.handleMessage(message: SocketMessage) {
 }
 
 fun NetworkService.handleFileTransfer(message: FileTransfer) {
-    val intent = Intent(this, FileTransferService::class.java).apply {
-        action = ACTION_RECEIVE_FILE
-        putExtra(EXTRA_FILE_TRANSFER, message)
+    when(message.transferType) {
+        TransferType.File -> {
+            val intent = Intent(this, FileTransferService::class.java).apply {
+                action = ACTION_RECEIVE_FILE
+                putExtra(EXTRA_FILE_TRANSFER, message)
+            }
+            startService(intent)
+        }
+        TransferType.Clipboard -> {
+            clipboardHandler.handleFileTransfer(message)
+        }
     }
-    startService(intent)
 }
 
 fun NetworkService.handleBulkFileTransfer(message: BulkFileTransfer) {
