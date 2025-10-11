@@ -57,29 +57,31 @@ class FileTransferService : Service() {
     @Inject lateinit var messageSerializer: MessageSerializer
     @Inject lateinit var networkManager: NetworkManager
     @Inject lateinit var notificationCenter: NotificationCenter
-    @Inject lateinit var preferencesRepository: PreferencesRepository
+   @Inject lateinit var preferencesRepository: PreferencesRepository
     @Inject lateinit var appRepository: AppRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
-    private sealed class TransferType {
-        data class Sending(val fileName: String) : TransferType()
+    private sealed class TransferContext {
+        data class Sending(val fileName: String) : TransferContext()
         data class Receiving(
             val fileName: String,
             val currentFileIndex: Int = 0,
             val totalFiles: Int = 1
-        ) : TransferType()
+        ) : TransferContext()
     }
 
-    private lateinit var currentTransfer: TransferType
+    private lateinit var currentTransfer: TransferContext
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when(intent?.action) {
             ACTION_CANCEL_TRANSFER -> {
-                stopForeground(STOP_FOREGROUND_REMOVE)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                }
                 stopSelf()
             }
             ACTION_SEND_FILE -> {
@@ -164,7 +166,7 @@ class FileTransferService : Service() {
 
     private suspend fun sendFile(fileUri: Uri) {
         val fileMetadata = getFileMetadata(this, fileUri)
-        setupNotification(TransferType.Sending(fileMetadata.fileName))
+        setupNotification(TransferContext.Sending(fileMetadata.fileName))
 
         val (serverInfo, serverSocket) = socketFactory.tcpServerSocket(PORT_RANGE) ?: return
         networkManager.sendMessage(FileTransfer(serverInfo, fileMetadata))
@@ -180,7 +182,7 @@ class FileTransferService : Service() {
 
     private suspend fun sendBulkFiles(fileUris: List<Uri>) {
         val filesMetadata = fileUris.map { getFileMetadata(this, it) }
-        setupNotification(TransferType.Sending("${filesMetadata.size} files"))
+        setupNotification(TransferContext.Sending("${filesMetadata.size} files"))
 
         val (serverInfo, serverSocket) = socketFactory.tcpServerSocket(PORT_RANGE) ?: return
         networkManager.sendMessage(BulkFileTransfer(serverInfo, filesMetadata))
@@ -221,7 +223,7 @@ class FileTransferService : Service() {
                     val fileMetadata = filesMetadata[index]
 
                     if (isBulk) {
-                        setupNotification(TransferType.Sending("${fileMetadata.fileName} (${index + 1}/${fileUris.size})"))
+                        setupNotification(TransferContext.Sending("${fileMetadata.fileName} (${index + 1}/${fileUris.size})"))
                     }
                     val fileInputStream = contentResolver.openInputStream(fileUri)
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -277,7 +279,7 @@ class FileTransferService : Service() {
     }
 
     private suspend fun receiveSingleFile(fileTransfer: FileTransfer) {
-        setupNotification(TransferType.Receiving(fileTransfer.fileMetadata.fileName))
+        setupNotification(TransferContext.Receiving(fileTransfer.fileMetadata.fileName))
 
         val lastConnectedDevice = appRepository.getLastConnectedDevice()
         val clientSocket = socketFactory.tcpClientSocket(
@@ -329,7 +331,7 @@ class FileTransferService : Service() {
             writeChannel.flush()
             bulkTransfer.files.forEachIndexed { index, metadata ->
                 try {
-                    setupNotification(TransferType.Receiving(
+                    setupNotification(TransferContext.Receiving(
                         fileName = metadata.fileName,
                         currentFileIndex = index + 1,
                         totalFiles = bulkTransfer.files.size
@@ -445,12 +447,12 @@ class FileTransferService : Service() {
         }
     }
 
-    private fun setupNotification(transferType: TransferType) {
-        currentTransfer = transferType
+    private fun setupNotification(transferContext: TransferContext) {
+        currentTransfer = transferContext
         
-        val title = when (transferType) {
-            is TransferType.Sending -> "Sending ${transferType.fileName}"
-            is TransferType.Receiving -> "Receiving ${transferType.fileName}"
+        val title = when (transferContext) {
+            is TransferContext.Sending -> "Sending ${transferContext.fileName}"
+            is TransferContext.Receiving -> "Receiving ${transferContext.fileName}"
         }
 
         // Create explicit intent for cancel action
@@ -499,7 +501,7 @@ class FileTransferService : Service() {
         val currentTotalMB = currentFileSize / 1024f / 1024f
         
         when (val transfer = currentTransfer) {
-            is TransferType.Receiving -> {
+            is TransferContext.Receiving -> {
                 val progressText = if (transfer.totalFiles > 1) {
                     "File ${transfer.currentFileIndex}/${transfer.totalFiles}: %.1f MB / %.1f MB\nTotal Progress: $totalProgress%%"
                         .format(currentMB, currentTotalMB)
@@ -512,7 +514,7 @@ class FileTransferService : Service() {
                     setContentText(progressText)
                 }
             }
-            is TransferType.Sending -> {
+            is TransferContext.Sending -> {
                 val progressText = "Sending: %.1f MB / %.1f MB".format(currentMB, currentTotalMB)
                 
                 notificationCenter.modifyNotification(notificationBuilder, AppNotifications.TRANSFER_PROGRESS_ID) {
@@ -530,8 +532,10 @@ class FileTransferService : Service() {
         fileUri: Uri? = null,
         mimeType: String? = null
     ) {
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        }
+
         val title = when {
             currentFile != null && totalFiles != null -> 
                 "File $currentFile of $totalFiles Complete"
@@ -590,7 +594,9 @@ class FileTransferService : Service() {
         currentFile: Int? = null,
         totalFiles: Int? = null
     ) {
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        }
 
         val title = when {
             currentFile != null && totalFiles != null -> 

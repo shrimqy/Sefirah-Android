@@ -2,6 +2,8 @@ package sefirah.common.notifications
 
 import android.app.NotificationChannelGroup
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.NotificationManagerCompat.IMPORTANCE_DEFAULT
 import androidx.core.app.NotificationManagerCompat.IMPORTANCE_LOW
@@ -40,6 +42,7 @@ object AppNotifications {
      *
      * @param context The application context.
      */
+    @RequiresApi(Build.VERSION_CODES.O)
     fun createChannels(context: Context) {
         val notificationManager = NotificationManagerCompat.from(context)
 

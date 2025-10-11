@@ -1,10 +1,12 @@
 package com.castle.sefirah
 
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +29,9 @@ class MainActivity : BaseActivity() {
                 viewModel.splashCondition
             }
         }
-        setupNotificationChannels()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setupNotificationChannels()
+        }
         enableEdgeToEdge()
         setContent {
             SefirahTheme() {
@@ -42,6 +46,7 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun setupNotificationChannels() {
         try {
             AppNotifications.createChannels(this)

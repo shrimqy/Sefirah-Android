@@ -51,6 +51,7 @@ import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.database.AppRepository
 import sefirah.database.model.toDomain
+import sefirah.domain.model.ApplicationList
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.DeviceStatus
@@ -295,10 +296,7 @@ class NetworkService : Service() {
     }
 
     private suspend fun sendInstalledApps() {
-        getInstalledApps(packageManager).forEach { app ->
-            sendMessage(app)
-            delay(10)
-        }
+        sendMessage(getInstalledApps(packageManager))
     }
 
 
