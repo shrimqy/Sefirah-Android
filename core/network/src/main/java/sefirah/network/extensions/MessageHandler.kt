@@ -133,15 +133,13 @@ fun NetworkService.handleMisc(commandMessage: CommandMessage) {
         CommandType.Disconnect -> stop(true)
         CommandType.ClearNotifications -> notificationHandler.removeAllNotification()
         CommandType.RequestAppList -> handleAppListRequest()
-        else -> {}
     }
 }
 
 private fun NetworkService.handleAppListRequest() {
     val appList = getInstalledApps(packageManager)
-    val appListMessage = ApplicationList(appList)
     CoroutineScope(Dispatchers.IO).launch {
-        sendMessage(appListMessage)
+        sendMessage(appList)
     }
 }
 
