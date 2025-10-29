@@ -1,0 +1,6 @@
+• feat: Make MainActivity as connection tile preferences
+• feat: improve clipboard transfer for images
+• handle vectordrawable in notifications
+• disable active mode for tiles
+• stop message db observer when connection is lost
+• add support for Android 6
