@@ -84,6 +84,7 @@
             <intent-filter>
                 <action android:name="START" />
                 <action android:name="STOP" />
+                <action android:name="SEND_CLIPBOARD" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>

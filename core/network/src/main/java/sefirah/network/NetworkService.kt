@@ -52,6 +52,7 @@ import sefirah.communication.utils.TelephonyHelper
 import sefirah.database.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.domain.model.ApplicationList
+import sefirah.domain.model.ClipboardMessage
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.DeviceStatus
@@ -144,6 +145,14 @@ class NetworkService : Service() {
             Actions.STOP.name -> {
                 if (connectionJob?.isActive == true) connectionJob?.cancel()
                 stop(true)
+            }
+            Actions.SEND_CLIPBOARD.name -> {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+                if (!text.isNullOrEmpty() && _connectionState.value.isConnected) {
+                    scope.launch {
+                        sendMessage(ClipboardMessage("text/plain", text))
+                    }
+                }
             }
         }
         return START_NOT_STICKY
@@ -499,6 +508,7 @@ class NetworkService : Service() {
         enum class Actions {
             START,
             STOP,
+            SEND_CLIPBOARD,
         }
 
         const val TAG = "NetworkService"
