@@ -79,8 +79,6 @@
     <string name="no_device">Nenhum dispositivo encontrado</string>
     <string name="last_connected">Última conexão</string>
     <string name="ip_addresses">Endereços IP</string>
-    <string name="no_ip">Nenhum endereço configurado</string>
-    <string name="add_custom_ip_button">Endereço IP adicional</string>
     <string name="custom_device_list">Dispositivos personalizados</string>
 
     <!-- Onboarding & Welcome -->
@@ -110,8 +108,6 @@
 
     <!-- Dialogs -->
     <string name="delete_dialog">Deseja excluir</string>
-    <string name="connection_options">Opções de conexão</string>
-    <string name="connection_options_subtitle">Deseja se conectar à</string>
     <string name="manual_connection">Conexão manual</string>
     <string name="available_ip_addresses">Endereços IP disponíveis:</string>
     <string name="custom_ip_placeholder">Inserir IP personalizado</string>
@@ -154,8 +150,8 @@
     <string name="set_group_message_as_mms_title">Enviar Grupo de MMS</string>
     <string name="set_group_message_as_mms" translatable="false">set_group_message_as_mms</string>
     <string name="set_long_text_as_mms_title">Enviar texto longo como MMS</string>
-    <string name="set_long_text_as_mms" translatable="false">set_long_text_as_mms</string>
     <string name="convert_to_mms_after_title">Converter para MMS</string>
+    <string name="set_long_text_as_mms" translatable="false">set_long_text_as_mms</string>
     <string name="convert_to_mms_after" translatable="false">convert_to_mms_after</string>
     <string name="convert_to_mms_after_default" translatable="false">3</string>
     <string name="messages_permission">Mensagens</string>

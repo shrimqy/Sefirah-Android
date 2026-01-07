@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -18,16 +19,15 @@ import androidx.core.os.bundleOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.Message
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationMessage
 import sefirah.domain.model.NotificationType
 import sefirah.domain.model.ReplyAction
+import sefirah.domain.repository.DeviceManager
 import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.presentation.util.bitmapToBase64
@@ -43,36 +43,36 @@ import javax.inject.Singleton
 class NotificationService @Inject constructor(
     private val context: Context,
     private val networkManager: NetworkManager,
+    private val deviceManager: DeviceManager,
     private val preferencesRepository: PreferencesRepository
 ) : NotificationHandler, NotificationCallback {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var isListenerConnected : Boolean = false
 
-    private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
-    
     private lateinit var listener: NotificationListenerService
 
-    private var activeNotificationsSend : Boolean = false
+    private val deviceIds = MutableStateFlow<Set<String>>(emptySet())
 
-    private var notificationSyncSettings = MutableStateFlow(true)
     init {
         scope.launch {
-            networkManager.connectionState.collect { state ->
-                connectionState.value = state
-                if (state == ConnectionState.Disconnected()) activeNotificationsSend = false
-            }
-        }
-
-        scope.launch {
-            preferencesRepository.readNotificationSyncSettings().collectLatest {
-                notificationSyncSettings.value = it
+            deviceManager.pairedDevices.collect { pairedDevices ->
+                val connectedDeviceIds = pairedDevices
+                    .filter { it.connectionState.isConnected }
+                    .filter { device ->
+                        preferencesRepository.readNotificationSyncSettingsForDevice(device.deviceId).first()
+                    }
+                    .map { it.deviceId }
+                    .toSet()
+                deviceIds.value = connectedDeviceIds
             }
         }
     }
 
-    override fun sendActiveNotifications() {
-        if (!isListenerConnected && !notificationSyncSettings.value) {
+    override fun sendActiveNotifications(deviceId: String?) {
+        val targetDeviceIds = deviceId?.let { setOf(it) } ?: deviceIds.value
+
+        if (!isListenerConnected && targetDeviceIds.isEmpty()) {
             return
         } else {
             scope.launch {
@@ -80,16 +80,14 @@ class NotificationService @Inject constructor(
                     Log.w(TAG, "listener not connected")
                     return@launch
                 }
-                
-                activeNotificationsSend = true
+
                 val activeNotifications = listener.activeNotifications
                 if (activeNotifications.isNullOrEmpty()) {
                     Log.d(TAG, "No active notifications found.")
                 } else {
                     Log.d(TAG, "Active notifications found: ${activeNotifications.size}")
                     activeNotifications.forEach { sbn ->
-                        sendNotification(sbn, NotificationType.Active)
-                        delay(50)
+                        sendNotification(sbn, NotificationType.Active, targetDeviceIds)
                     }
                 }
             }
@@ -106,7 +104,7 @@ class NotificationService @Inject constructor(
 
 
     override fun onNotificationPosted(notification: StatusBarNotification) {
-        sendNotification(notification, NotificationType.New)
+        sendNotification(notification, NotificationType.New, deviceIds.value)
     }
 
     override fun onNotificationRemoved(notification: StatusBarNotification) {
@@ -117,17 +115,15 @@ class NotificationService @Inject constructor(
             notificationType = NotificationType.Removed,
             tag = notification.tag,
         )
-        scope.launch {
-            networkManager.sendMessage(removeNotificationMessage)
+        deviceIds.value.forEach { deviceId ->
+            networkManager.sendMessage(deviceId, removeNotificationMessage)
         }
     }
 
     override fun onListenerConnected(service: NotificationListenerService) {
         isListenerConnected = true
         listener = service
-        if ((connectionState.value == ConnectionState.Connected) && !activeNotificationsSend) {
-            sendActiveNotifications()
-        }
+        sendActiveNotifications()
     }
 
     override fun onListenerDisconnected() {
@@ -189,14 +185,13 @@ class NotificationService @Inject constructor(
         }
     }
 
-    private fun sendNotification(sbn: StatusBarNotification, notificationType: NotificationType) {
-        if (!notificationSyncSettings.value) return
+    private fun sendNotification(sbn: StatusBarNotification, notificationType: NotificationType, targetDeviceIds: Set<String>) {
+        if (targetDeviceIds.isEmpty()) return
         val notification = sbn.notification
         val packageName = sbn.packageName
 
         // Get the app name using PackageManager
         val packageManager = listener.packageManager
-
 
         val appName = try {
             val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
@@ -208,6 +203,7 @@ class NotificationService @Inject constructor(
 
         val extras = notification.extras
         // Check for progress-related extras
+        // verify if this is needed
         val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
         val maxProgress = extras.getInt(Notification.EXTRA_PROGRESS_MAX, -1)
         val isIndeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
@@ -230,11 +226,17 @@ class NotificationService @Inject constructor(
             return
         }
 
-        if ("com.android.systemui" == packageName &&
-            "low_battery" == sbn.tag
-        ) {
-            //HACK: Android low battery notification are posted again every few seconds. Ignore them, as we already have a battery indicator.
-            return
+        if ("com.android.systemui" == packageName) {
+            if ("low_battery" == sbn.tag) {
+                //HACK: Android low battery notification are posted again every few seconds. Ignore them, as we already have a battery indicator.
+                return
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if ("MediaOngoingActivity" == notification.channelId) {
+                    //HACK: Samsung OneUI sends this notification when media playback is started.
+                    return
+                }
+            }
         }
 
         if ("com.castle.sefirah" == packageName) {
@@ -279,17 +281,21 @@ class NotificationService @Inject constructor(
                 ?: getSpannableText(notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT))
                 ?: getSpannableText(notification.extras.getCharSequence(Notification.EXTRA_SUB_TEXT))
 
-            val messages = notification.extras.getParcelableArray(Notification.EXTRA_MESSAGES)?.mapNotNull {
-                val bundle = it as? Bundle
-                val sender = bundle?.getCharSequence("sender")?.toString() // Get the sender's name
-                val messageText = bundle?.getCharSequence("text")?.toString()
+            val messages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                notification.extras.getParcelableArray(Notification.EXTRA_MESSAGES)?.mapNotNull {
+                    val bundle = it as? Bundle
+                    val sender = bundle?.getCharSequence("sender")?.toString() // Get the sender's name
+                    val messageText = bundle?.getCharSequence("text")?.toString()
 
-                if (sender != null && messageText != null) {
-                    Message(sender = sender, text = messageText)
-                } else {
-                    null
-                }
-            } ?: emptyList()
+                    if (sender != null && messageText != null) {
+                        Message(sender = sender, text = messageText)
+                    } else {
+                        null
+                    }
+                } ?: emptyList()
+            } else {
+                emptyList()
+            }
 
             // Get the timestamp of the notification
             val timestamp = notification.`when`
@@ -341,8 +347,10 @@ class NotificationService @Inject constructor(
             }
 
             try {
-//                Log.d("NotificationService", "${notificationMessage.appName} ${notificationMessage.title} ${notificationMessage.text} ${notificationMessage.tag} ${notificationMessage.groupKey}")
-                networkManager.sendMessage(notificationMessage)
+//                Log.d("NotificationService", "${notificationMessage.appName} ${notificationMessage.title} ${notificationMessage.text}")
+                targetDeviceIds.forEach { deviceId ->
+                    networkManager.sendMessage(deviceId, notificationMessage)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send notification message", e)
             }

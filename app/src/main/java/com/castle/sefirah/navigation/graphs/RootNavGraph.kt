@@ -5,12 +5,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.castle.sefirah.navigation.Graph
-import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.navigation.OnboardingRoute
 import com.castle.sefirah.navigation.SyncRoute
 import com.castle.sefirah.navigation.transitions.NavigationTransitions
 import com.castle.sefirah.presentation.main.MainScreen
 import com.castle.sefirah.presentation.onboarding.OnboardingScreen
+import com.castle.sefirah.presentation.sync.QrCodeScanner
 import com.castle.sefirah.presentation.sync.SyncScreen
 
 @Composable
@@ -26,7 +26,6 @@ fun RootNavGraph(startDestination: String) {
         popEnterTransition = { NavigationTransitions.rootPopEnterTransition(this) },
         popExitTransition = { NavigationTransitions.rootPopExitTransition(this) }
     ) {
-
         composable(route = OnboardingRoute.OnboardingScreen.route) {
             OnboardingScreen(
                 onComplete = {
@@ -41,6 +40,9 @@ fun RootNavGraph(startDestination: String) {
         }
         composable(route = SyncRoute.SyncScreen.route) {
             SyncScreen(rootNavController = rootNavController)
+        }
+        composable(route = SyncRoute.QrCodeScannerScreen.route) {
+            QrCodeScanner(rootNavController = rootNavController)
         }
         composable(route = Graph.MainScreenGraph) {
             MainScreen(rootNavController = rootNavController)

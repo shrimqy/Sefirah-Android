@@ -2,59 +2,46 @@ package sefirah.common.util
 
 import android.content.Context
 import android.net.Uri
-import android.os.Environment
-import android.os.StatFs
+import androidx.core.content.FileProvider
+import java.io.File
 import java.net.URLDecoder
-import java.text.DecimalFormat
+import androidx.core.net.toUri
 
-//fun extractMetadata(context: Context, uri: Uri): FileMetadata {
-//    var fileName = ""
-//    var fileSize: Long = 0
-//    var fileType = ""
-//    var creationDate: String? = null
-//    var modificationDate: String? = null
-//
-//    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-//        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-//        val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-//
-//        if (cursor.moveToFirst()) {
-//            if (nameIndex != -1) {
-//                fileName = cursor.getString(nameIndex)
-//            }
-//            if (sizeIndex != -1) {
-//                fileSize = cursor.getLong(sizeIndex)
-//            }
-//        }
-//    }
-//
-//    // Get file type
-//    fileType = context.contentResolver.getType(uri) ?: "application/octet-stream"
-//
-//    // Try to get creation and modification dates
-//    try {
-//        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT)
-//        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
-//
-//        context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
-//            creationDate = dateFormat.format(Date(pfd.statSize))
-//            modificationDate = dateFormat.format(Date(pfd.statSize))
-//        }
-//    } catch (e: Exception) {
-//        Log.e("Metadata", "Error getting file dates", e)
-//    }
-//
-//    return FileMetadata(
-//        fileName = fileName,
-//        fileSize = fileSize,
-//        uri = uri.toString(),
-//        mimeType = fileType
-//    )
-//}
+/**
+ * Creates a temporary file in the app's cache directory.
+ * The file is marked for deletion on JVM exit.
+ * 
+ * @param context Application context
+ * @param prefix Prefix for the temp file name
+ * @param extension File extension (without dot), e.g. "jpg", "png"
+ * @return URI to the created temp file via FileProvider
+ */
+fun createTempFileUri(context: Context, prefix: String, extension: String): Uri {
+    val tempFile = createTempFile(context, prefix, extension)
+    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
+}
 
+/**
+ * Creates a temporary file in the app's cache directory.
+ * Use this when you need to write to the file before getting a URI.
+ * Call [getFileProviderUri] after writing to get the shareable URI.
+ * 
+ * @return The created temp File
+ */
+fun createTempFile(context: Context, prefix: String, extension: String): File {
+    return File.createTempFile(
+        prefix,
+        if (extension.isNotEmpty()) ".$extension" else "",
+        context.cacheDir
+    ).apply { deleteOnExit() }
+}
 
-
-
+/**
+ * Gets a FileProvider URI for an existing file.
+ */
+fun getFileProviderUri(context: Context, file: File): Uri {
+    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+}
 
 /**
  * Helper function to return a human-readable version of the URI.
@@ -63,7 +50,7 @@ import java.text.DecimalFormat
 fun getReadablePathFromUri(context: Context, uriString: String): String {
     return if (uriString.startsWith("content://")) {
         // Parse the URI and convert it to a human-readable path
-        val uri = Uri.parse(uriString)
+        val uri = uriString.toUri()
         getPathFromTreeUri(uri)
     } else {
         // Return the file path as is (e.g., "/storage/emulated/0/Downloads")

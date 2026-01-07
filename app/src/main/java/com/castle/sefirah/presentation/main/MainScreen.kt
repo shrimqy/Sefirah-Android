@@ -3,7 +3,6 @@ package com.castle.sefirah.presentation.main
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
-import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.animation.shrinkVertically
@@ -30,7 +29,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.castle.sefirah.R
-import com.castle.sefirah.navigation.DeviceRouteScreen
 import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.navigation.SettingsRouteScreen
 import com.castle.sefirah.navigation.SyncRoute
@@ -46,7 +44,6 @@ import sefirah.presentation.components.PullRefresh
 import sefirah.common.R as CommonR
 
 
-@OptIn(ExperimentalAnimationGraphicsApi::class)
 @Composable
 fun MainScreen(
     rootNavController: NavHostController,
@@ -72,11 +69,11 @@ fun MainScreen(
         )
     }
 
-    // Add this state to track if we've checked for updates
+    // To track if we've checked for updates
     val hasCheckedForUpdate = remember { viewModel.hasCheckedForUpdate }
 
     LaunchedEffect(key1 = Unit) {
-        // Only check for updates if we haven't done so yet
+        // Check for updates
         if (!hasCheckedForUpdate.value) {
             Log.d("MainScreen", "Checking for update")
             
@@ -84,8 +81,6 @@ fun MainScreen(
             if (result is ReleaseRepository.Result.NewUpdate) {
                 rootNavController.navigate(SettingsRouteScreen.NewUpdateScreen.route)
             }
-            
-            // Mark that we've checked for updates
             hasCheckedForUpdate.value = true
         }
     }
@@ -111,9 +106,15 @@ fun MainScreen(
     PullRefresh(
         refreshing = isRefreshing,
         enabled = isPullRefreshEnabled,
-        onRefresh = { viewModel.toggleSync(true) }
+        onRefresh = {
+            when (currentRoute) {
+                MainRouteScreen.HomeScreen.route -> viewModel.toggleSync(true)
+                else -> {}
+            }
+        }
     ) {
-        Scaffold (modifier = Modifier.fillMaxSize(),
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
             floatingActionButton = {
                 if (currentRoute == MainRouteScreen.DeviceListScreen.route) {
                     FloatingActionButton(
@@ -133,8 +134,7 @@ fun MainScreen(
                     AppTopBar(
                         items = navigationItems,
                         selectedItem = selectedItem,
-                        onAddDeviceClick = { rootNavController.navigate(DeviceRouteScreen.CustomDeviceScreen.route) },
-                        onSearchQueryChange = { query -> 
+                        onSearchQueryChange = { query ->
                             searchQuery = query
                         }
                     )
@@ -164,10 +164,9 @@ fun MainScreen(
             )
         }
     }
-
 }
 
-private fun navigateToTab(navController: NavController, route: String) {
+internal fun navigateToTab(navController: NavController, route: String) {
     navController.navigate(route) {
         navController.graph.startDestinationRoute?.let { screenRoute ->
             popUpTo(screenRoute ) {

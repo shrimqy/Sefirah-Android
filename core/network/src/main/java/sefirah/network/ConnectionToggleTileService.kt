@@ -1,41 +1,37 @@
 package sefirah.network
 
-import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import android.util.Log
+import androidx.annotation.RequiresApi
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import sefirah.database.AppRepository
 import sefirah.database.model.toDomain
 import sefirah.domain.model.ConnectionState
+import sefirah.domain.repository.DeviceManager
 import sefirah.domain.repository.NetworkManager
 import javax.inject.Inject
 import sefirah.common.R as CommonR
 
+@RequiresApi(Build.VERSION_CODES.N)
 @AndroidEntryPoint
 class ConnectionToggleTileService : TileService() {
-    
     @Inject lateinit var appRepository: AppRepository
     @Inject lateinit var networkManager: NetworkManager
+    @Inject lateinit var deviceManager: DeviceManager
     
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var connectionStateJob: kotlinx.coroutines.Job? = null
-
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
-    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+    private var connectionState: ConnectionState = ConnectionState.Disconnected()
     
     override fun onTileAdded() {
         super.onTileAdded()
@@ -44,10 +40,22 @@ class ConnectionToggleTileService : TileService() {
     
     override fun onStartListening() {
         super.onStartListening()
-        // Start observing connection state
+        // Start observing connection state for the last connected device
         connectionStateJob = serviceScope.launch {
-            networkManager.connectionState.collectLatest { state ->
-                _connectionState.value = state
+            combine(
+                appRepository.getLastConnectedDeviceFlow(),
+                deviceManager.pairedDevices
+            ) { deviceEntity, paired ->
+                val device = deviceEntity?.toDomain()
+                if (device != null) {
+                    // Get this specific device's connection state from paired devices only
+                    paired.firstOrNull { it.deviceId == device.deviceId }?.connectionState 
+                        ?: ConnectionState.Disconnected()
+                } else {
+                    ConnectionState.Disconnected()
+                }
+            }.collectLatest { state ->
+                connectionState = state
                 updateTile()
             }
         }
@@ -61,27 +69,27 @@ class ConnectionToggleTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        Log.d(TAG, "Tile clicked")
-        
         serviceScope.launch(Dispatchers.IO) {
-            val lastDevice = appRepository.getLastConnectedDevice()
+            val lastDeviceEntity = appRepository.getLastConnectedDevice()
+            val lastDevice = lastDeviceEntity?.toDomain()
+            
             when {
-                connectionState.value.isConnected -> {
-                    val stopIntent = Intent(this@ConnectionToggleTileService, NetworkService::class.java).apply {
-                        action = NetworkService.Companion.Actions.STOP.name
+                connectionState.isConnected -> {
+                    // Get the device ID from the last connected device
+                    val deviceId = lastDevice?.deviceId
+                    if (deviceId != null) {
+                        networkManager.disconnect(deviceId)
                     }
-                    startForegroundService(stopIntent)
                 }
-                connectionState.value.isDisconnected && lastDevice != null -> {
-                    val intent = Intent(this@ConnectionToggleTileService, NetworkService::class.java).apply {
-                        action = NetworkService.Companion.Actions.START.name
-                        putExtra(NetworkService.REMOTE_INFO, lastDevice.toDomain())
+                connectionState.isDisconnected && lastDevice != null -> {
+                    // Get the paired device to ensure we have the latest connection info
+                    val pairedDevice = deviceManager.getPairedDevice(lastDevice.deviceId)
+                    if (pairedDevice != null) {
+                        networkManager.connectPaired(pairedDevice)
                     }
-                    startForegroundService(intent)
                 }
-                connectionState.value.isDisconnected && lastDevice == null -> {
-                }
-                connectionState.value.isConnecting -> {
+                connectionState.isDisconnected && lastDevice == null -> {
+                    // No device to connect to
                 }
             }
         }
@@ -89,7 +97,6 @@ class ConnectionToggleTileService : TileService() {
 
     override fun onTileRemoved() {
         super.onTileRemoved()
-        Log.d(TAG, "Tile removed")
         serviceScope.cancel()
     }
     
@@ -98,7 +105,7 @@ class ConnectionToggleTileService : TileService() {
             val tile = qsTile ?: return@launch
 
             val (label, tileState, icon, subtitle) = when {
-                connectionState.value.isConnected -> {
+                connectionState.isConnected -> {
                     TileData(
                         label = appRepository.getLastConnectedDevice()?.deviceName.toString(),
                         tileState = Tile.STATE_ACTIVE,
@@ -106,15 +113,8 @@ class ConnectionToggleTileService : TileService() {
                         icon = Icon.createWithResource(this@ConnectionToggleTileService, sefirah.presentation.R.drawable.sync),
                     )
                 }
-                connectionState.value.isConnecting -> {
-                    TileData(
-                        label = (connectionState.value as ConnectionState.Connecting).device.toString(),
-                        tileState = Tile.STATE_ACTIVE,
-                        subtitle = getString(CommonR.string.status_connecting),
-                        icon = Icon.createWithResource(this@ConnectionToggleTileService, sefirah.presentation.R.drawable.sync),
-                    )
-                }
-                connectionState.value.isDisconnected -> {
+
+                connectionState.isDisconnected -> {
                     val lastDevice = appRepository.getLastConnectedDevice()
                     if (lastDevice != null) {
                         TileData(
@@ -131,7 +131,8 @@ class ConnectionToggleTileService : TileService() {
                         )
                     }
                 }
-                connectionState.value.isError -> {
+
+                connectionState.isError -> {
                     TileData(
                         label = getString(CommonR.string.error),
                         tileState = Tile.STATE_UNAVAILABLE,

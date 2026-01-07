@@ -1,7 +1,5 @@
 package sefirah.domain.model
 
-import android.os.Build
-
 /**
  * Contains information about the latest release.
  */

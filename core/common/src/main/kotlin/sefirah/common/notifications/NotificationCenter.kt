@@ -1,22 +1,18 @@
 package sefirah.common.notifications
 
 import android.annotation.SuppressLint
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationChannelGroupCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.getSystemService
-import dagger.hilt.android.qualifiers.ApplicationContext
 import sefirah.common.R
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class NotificationCenter @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val context: Context
 ) {
     private val manager = NotificationManagerCompat.from(context)
 

@@ -146,7 +146,7 @@ object SmsMmsUtils {
             // If there are any attachment files add those into the message
             if (attachedFiles != null) {
                 for (attachedFile in attachedFiles) {
-                    val file = Base64.decode(attachedFile.base64EncodedFile, Base64.DEFAULT)
+                    val file = Base64.decode(attachedFile.base64EncodedFile, Base64.NO_WRAP)
                     val mimeType = attachedFile.mimeType
                     val fileName = attachedFile.uniqueIdentifier
                     message.addMedia(file, mimeType, fileName)

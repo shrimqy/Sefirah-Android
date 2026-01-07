@@ -4,9 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import sefirah.domain.model.PlaybackAction
 import sefirah.domain.model.PlaybackActionType
 import sefirah.domain.repository.NetworkManager
@@ -14,11 +11,11 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MediaActionReceiver : BroadcastReceiver() {
-    @Inject
-    lateinit var networkManager: NetworkManager
+    @Inject lateinit var networkManager: NetworkManager
     
     override fun onReceive(context: Context, intent: Intent) {
         val source = intent.getStringExtra(EXTRA_SOURCE) ?: return
+        val deviceId = intent.getStringExtra(EXTRA_DEVICE_ID) ?: return
         val action = intent.action ?: return
         
         val actionType = when (action) {
@@ -33,11 +30,8 @@ class MediaActionReceiver : BroadcastReceiver() {
             source = source,
             playbackActionType = actionType
         )
-        
-        // Actually handle the session
-        CoroutineScope(Dispatchers.IO).launch {
-            networkManager.sendMessage(session)
-        }
+
+        networkManager.sendMessage(deviceId, session)
     }
 
     companion object {
@@ -45,7 +39,7 @@ class MediaActionReceiver : BroadcastReceiver() {
         const val ACTION_PAUSE: String = "ACTION_PAUSE"
         const val ACTION_PREVIOUS: String = "ACTION_PREVIOUS"
         const val ACTION_NEXT: String = "ACTION_NEXT"
-
         const val EXTRA_SOURCE: String = "source"
+        const val EXTRA_DEVICE_ID: String = "deviceId"
     }
 }

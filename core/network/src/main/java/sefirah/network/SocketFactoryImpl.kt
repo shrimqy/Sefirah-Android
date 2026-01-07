@@ -1,6 +1,5 @@
 package sefirah.network
 
-import android.content.Context
 import android.util.Log
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.BoundDatagramSocket
@@ -14,36 +13,28 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import sefirah.domain.model.ServerInfo
-import sefirah.domain.model.SocketType
 import sefirah.domain.repository.SocketFactory
+import sefirah.network.util.NetworkHelper.localAddress
 import sefirah.network.util.TrustManager
-import sefirah.network.util.generateRandomPassword
-import sefirah.network.util.getDeviceIpAddress
-import java.net.InetAddress
 import java.security.SecureRandom
 import javax.inject.Inject
+import javax.inject.Singleton
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLServerSocket
 
-
+@Singleton
 class SocketFactoryImpl @Inject constructor(
-    val context: Context,
     private val customTrustManager: TrustManager,
 ) : SocketFactory {
     private val selectorManager = SelectorManager(Dispatchers.IO)
-    private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    override suspend fun tcpClientSocket(
-        type: SocketType,
-        ipAddress: String,
-        port: Int,
-    ): Socket? {
+    override suspend fun tcpClientSocket(address: String, port: Int): Socket? {
         return coroutineScope {
             try {
-                Log.d(TAG, "Connecting to $ipAddress:$port")
+                Log.d(TAG, "Connecting to $address:$port")
                 withTimeoutOrNull(3000L) {
-                    aSocket(selectorManager).tcp().connect(ipAddress, port).tls(connectionScope.coroutineContext) {
+                    aSocket(selectorManager).tcp().connect(address, port).tls(scope.coroutineContext) {
                         trustManager = customTrustManager.getRemoteTrustManager()
                     }
                 }?.also { 
@@ -59,9 +50,8 @@ class SocketFactoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun tcpServerSocket(range: IntRange): Pair<ServerInfo, SSLServerSocket>? {
-        val ipAddress = getDeviceIpAddress() ?: return null
-        val sslContext = SSLContext.getInstance("TLS")
+    override suspend fun tcpServerSocket(range: IntRange): SSLServerSocket? {
+        val sslContext = SSLContext.getInstance("TLSv1.2")
         sslContext.init(
             customTrustManager.getLocalKeyManagerFactory().keyManagers,
             arrayOf(customTrustManager.getLocalTrustManager()),
@@ -71,16 +61,12 @@ class SocketFactoryImpl @Inject constructor(
         range.forEach { port ->
             try {
                 val serverSocket = withContext(Dispatchers.IO) {
-                    sslContext.serverSocketFactory.createServerSocket(
-                        port,
-                        50,
-                        InetAddress.getByName(ipAddress)
-                    )
+                    sslContext.serverSocketFactory.createServerSocket(port)
                 } as SSLServerSocket
-                Log.d(TAG, "Server socket created on ${ipAddress}:${port}, waiting for client to connect")
-                return Pair(ServerInfo(ipAddress, port, generateRandomPassword()), serverSocket)
+                Log.d(TAG, "Server socket created on ${localAddress}:${port}")
+                return serverSocket
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to create server socket on port $port, trying next port", e)
+                Log.w(TAG, "Failed to create server socket on port $port", e)
             }
         }
         Log.e(TAG, "Server socket creation failed")

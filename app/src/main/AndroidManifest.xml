@@ -25,6 +25,7 @@
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
         android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:name=".MainApplication"
@@ -88,14 +89,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
-        <service android:name="sefirah.network.FileTransferService" android:foregroundServiceType="connectedDevice" />
 
         <service
             android:name="sefirah.network.ConnectionToggleTileService"
             android:exported="true"
             android:label="@string/connection_toggle"
             android:icon="@drawable/sync_desktop"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>

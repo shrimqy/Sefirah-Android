@@ -4,7 +4,7 @@ import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.ReplyAction
 
 interface NotificationHandler {
-    fun sendActiveNotifications()
+    fun sendActiveNotifications(deviceId: String? = null)
     fun removeAllNotification()
     fun removeNotification(notificationId: String?)
     fun openNotification(notificationKey: String?)

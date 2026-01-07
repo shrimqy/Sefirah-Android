@@ -5,6 +5,5 @@ import androidx.room.PrimaryKey
 
 @Entity
 data class NetworkEntity (
-    @PrimaryKey val ssid: String,
-    val isEnabled: Boolean
+    @PrimaryKey val ssid: String
 )

@@ -1,8 +1,8 @@
 package sefirah.database
 
 import androidx.room.TypeConverter
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import sefirah.domain.model.AddressEntry
 
 class Converters {
     private val json = Json {
@@ -11,12 +11,12 @@ class Converters {
     }
 
     @TypeConverter
-    fun fromString(value: String): List<String> {
+    fun fromAddressEntryList(value: String): List<AddressEntry> {
         return json.decodeFromString(value)
     }
 
     @TypeConverter
-    fun fromList(list: List<String>): String {
+    fun toAddressEntryList(list: List<AddressEntry>): String {
         return json.encodeToString(list)
     }
 }

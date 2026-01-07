@@ -9,9 +9,9 @@ import android.telephony.SubscriptionManager.OnSubscriptionsChangedListener
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import sefirah.domain.model.PhoneNumber
 import java.util.stream.Collectors
-import androidx.core.net.toUri
 
 object TelephonyHelper {
     const val LOGGING_TAG: String = "TelephonyHelper"
@@ -143,7 +143,14 @@ object TelephonyHelper {
         }
         val phoneNumbers: MutableList<LocalPhoneNumber> = ArrayList(subscriptionInfos.size)
         for (info in subscriptionInfos) {
-            val thisPhoneNumber = LocalPhoneNumber(info.number, info.subscriptionId)
+            // Skip entries where number is null or empty, as mentioned in the documentation
+            // that phone numbers might not be known by the device
+            val phoneNumber = info.number
+            if (phoneNumber == null || phoneNumber.isBlank()) {
+                Log.d(LOGGING_TAG, "Skipping subscription ${info.subscriptionId} with null or empty phone number")
+                continue
+            }
+            val thisPhoneNumber = LocalPhoneNumber(phoneNumber, info.subscriptionId)
             phoneNumbers.add(thisPhoneNumber)
         }
         return phoneNumbers.stream()

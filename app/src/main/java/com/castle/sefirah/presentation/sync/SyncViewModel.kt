@@ -1,149 +1,115 @@
 package com.castle.sefirah.presentation.sync
 
-import android.app.Application
-import android.content.Context
-import android.content.Intent
-import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.SyncRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import sefirah.common.R
-import sefirah.database.AppRepository
-import sefirah.database.model.toDomain
-import sefirah.domain.model.ConnectionState
-import sefirah.domain.model.LocalDevice
-import sefirah.domain.model.RemoteDevice
+import kotlinx.coroutines.withContext
+import android.util.Log
+import sefirah.domain.model.ConnectionDetails
+import sefirah.domain.model.DiscoveredDevice
+import sefirah.domain.model.PairMessage
+import sefirah.domain.repository.DeviceManager
 import sefirah.domain.repository.NetworkManager
-import sefirah.network.DiscoveredDevice
 import sefirah.network.NetworkDiscovery
-import sefirah.network.NetworkService
-import sefirah.network.NetworkService.Companion.Actions
-import sefirah.network.NsdService
-import sefirah.network.util.ECDHHelper.deriveSharedSecret
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
-
 @HiltViewModel
 class SyncViewModel @Inject constructor(
-    application: Application,
-    private val nsdService: NsdService,
-    private val appRepository: AppRepository,
+    private val deviceManager: DeviceManager,
     private val networkManager: NetworkManager,
     private val networkDiscovery: NetworkDiscovery
 ) : ViewModel() {
 
-    private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
-
-    val discoveredDevices: StateFlow<List<DiscoveredDevice>> = networkDiscovery.discoveredDevices
-    private lateinit var localDevice: LocalDevice
-    init {
-        // Starting Nsd Discovery for mDNS services at start
-        viewModelScope.launch {
-            nsdService.startDiscovery()
-            localDevice = appRepository.getLocalDevice().toDomain()
-            networkDiscovery.startDiscovery()
-            delay(1.seconds)
-            if (discoveredDevices.value.isEmpty()) {
-                Toast.makeText(application.applicationContext, R.string.toast_network, Toast.LENGTH_LONG).show()
-            }
-        }
-
-        viewModelScope.launch {
-            networkManager.connectionState.collectLatest { state ->
-                connectionState.value = state
-            }
-        }
-    }
+    val discoveredDevices: StateFlow<Map<String, DiscoveredDevice>> = deviceManager.discoveredDevices
+    private var navigationJob: Job? = null
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
-    private var connectionStateJob: Job? = null
-
-    fun authenticate(context: Context, remoteDevice: RemoteDevice, rootNavController: NavController) {
-        // Create a copy with preferred address (might be null)
-        val finalDevice = remoteDevice.copy(
-            prefAddress = remoteDevice.prefAddress?.takeIf { it.isNotBlank() }
-        )
-
-        connectionStateJob = viewModelScope.launch {
+    fun pair(device: DiscoveredDevice, rootNavController: NavController) {
+        // Cancel previous navigation job if any
+        navigationJob?.cancel()
+        
+        viewModelScope.launch {
             try {
-                val intent = Intent(context, NetworkService::class.java).apply {
-                    action = Actions.START.name
-                    putExtra(NetworkService.REMOTE_INFO, finalDevice)
+                if (device.isPairing) {
+                    val updatedDevice = device.copy(isPairing = false)
+                    deviceManager.addOrUpdateDiscoveredDevice(updatedDevice)
+                    return@launch
                 }
-                context.startService(intent)
-                delay(200)
-                // Monitor connection state changes until Connected or Disconnected
-                connectionState.collect { state ->
-                    when (state) {
-                        ConnectionState.Connected -> {
-                            _isRefreshing.value = false
-                            networkDiscovery.stopDiscovery()
+
+                val updatedDevice = device.copy(isPairing = true)
+                deviceManager.addOrUpdateDiscoveredDevice(updatedDevice)
+
+                networkManager.sendMessage(device.deviceId, PairMessage(true))
+
+                // Watch for device to disappear from discoveredDevices or isPairing to become false
+                navigationJob = viewModelScope.launch {
+                    discoveredDevices.collectLatest { devices ->
+                        val currentDevice = devices[device.deviceId]
+                        
+                        if (currentDevice == null) {
                             rootNavController.navigate(route = Graph.MainScreenGraph) {
                                 popUpTo(SyncRoute.SyncScreen.route) { inclusive = true }
                             }
-                            connectionStateJob?.cancel() // Stop collecting after navigation
-                        }
-                        is ConnectionState.Disconnected -> {
-                            _isRefreshing.value = false
-                            connectionStateJob?.cancel() // Stop collecting after failure
-                        }
-                        is ConnectionState.Connecting -> {
-                            _isRefreshing.value = true
-                        }
-                        is ConnectionState.Error -> {
-                            _isRefreshing.value = false
-//                            Toast.makeText(
-//                                context,
-//                                state.message,
-//                                Toast.LENGTH_LONG
-//                            ).show()
-                            connectionStateJob?.cancel()
+                            navigationJob?.cancel()
+                        } else if (!currentDevice.isPairing) {
+                            navigationJob?.cancel()
                         }
                     }
                 }
             } catch (e: Exception) {
-                _isRefreshing.value = false
+                // Reset pairing state on error
+                val resetDevice = device.copy(isPairing = false)
+                deviceManager.addOrUpdateDiscoveredDevice(resetDevice)
+                navigationJob?.cancel()
             }
         }
     }
 
-    fun findServices() {
+    fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            nsdService.startDiscovery()
+            networkDiscovery.broadcastDevice()
             // Fake slower refresh so it doesn't seem like it's not doing anything
             delay(1.5.seconds)
             _isRefreshing.value = false
         }
     }
 
-    fun deriveSharedSecretCode(publicKey: String): ByteArray {
-        return deriveSharedSecret(localDevice.privateKey, publicKey)
-    }
+    fun connectFromQrCode(connectionDetails: ConnectionDetails, rootNavController: NavController) {
+        viewModelScope.launch {
+            try {
+                // Connect to the device
+                withContext(Dispatchers.IO) {
+                    networkManager.connectTo(connectionDetails)
+                }
 
+                val device = discoveredDevices.value[connectionDetails.deviceId] ?: return@launch
+                pair(device, rootNavController)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error connecting from QR code", e)
+            }
+        }
+    }
 
     override fun onCleared() {
         super.onCleared()
-        connectionStateJob?.cancel()
-        networkDiscovery.stopDiscovery()
-        nsdService.stopAdvertisingService()
-        nsdService.stopDiscovery()
+        navigationJob?.cancel()
     }
 
     companion object {
-        private const val TAG = "OnboardingViewModel"
-        private const val PORT = 5149
+        private const val TAG = "SyncViewModel"
     }
 }

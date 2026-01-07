@@ -12,9 +12,12 @@ import sefirah.domain.repository.PreferencesRepository
 import sefirah.network.NetworkHelper
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ReleaseRepository(
-    val preferencesRepository: PreferencesRepository,
+@Singleton
+class ReleaseRepository @Inject constructor(
+    private val preferencesRepository: PreferencesRepository,
     private val networkHelper: NetworkHelper
 ) {
     suspend fun getRelease(currentVersion: String): Result {
@@ -35,11 +38,9 @@ class ReleaseRepository(
             }
 
             preferencesRepository.saveLastCheckedForUpdate(now.toEpochMilli())
-            
-            // Parse the response
+
             val githubRelease: GitHubReleaseResponse = response.body()
-            
-            // Map to domain model
+
             val latestRelease = Release(
                 version = githubRelease.tagName,
                 info = githubRelease.body,

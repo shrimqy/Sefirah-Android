@@ -1,6 +1,5 @@
 package sefirah.notification
 
-import android.content.Context
 import android.content.Intent
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -10,9 +9,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class NotificationListener : NotificationListenerService() {
-
-    @Inject
-    lateinit var notificationCallback: NotificationCallback
+    @Inject lateinit var notificationCallback: NotificationCallback
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn?.let { notification ->
@@ -39,18 +36,6 @@ class NotificationListener : NotificationListenerService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
-    }
-
-    companion object {
-        fun start(context: Context) {
-            val intent = Intent(context, NotificationListener::class.java)
-            context.startService(intent)
-        }
-        fun stop(context: Context) {
-            Log.d("NotificationService", "Stop called")
-            val intent = Intent(context, NotificationListener::class.java)
-            context.stopService(intent)
-        }
     }
 }
 

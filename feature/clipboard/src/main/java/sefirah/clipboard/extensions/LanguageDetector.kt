@@ -7,6 +7,7 @@
 package sefirah.clipboard.extensions
 
 import android.content.Context
+import android.os.Build
 
 object LanguageDetector {
     fun getCopyForLocale(context: Context): String {
@@ -15,7 +16,11 @@ object LanguageDetector {
     }
 
     fun find(context: Context): String {
-        return context.resources.configuration.locales[0].language
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            context.resources.configuration.locales[0].language
+        } else {
+            context.resources.configuration.locale.language
+        }
     }
 
     /**

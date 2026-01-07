@@ -1,9 +1,5 @@
 package sefirah.network.util
 
-import android.app.appsearch.StorageInfo
-import android.os.Environment
-import android.os.StatFs
-import java.io.File
 import java.text.DecimalFormat
 
 //fun getStorageInfo(): StorageInfo {
@@ -26,6 +22,7 @@ import java.text.DecimalFormat
 //    )
 //}
 
+
 fun formatSize(size: Long): String {
     val kilo = 1024.0
     val mega = kilo * 1024
@@ -34,9 +31,9 @@ fun formatSize(size: Long): String {
     val formatter = DecimalFormat("#.##")
 
     return when {
-        size >= giga -> {formatter.format(size / giga)}
-        size >= mega -> {formatter.format(size / mega)}
-        else -> {formatter.format(size / kilo)}
+        size >= giga -> "${formatter.format(size / giga)} GB"
+        size >= mega -> "${formatter.format(size / mega)} MB"
+        else -> "${formatter.format(size / kilo)} KB"
     }
 }
 

@@ -17,7 +17,7 @@ fun bitmapToBase64(bitmap: Bitmap): String {
     val outputStream = ByteArrayOutputStream()
     bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
     val byteArray = outputStream.toByteArray()
-    return Base64.encodeToString(byteArray, Base64.DEFAULT)
+    return Base64.encodeToString(byteArray, Base64.NO_WRAP)
 }
 
 fun drawableToBitmap(drawable: Drawable): Bitmap {
@@ -42,7 +42,7 @@ fun drawableToBase64(drawable: Drawable): String? {
 fun base64ToBitmap(base64String: String?): Bitmap? {
     return try {
         if (base64String == null) return null
-        val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
+        val decodedBytes = Base64.decode(base64String, Base64.NO_WRAP)
         BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
     } catch (e: Exception) {
         Log.e("BitmapHelper", "Error decoding base64 thumbnail", e)

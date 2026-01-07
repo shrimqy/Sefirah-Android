@@ -15,6 +15,7 @@
     <string name="channel_transfer_progress">Transfer Progress</string>
     <string name="channel_transfer_complete">Transfer Complete</string>
     <string name="channel_device_connection">Device Connection</string>
+    <string name="channel_pairing_request">Pairing Request</string>
     <string name="channel_media_playback">Desktop Media Playback</string>
 
     <!-- Notification Content -->
@@ -28,8 +29,26 @@
     <string name="notification_file_transfer">File Transfer</string>
     <string name="notification_file_transfer_error">File Transfer Error</string>
     <string name="notification_file_transfer_progress">Ongoing file transfer</string>
-    <string name="notification_file_transfer_complete">Completed file transfer</string>
+    <string name="notification_file_transfer_complete">File Transfer Complete</string>
+    <string name="notification_transfer_preparing">Preparing transfer…</string>
+    <string name="notification_sending">Sending: %.1f MB / %.1f MB</string>
+    <string name="notification_receiving">Receiving: %.1f MB / %.1f MB</string>
+    <string name="notification_transfer_success">Transfer completed successfully</string>
+    <string name="notification_transfer_success_bulk">Successfully transferred %d files</string>
+    <string name="notification_sending_action">Sending</string>
+    <string name="notification_receiving_action">Receiving</string>
+    <string name="notification_file">file</string>
+    <string name="notification_files">files</string>
+    <string name="notification_to">to</string>
+    <string name="notification_from">from</string>
+    <string name="notification_progress_format">%1$d%% (%2$s/%3$s)</string>
+    <string name="notification_sending_title_format">%1$s %2$d %3$s %4$s %5$s</string>
+    <string name="notification_receiving_title_format">%1$s %2$d %3$s %4$s %5$s</string>
     <string name="notification_device_connection">Device Connection Status</string>
+    <string name="notification_pairing_request_title">Pairing Request</string>
+    <string name="notification_pairing_request_text">%1$s wants to pair.\nVerification code: %2$s</string>
+    <string name="notification_pairing_approve">Approve</string>
+    <string name="notification_pairing_reject">Reject</string>
 
     <!-- Screen Names -->
     <string name="home">Home</string>
@@ -41,11 +60,9 @@
     <string name="network">Network</string>
 
     <!-- Common UI Elements -->
-    <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
     <string name="next">Next</string>
     <string name="finish">Finish</string>
-    <string name="add">Add</string>
     <string name="back_button">Back</string>
     <string name="connect_button">Connect</string>
     <string name="grant">Grant</string>
@@ -78,9 +95,16 @@
     <string name="add_device">Add Device</string>
     <string name="no_device">No devices found</string>
     <string name="last_connected">Last connected</string>
-    <string name="ip_addresses">Ip addresses</string>
-    <string name="no_ip">No address configured</string>
-    <string name="add_custom_ip_button">Add Custom IP Address</string>
+    <string name="connected_to">Connected to</string>
+    <string name="no_ip_addresses">No IP addresses</string>
+    <string name="enabled">enabled</string>
+    <string name="all_addresses_fallback">All addresses (none enabled)</string>
+    <string name="manage_addresses_title">Manage Addresses</string>
+    <string name="ip_address_subtitle">Addresses used for connecting to the device</string>
+    <string name="add_ip_address">Add IP Address</string>
+    <string name="add">Add</string>
+    <string name="cancel">Cancel</string>
+    <string name="ip_addresses">Preferred hostname or IP address</string>
     <string name="custom_device_list">Custom device list</string>
 
     <!-- Onboarding & Welcome -->
@@ -110,12 +134,12 @@
 
     <!-- Dialogs -->
     <string name="delete_dialog">Do you want to delete</string>
-    <string name="connection_options">Connection Options</string>
-    <string name="connection_options_subtitle">How do you want to connect to</string>
+    <string name="select_address_title">Select Address/Hostname</string>
+    <string name="custom_ip_text_label">Hostname or IP Address</string>
     <string name="manual_connection">Manual Connection</string>
     <string name="available_ip_addresses">Available IP addresses:</string>
     <string name="custom_ip_placeholder">Or enter custom IP</string>
-    <string name="custom_ip_text_label">Hostname/Ip Address</string>
+
     <string name="ip_example">Example: 192.168.1.100</string>
 
     <!-- Network -->
@@ -154,9 +178,9 @@
     <string name="set_group_message_as_mms_title">Send group MMS</string>
     <string name="set_group_message_as_mms" translatable="false">set_group_message_as_mms</string>
     <string name="set_long_text_as_mms_title">Send long text as MMS</string>
-    <string name="set_long_text_as_mms" translatable="false">set_long_text_as_mms</string>
     <string name="convert_to_mms_after_title">Convert to MMS</string>
     <string name="convert_to_mms_after" translatable="false">convert_to_mms_after</string>
+    <string name="set_long_text_as_mms" translatable="false">set_long_text_as_mms</string>
     <string name="convert_to_mms_after_default" translatable="false">3</string>
     <string name="messages_permission">Messages permission</string>
     <string name="messages_permission_rationale">For sending and reading messages</string>
@@ -185,10 +209,10 @@
     <string name="update_check_open">Open on Github</string>
     <string name="error">Error</string>
     <string name="connection_toggle">Connection toggle</string>
-    <string name="action_cancel">Cancel</string>
     <string name="auto_discovery">Auto discovery</string>
     <string name="always_on">Always on</string>
     <string name="disabled">Disabled</string>
     <string name="device_discovery">Device discovery</string>
+    <string name="trust_all_networks">Trust all networks</string>
 
 </resources>

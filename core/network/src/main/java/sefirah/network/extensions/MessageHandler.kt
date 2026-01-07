@@ -1,160 +1,149 @@
 package sefirah.network.extensions
 
-import android.content.Context
-import android.content.Intent
 import android.media.AudioManager
 import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import sefirah.database.model.toEntity
-import sefirah.domain.model.ApplicationList
+import sefirah.domain.model.ActionMessage
+import sefirah.domain.model.AddressEntry
 import sefirah.domain.model.AudioDevice
-import sefirah.domain.model.BulkFileTransfer
+import sefirah.domain.model.BaseRemoteDevice
 import sefirah.domain.model.ClipboardMessage
-import sefirah.domain.model.DeviceInfo
-import sefirah.domain.model.DeviceRingerMode
-import sefirah.domain.model.FileTransfer
 import sefirah.domain.model.CommandMessage
 import sefirah.domain.model.CommandType
+import sefirah.domain.model.ConnectionState
+import sefirah.domain.model.DeviceInfo
+import sefirah.domain.model.DeviceRingerMode
+import sefirah.domain.model.DiscoveredDevice
+import sefirah.domain.model.FileTransferMessage
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationMessage
 import sefirah.domain.model.NotificationType
+import sefirah.domain.model.PairMessage
+import sefirah.domain.model.PairedDevice
+import sefirah.domain.model.PendingDeviceApproval
 import sefirah.domain.model.PlaybackSession
-import sefirah.domain.model.RemoteDevice
 import sefirah.domain.model.ReplyAction
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.TextMessage
 import sefirah.domain.model.ThreadRequest
-import sefirah.domain.model.ActionMessage
-import sefirah.domain.model.TransferType
-import sefirah.network.FileTransferService
-import sefirah.network.FileTransferService.Companion.ACTION_RECEIVE_FILE
-import sefirah.network.FileTransferService.Companion.EXTRA_BULK_TRANSFER
-import sefirah.network.FileTransferService.Companion.EXTRA_FILE_TRANSFER
 import sefirah.network.NetworkService
 import sefirah.network.NetworkService.Companion.TAG
-import sefirah.network.util.ECDHHelper
 import sefirah.network.util.getInstalledApps
 
-fun NetworkService.handleMessage(message: SocketMessage) {
-    when (message) {
-        is CommandMessage -> handleMisc(message)
-        is NotificationMessage -> handleNotificationMessage(message)
-        is NotificationAction -> notificationHandler.performNotificationAction(message)
-        is ReplyAction -> notificationHandler.performReplyAction(message)
-        is PlaybackSession -> handleMediaInfo(message)
-        is ClipboardMessage -> {
-            Log.d("ClipboardMessage", "Received clipboard message: ${message.content}")
-            clipboardHandler.setClipboard(message)
-        }
-        is FileTransfer -> handleFileTransfer(message)
-        is BulkFileTransfer -> handleBulkFileTransfer(message)
-        is DeviceRingerMode -> handleRingerMode(message)
-        is ThreadRequest -> smsHandler.handleThreadRequest(message)
-        is TextMessage -> smsHandler.sendTextMessage(message)
-        is AudioDevice -> mediaHandler.addAudioDevice(message)
-        is ActionMessage -> actionHandler.addAction(message)
-        else -> {}
-    }
-}
-
-fun NetworkService.handleFileTransfer(message: FileTransfer) {
-    when(message.transferType) {
-        TransferType.File -> {
-            val intent = Intent(this, FileTransferService::class.java).apply {
-                action = ACTION_RECEIVE_FILE
-                putExtra(EXTRA_FILE_TRANSFER, message)
+suspend fun NetworkService.handleMessage(device: BaseRemoteDevice, message: SocketMessage) {
+    try {
+        if (device is DiscoveredDevice) {
+            when (message) {
+                is PairMessage -> handlePairMessage(device, message)
+                else -> {}
             }
-            startService(intent)
+            return
         }
-        TransferType.Clipboard -> {
-            clipboardHandler.handleFileTransfer(message)
+
+        // Only PairedDevice can receive these messages
+        when (message) {
+            is DeviceInfo -> handleDeviceInfo(message, device as PairedDevice)
+            is CommandMessage -> handleMisc(message, device as PairedDevice)
+            is NotificationMessage -> handleNotificationMessage(message)
+            is NotificationAction -> notificationHandler.performNotificationAction(message)
+            is ReplyAction -> notificationHandler.performReplyAction(message)
+            is PlaybackSession -> handleMediaInfo(device.deviceId, message)
+            is ClipboardMessage -> clipboardHandler.setClipboard(message)
+            is FileTransferMessage ->  fileTransferService.receiveFiles(device.deviceId, message)
+            is DeviceRingerMode -> handleRingerMode(message)
+            is ThreadRequest -> smsHandler.handleThreadRequest(message)
+            is TextMessage -> smsHandler.sendTextMessage(message)
+            is AudioDevice -> mediaHandler.handleAudioDevice(device.deviceId, message)
+            is ActionMessage -> actionHandler.addAction(device.deviceId, message)
+            else -> {}
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error handling message for device ${device.deviceId}", e)
+    }
+}
+
+private suspend fun NetworkService.handlePairMessage(device: DiscoveredDevice, message: PairMessage) {
+    if (message.pair) {
+        // Check if this is a response to our pairing request
+        if (device.isPairing) {
+            val pairedDevice = PairedDevice(
+                deviceId = device.deviceId,
+                deviceName = device.deviceName,
+                avatar = null,
+                lastConnected = System.currentTimeMillis(),
+                addresses = device.addresses.map { AddressEntry(it) },
+                address = device.address,
+                publicKey = device.publicKey,
+                connectionState = ConnectionState.Connected,
+                port = device.port,
+            )
+
+            deviceManager.removeDiscoveredDevice(device.deviceId)
+            deviceManager.addOrUpdatePairedDevice(pairedDevice)
+            Log.d(TAG, "Created PairedDevice ${device.deviceId} after pairing approval")
+
+            finalizeConnection(pairedDevice, true)
+        } else {
+            // Remote device is requesting to pair with us
+            val pendingApproval = PendingDeviceApproval(
+                device.deviceId,
+                device.deviceName,
+                device.verificationCode
+            )
+            emitPendingApproval(pendingApproval)
+            showPairingVerificationNotification(pendingApproval)
+        }
+    } else {
+        // Pairing rejected
+        if (device.isPairing) {
+            // They rejected our pairing request - update isPairing to false
+            val updatedDevice = device.copy(isPairing = false)
+            deviceManager.addOrUpdateDiscoveredDevice(updatedDevice)
+            Log.d(TAG, "Pairing rejected by ${device.deviceId}")
         }
     }
 }
 
-fun NetworkService.handleBulkFileTransfer(message: BulkFileTransfer) {
-    val intent = Intent(this, FileTransferService::class.java).apply {
-        action = ACTION_RECEIVE_FILE
-        putExtra(EXTRA_BULK_TRANSFER, message)
-    }
-    startService(intent)
-}
-
-suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo, remoteInfo: RemoteDevice, ipAddress: String) {
-
-    // Verify authentication
-    if (deviceInfo.nonce == null || deviceInfo.proof == null) {
-        Log.e(TAG, "Missing authentication data")
-        stop(false)
-        return
-    }
-
-    val localDevice = appRepository.getLocalDevice()
-
-    val sharedSecret = ECDHHelper.deriveSharedSecret(
-        localDevice.privateKey,
-        remoteInfo.publicKey
+suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo, device: PairedDevice) {
+    Log.d(TAG, "Handling DeviceInfo for paired device ${device.deviceId}")
+    val updatedDevice = device.copy(
+        deviceName = deviceInfo.deviceName,
+        avatar = deviceInfo.avatar
     )
-
-    if (!ECDHHelper.verifyProof(sharedSecret, deviceInfo.nonce!!, deviceInfo.proof!!)) {
-        Log.e(TAG, "Authentication failed")
-        stop(false)
-        return
-    }
-
-    appRepository.addDevice(
-        RemoteDevice(
-            deviceId = deviceInfo.deviceId,
-            deviceName = deviceInfo.deviceName,
-            avatar = deviceInfo.avatar,
-            port = remoteInfo.port,
-            lastConnected = System.currentTimeMillis(),
-            ipAddresses = remoteInfo.ipAddresses,
-            prefAddress = ipAddress,
-            publicKey = remoteInfo.publicKey,
-        ).toEntity()
-    )
+    deviceManager.addOrUpdatePairedDevice(updatedDevice)
+    Log.d(TAG, "DeviceInfo processed successfully for ${device.deviceId}")
 }
 
-
-fun NetworkService.handleMediaInfo(session: PlaybackSession) {
-    CoroutineScope(Dispatchers.IO).launch {
-        if (preferencesRepository.readMediaSessionSettings().first()) {
-            mediaHandler.handlePlaybackSessionUpdates(session)
-        }
+suspend fun NetworkService.handleMediaInfo(deviceId: String, playbackSession: PlaybackSession) {
+    if (preferencesRepository.readMediaSessionSettingsForDevice(deviceId).first()) {
+        mediaHandler.handlePlaybackSessionUpdates(deviceId, playbackSession)
     }
 }
 
-fun NetworkService.handleMisc(commandMessage: CommandMessage) {
-    when(commandMessage.commandType) {
-        CommandType.Disconnect -> stop(true)
+suspend fun NetworkService.handleMisc(commandMessage: CommandMessage, device: PairedDevice) {
+    when (commandMessage.commandType) {
+        CommandType.Disconnect -> disconnectDevice(device, true)
         CommandType.ClearNotifications -> notificationHandler.removeAllNotification()
-        CommandType.RequestAppList -> handleAppListRequest()
+        CommandType.RequestAppList -> handleAppListRequest(device)
     }
 }
 
-private fun NetworkService.handleAppListRequest() {
+private fun NetworkService.handleAppListRequest(device: PairedDevice) {
     val appList = getInstalledApps(packageManager)
-    CoroutineScope(Dispatchers.IO).launch {
-        sendMessage(appList)
-    }
+    sendMessage(device.deviceId, appList)
 }
 
 fun NetworkService.handleRingerMode(ringerMode: DeviceRingerMode) {
-    when(ringerMode.ringerMode) {
+    when (ringerMode.ringerMode) {
         AudioManager.RINGER_MODE_SILENT -> {
-            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
         }
+
         AudioManager.RINGER_MODE_VIBRATE -> {
-            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
         }
+
         AudioManager.RINGER_MODE_NORMAL -> {
-            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
         }
     }

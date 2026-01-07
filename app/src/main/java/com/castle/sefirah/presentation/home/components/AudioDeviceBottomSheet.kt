@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import sefirah.domain.model.AudioDevice
+import sefirah.domain.model.AudioMessageType
 
 @Composable
 fun AudioDeviceBottomSheet(
@@ -56,9 +57,6 @@ fun SelectedAudioDevice(
     onVolumeChange: (AudioDevice, Float) -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         onClick = { onClick() }
     ) {
@@ -162,6 +160,7 @@ fun AudioDeviceBottomSheetPreview() {
     MaterialTheme {
         val sampleDevices = listOf(
             AudioDevice(
+                audioDeviceType = AudioMessageType.Active,
                 deviceId = "1",
                 isSelected = true,
                 deviceName = "Living Room Speaker",
@@ -169,6 +168,7 @@ fun AudioDeviceBottomSheetPreview() {
                 isMuted = false
             ),
             AudioDevice(
+                audioDeviceType = AudioMessageType.Active,
                 deviceId = "2",
                 isSelected = false,
                 deviceName = "Kitchen Speaker",
@@ -176,6 +176,7 @@ fun AudioDeviceBottomSheetPreview() {
                 isMuted = true,
             ),
             AudioDevice(
+                audioDeviceType = AudioMessageType.Active,
                 deviceId = "3",
                 isSelected = false,
                 deviceName = "Bedroom Speaker",

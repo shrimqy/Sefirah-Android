@@ -1,17 +1,16 @@
 package sefirah.network.util
 
-import android.content.Context
 import kotlinx.coroutines.runBlocking
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import javax.inject.Inject
+import javax.inject.Singleton
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
-class TrustManager @Inject constructor(
-    private val context: Context,
-) {
+@Singleton
+class TrustManager @Inject constructor() {
     // Trust all certificates since we're doing our own authentication
     private val trustAllCerts = object : X509TrustManager {
         override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
@@ -35,7 +34,7 @@ class TrustManager @Inject constructor(
         keyStore.load(null)
         
         // Use CryptoUtils to create/get the certificate
-        val cryptoUtils = CryptoUtils(context)
+        val cryptoUtils = CryptoUtils()
         runBlocking {
             cryptoUtils.getOrCreateCertificate()
         }
@@ -57,7 +56,7 @@ class TrustManager @Inject constructor(
             if (!containsAlias(CryptoUtils.KEY_ALIAS)) {
                 runBlocking {
                     // Create certificate and reload
-                    CryptoUtils(context).getOrCreateCertificate()
+                    CryptoUtils().getOrCreateCertificate()
                     load(null)
                 }
                 

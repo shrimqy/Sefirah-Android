@@ -2,29 +2,25 @@ package sefirah.clipboard
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.last
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runBlocking
 import sefirah.clipboard.extensions.LanguageDetector
+import sefirah.domain.repository.DeviceManager
 import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
-import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
 class ClipboardListener : AccessibilityService() {
     @Inject
     lateinit var networkManager: NetworkManager
+
+    @Inject lateinit var deviceManager: DeviceManager
 
     @Inject
     lateinit var preferencesRepository: PreferencesRepository
@@ -56,7 +52,11 @@ class ClipboardListener : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        val isDisconnected = runBlocking { networkManager.connectionState.first().isDisconnected }
+        val isDisconnected = runBlocking { 
+            val pairedDevices = deviceManager.pairedDevices.first()
+            // Check if any device is connected or connecting
+            !pairedDevices.any { it.connectionState.isConnected || it.connectionState.isConnecting }
+        }
         if (isDisconnected) return
         
         try {
