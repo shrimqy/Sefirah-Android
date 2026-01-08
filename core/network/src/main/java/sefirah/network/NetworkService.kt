@@ -227,6 +227,12 @@ class NetworkService : Service() {
                     fileTransferService.sendFiles(deviceId, uris)
                 }
             }
+            Actions.SEND_CLIPBOARD.name -> {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+                if (!text.isNullOrEmpty()) {
+                    sendClipboardMessage(ClipboardMessage("text/plain", text))
+                }
+            }
         }
         return START_STICKY
     }
@@ -920,6 +926,7 @@ class NetworkService : Service() {
             REJECT_DEVICE,
             DISCONNECT,
             CANCEL_TRANSFER,
+            SEND_CLIPBOARD,
             SEND_FILES
         }
 
