@@ -2,6 +2,7 @@ package com.castle.sefirah.presentation.home.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,19 +14,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.SkipNext
-import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,6 +49,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sefirah.common.R
 import sefirah.domain.model.PlaybackSession
+import sefirah.presentation.components.WavySlider
 import sefirah.presentation.util.base64ToBitmap
 import java.util.Locale
 import kotlin.math.abs
@@ -72,7 +74,7 @@ fun MediaCard(
         val newActiveIndex = sessions.indexOfFirst { it.isPlaying }
         // Only scroll if there's a playing session and current page isn't already showing it
         if (newActiveIndex >= 0) {
-            val currentPageIsPlaying = pagerState.currentPage < sessions.size && 
+            val currentPageIsPlaying = pagerState.currentPage < sessions.size &&
                                       sessions[pagerState.currentPage].isPlaying
             if (newActiveIndex != pagerState.currentPage && !currentPageIsPlaying) {
                 scope.launch {
@@ -85,6 +87,7 @@ fun MediaCard(
     Box(modifier = Modifier.fillMaxWidth()) {
         HorizontalPager(
             state = pagerState,
+            pageSpacing = 16.dp
         ) { page ->
             val session = sessions[page]
             PlaybackSession(
@@ -101,12 +104,13 @@ fun MediaCard(
                 pageCount = sessions.size,
                 currentPage = pagerState.currentPage,
                 currentPageOffset = pagerState.currentPageOffsetFraction,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp)
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PlaybackSession(
     session: PlaybackSession,
@@ -114,19 +118,12 @@ fun PlaybackSession(
     onSkipNextClick: () -> Unit,
     onSkipPreviousClick: () -> Unit,
     onSeekChange: (Double) -> Unit,
-    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
     ) {
         session.trackTitle?.let {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
+            Box(Modifier.fillMaxWidth()) {
 
                 session.thumbnail?.let { thumbnail ->
                     // Remember the bitmap conversion result
@@ -141,7 +138,7 @@ fun PlaybackSession(
                         contentDescription = null,
                         modifier = Modifier
                             .matchParentSize()
-                            .clip(RoundedCornerShape(16.dp)),
+                            .clip(MaterialTheme.shapes.large),
                         contentScale = ContentScale.Crop
                     )
                 }
@@ -204,12 +201,12 @@ fun PlaybackSession(
                     LaunchedEffect(session.isPlaying, isDragging) {
                         if (session.isPlaying && !isDragging) {
                             lastUpdateTime = System.currentTimeMillis()
-                            
+
                             while (true) {
                                 delay(100)
-                                
+
                                 if (isDragging) break
-                                
+
                                 // Calculate elapsed time since last update
                                 val now = System.currentTimeMillis()
                                 val elapsedTime = now - lastUpdateTime
@@ -217,9 +214,9 @@ fun PlaybackSession(
 
                                 val newPosition = displayPosition + elapsedTime
                                 val boundedPosition = minOf(newPosition, session.maxSeekTime)
-                                
+
                                 displayPosition = boundedPosition
-                                
+
                                 if (boundedPosition >= session.maxSeekTime) break
                             }
                         }
@@ -230,8 +227,11 @@ fun PlaybackSession(
                     } else {
                         0f
                     }
-                                        
-                    Slider(
+
+                    // Interaction source for tracking thumb interaction state
+                    val thumbInteractionSource = remember { MutableInteractionSource() }
+
+                    WavySlider(
                         value = sliderPosition,
                         onValueChange = { newValue ->
                             isDragging = true
@@ -239,12 +239,12 @@ fun PlaybackSession(
                         },
                         onValueChangeFinished = {
                             onSeekChange(displayPosition)
-                            // Reset the reference time after seek
                             lastUpdateTime = System.currentTimeMillis()
-
                             isDragging = false
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        interactionSource = thumbInteractionSource,
+                        isPlaying = session.isPlaying
                     )
 
                     Row(
@@ -270,33 +270,37 @@ fun PlaybackSession(
                     ) {
                         IconButton(onClick = onSkipPreviousClick) {
                             Icon(
-                                imageVector = Icons.Outlined.SkipPrevious,
+                                painter = painterResource(R.drawable.ic_skip_previous),
                                 contentDescription = "Skip Previous",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
 
+                        val playPauseInteractionSource = remember { MutableInteractionSource() }
+
                         // Play/Pause button
-                        IconButton(onClick = onPlayPauseClick) {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .padding(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (session.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    contentDescription = if (session.isPlaying) "Pause" else "Play",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
+                        IconToggleButton (
+                            checked = session.isPlaying,
+                            onCheckedChange = { onPlayPauseClick() },
+                            shapes = IconButtonDefaults.toggleableShapes(),
+                            colors = IconButtonDefaults.filledIconToggleButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = contentColorFor(MaterialTheme.colorScheme.primary),
+                                checkedContainerColor = MaterialTheme.colorScheme.primary,
+                                checkedContentColor = contentColorFor(MaterialTheme.colorScheme.primary)
+                            ),
+                            interactionSource = playPauseInteractionSource,
+                            modifier = Modifier.size(IconButtonDefaults.mediumContainerSize(IconButtonDefaults.IconButtonWidthOption.Wide))
+                        ) {
+                            Icon(
+                                painter = if (session.isPlaying) painterResource(R.drawable.ic_pause) else painterResource(R.drawable.ic_play_arrow),
+                                contentDescription = if (session.isPlaying) "Pause" else "Play"
+                            )
                         }
 
                         IconButton(onClick = onSkipNextClick) {
                             Icon(
-                                imageVector = Icons.Outlined.SkipNext,
+                                painter = painterResource(R.drawable.ic_skip_next),
                                 contentDescription = "Skip Next",
                                 tint = MaterialTheme.colorScheme.primary
                             )

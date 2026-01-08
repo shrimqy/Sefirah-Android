@@ -9,18 +9,18 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import sefirah.domain.model.DiscoveryMode
-import sefirah.domain.model.PreferencesSettings
+import sefirah.domain.model.DevicePreferences
 import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class PreferencesDatastore @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val context: Context
 ) : PreferencesRepository {
 
     private val datastore = context.dataStore
@@ -35,93 +35,13 @@ class PreferencesDatastore @Inject constructor(
         APP_ENTRY.update(true)
     }
 
-
-    override suspend fun saveSynStatus(syncStatus: Boolean) {
-        SYNC_STATUS.update(syncStatus)
+    override suspend fun saveTrustAllNetworks(enabled: Boolean) {
+        TRUST_ALL_NETWORKS.update(enabled)
     }
 
-
-    override fun readSyncStatus(): Flow<Boolean> {
-        return datastore.data.map { status ->
-            status[SYNC_STATUS] == true
-        }
-    }
-
-
-    override suspend fun saveLastConnected(hostAddress: String) {
-        LAST_CONNECTED.update(hostAddress)
-    }
-
-
-    override fun readLastConnected(): Flow<String?> {
-        return datastore.data.map { host ->
-            host[LAST_CONNECTED]
-        }
-    }
-
-    override suspend fun readDiscoveryMode(): DiscoveryMode {
+    override fun readTrustAllNetworks(): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            val modeString = preferences[DISCOVERY_MODE] ?: DiscoveryMode.AUTO.name
-            try {
-                DiscoveryMode.valueOf(modeString)
-            } catch (e: IllegalArgumentException) {
-                DiscoveryMode.AUTO
-            }
-        }.first()
-    }
-
-    override fun readDiscoveryModeFlow(): Flow<DiscoveryMode> {
-        return datastore.data.map { preferences ->
-            val modeString = preferences[DISCOVERY_MODE] ?: DiscoveryMode.AUTO.name
-            DiscoveryMode.valueOf(modeString)
-        }
-    }
-
-
-    override suspend fun saveDiscoveryMode(discoveryMode: DiscoveryMode) {
-        DISCOVERY_MODE.update(discoveryMode.name)
-    }
-
-
-    override suspend fun saveClipboardSyncSettings(clipboardSync: Boolean) {
-        CLIPBOARD_SYNC.update(clipboardSync)
-    }
-
-
-    override fun readClipboardSyncSettings(): Flow<Boolean> {
-        return datastore.data.map { preferences ->
-            preferences[CLIPBOARD_SYNC] != false
-        }
-    }
-
-    override suspend fun saveNotificationSyncSettings(notificationSync: Boolean) {
-        NOTIFICATION_SYNC.update(notificationSync)
-    }
-
-    override fun readNotificationSyncSettings(): Flow<Boolean> {
-        return datastore.data.map { preferences ->
-            preferences[NOTIFICATION_SYNC] != false
-        }
-    }
-
-    override suspend fun saveMediaSessionSettings(showMediaSession: Boolean) {
-        MEDIA_SESSION.update(showMediaSession)
-    }
-
-    override fun readMediaSessionSettings(): Flow<Boolean> {
-        return datastore.data.map { preferences ->
-            preferences[MEDIA_SESSION] != false
-        }
-    }
-
-    override suspend fun saveImageClipboardSettings(copyImagesToClipboard: Boolean) {
-        IMAGE_CLIPBOARD.update(copyImagesToClipboard)
-    }
-
-
-    override fun readImageClipboardSettings(): Flow<Boolean> {
-        return datastore.data.map { preferences ->
-            preferences[IMAGE_CLIPBOARD] != false
+            preferences[TRUST_ALL_NETWORKS] != false
         }
     }
 
@@ -129,20 +49,9 @@ class PreferencesDatastore @Inject constructor(
         STORAGE_LOCATION.update(uri)
     }
 
-
     override suspend fun getStorageLocation(): Flow<String> {
         return datastore.data.map { preferences ->
             preferences[STORAGE_LOCATION] ?: ""
-        }
-    }
-
-    override suspend fun saveMessageSyncSettings(messageSync: Boolean) {
-        MESSAGE_SYNC.update(messageSync)
-    }
-
-    override fun readMessageSyncSettings(): Flow<Boolean> { 
-        return datastore.data.map { preferences ->
-            preferences[MESSAGE_SYNC] != false
         }
     }
 
@@ -157,28 +66,16 @@ class PreferencesDatastore @Inject constructor(
     }
 
     override suspend fun savePermissionRequested(permission: String) {
-        datastore.edit { prefs ->
-            val requested = prefs[PERMISSION_REQUESTED] ?: ""
-            if (!requested.contains(permission)) {
-                prefs[PERMISSION_REQUESTED] = "$requested,$permission"
-            }
-        }
+        permissionRequestedKey(permission).update(true)
+    }
+
+    override suspend fun clearPermissionRequested(permission: String) {
+        permissionRequestedKey(permission).update(false)
     }
 
     override fun hasRequestedPermission(permission: String): Flow<Boolean> {
-        return datastore.data.map { prefs ->
-            val requested = prefs[PERMISSION_REQUESTED] ?: ""
-            requested.split(",").contains(permission)
-        }
-    }
-
-    override suspend fun saveRemoteStorageSettings(enabled: Boolean) {
-        REMOTE_STORAGE.update(enabled)
-    }
-
-    override fun readRemoteStorageSettings(): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            preferences[REMOTE_STORAGE] != false
+            preferences[permissionRequestedKey(permission)] == true
         }
     }
 
@@ -204,38 +101,83 @@ class PreferencesDatastore @Inject constructor(
         }
     }
 
+    override suspend fun saveClipboardSyncSettingsForDevice(deviceId: String, clipboardSync: Boolean) {
+        deviceClipboardSyncKey(deviceId).update(clipboardSync)
+    }
+
+    override fun readClipboardSyncSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceClipboardSyncKey(deviceId)] != false
+        }
+    }
+
+    override suspend fun saveMessageSyncSettingsForDevice(deviceId: String, messageSync: Boolean) {
+        deviceMessageSyncKey(deviceId).update(messageSync)
+    }
+
+    override fun readMessageSyncSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceMessageSyncKey(deviceId)] != false
+        }
+    }
+
+    override suspend fun saveNotificationSyncSettingsForDevice(deviceId: String, notificationSync: Boolean) {
+        deviceNotificationSyncKey(deviceId).update(notificationSync)
+    }
+
+    override fun readNotificationSyncSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceNotificationSyncKey(deviceId)] != false
+        }
+    }
+
+    override suspend fun saveImageClipboardSettingsForDevice(deviceId: String, copyImagesToClipboard: Boolean) {
+        deviceImageClipboardKey(deviceId).update(copyImagesToClipboard)
+    }
+
+    override fun readImageClipboardSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceImageClipboardKey(deviceId)] != false
+        }
+    }
+
+    override suspend fun saveMediaSessionSettingsForDevice(deviceId: String, showMediaSession: Boolean) {
+        deviceMediaSessionKey(deviceId).update(showMediaSession)
+    }
+
+    override fun readMediaSessionSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceMediaSessionKey(deviceId)] != false
+        }
+    }
+
+    override suspend fun saveRemoteStorageSettingsForDevice(deviceId: String, enabled: Boolean) {
+        deviceRemoteStorageKey(deviceId).update(enabled)
+    }
+
+    override fun readRemoteStorageSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceRemoteStorageKey(deviceId)] != false
+        }
+    }
+
     private suspend inline fun <T> Preferences.Key<T>.update(newValue: T) {
         datastore.edit { preferences ->
             preferences[this] = newValue
         }
     }
 
-    override fun preferenceSettings(): Flow<PreferencesSettings>  {
+    override fun preferenceSettings(deviceId: String): Flow<DevicePreferences>  {
         return datastore.data.catch {
             emit(emptyPreferences())
         }.map { preferences->
-            val language = preferences[LANGUAGE] ?: "system"
-            val discoveryMode = DiscoveryMode.valueOf(preferences[DISCOVERY_MODE] ?: DiscoveryMode.AUTO.name)
-            val storageLocation = preferences[STORAGE_LOCATION] ?: ""
-            val readSensitiveNotifications = preferences[READ_SENSITIVE_NOTIFICATIONS] == true
-            val notificationSync = preferences[NOTIFICATION_SYNC] != false
-            val imageClipboard = preferences[IMAGE_CLIPBOARD] != false
-            val messageSync = preferences[MESSAGE_SYNC] != false
-            val clipboardSync = preferences[CLIPBOARD_SYNC] != false
-            val mediaSession = preferences[MEDIA_SESSION] != false
-            val remoteStorage = preferences[REMOTE_STORAGE] != false
-
-            PreferencesSettings(
-                language = language,
-                discoveryMode = discoveryMode,
-                storageLocation =  storageLocation,
-                readSensitiveNotifications = readSensitiveNotifications,
-                notificationSync = notificationSync,
-                mediaSession =  mediaSession,
-                clipboardSync =  clipboardSync,
-                messageSync = messageSync,
-                imageClipboard =  imageClipboard,
-                remoteStorage = remoteStorage
+            DevicePreferences(
+                clipboardSync = preferences[deviceClipboardSyncKey(deviceId)] != false,
+                messageSync = preferences[deviceMessageSyncKey(deviceId)] != false,
+                notificationSync = preferences[deviceNotificationSyncKey(deviceId)] != false,
+                imageClipboard = preferences[deviceImageClipboardKey(deviceId)] != false,
+                mediaSession = preferences[deviceMediaSessionKey(deviceId)] != false,
+                remoteStorage = preferences[deviceRemoteStorageKey(deviceId)] != false
             )
         }
     }
@@ -244,20 +186,19 @@ class PreferencesDatastore @Inject constructor(
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "appPreferences")
 
         val LANGUAGE = stringPreferencesKey("language")
-        val SYNC_STATUS = booleanPreferencesKey("syncStatus")
-        val LAST_CONNECTED = stringPreferencesKey("lastConnected")
-        val DISCOVERY_MODE = stringPreferencesKey("discoveryMode")
-        val CLIPBOARD_SYNC = booleanPreferencesKey("clipboardSync")
-        val READ_SENSITIVE_NOTIFICATIONS = booleanPreferencesKey("readSensitiveNotifications")
-        val MEDIA_SESSION = booleanPreferencesKey("mediaSession")
-        val IMAGE_CLIPBOARD = booleanPreferencesKey("autoImageClipboard")
+
         val STORAGE_LOCATION = stringPreferencesKey("storageLocation")
         val APP_ENTRY = booleanPreferencesKey("appEntry")
-        val PERMISSION_REQUESTED = stringPreferencesKey("permission_requested")
-        val NOTIFICATION_SYNC = booleanPreferencesKey("notificationSync")
-        val REMOTE_STORAGE = booleanPreferencesKey("remoteStorage")
         val PASSIVE_DISCOVERY = booleanPreferencesKey("passiveDiscovery")
-        val MESSAGE_SYNC = booleanPreferencesKey("messageSync")
         val LAST_CHECKED_FOR_UPDATE = longPreferencesKey("lastCheckedForUpdate")
+        val TRUST_ALL_NETWORKS = booleanPreferencesKey("trustAllNetworks")
+
+        fun permissionRequestedKey(permission: String) = booleanPreferencesKey("permission_requested_$permission")
+        fun deviceClipboardSyncKey(deviceId: String) = booleanPreferencesKey("clipboardSync_$deviceId")
+        fun deviceMessageSyncKey(deviceId: String) = booleanPreferencesKey("messageSync_$deviceId")
+        fun deviceNotificationSyncKey(deviceId: String) = booleanPreferencesKey("notificationSync_$deviceId")
+        fun deviceImageClipboardKey(deviceId: String) = booleanPreferencesKey("imageClipboard_$deviceId")
+        fun deviceMediaSessionKey(deviceId: String) = booleanPreferencesKey("mediaSession_$deviceId")
+        fun deviceRemoteStorageKey(deviceId: String) = booleanPreferencesKey("remoteStorage_$deviceId")
     }
 }

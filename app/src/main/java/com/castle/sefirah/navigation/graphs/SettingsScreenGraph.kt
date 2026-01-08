@@ -8,7 +8,7 @@ import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.navigation.SettingsRouteScreen
 import com.castle.sefirah.presentation.about.AboutScreen
-import com.castle.sefirah.presentation.network.NetworkScreen
+import com.castle.sefirah.presentation.network.TrustedNetworkScreen
 import com.castle.sefirah.presentation.permission.PermissionScreen
 import com.castle.sefirah.presentation.settings.update.NewUpdateScreen
 
@@ -18,7 +18,7 @@ fun NavGraphBuilder.settingsNavGraph(rootNavController: NavHostController) {
         startDestination = MainRouteScreen.SettingsScreen.route
     ) {
         composable(route = SettingsRouteScreen.NetworkScreen.route) {
-            NetworkScreen(rootNavController)
+            TrustedNetworkScreen(rootNavController)
         }
         composable(route = SettingsRouteScreen.AboutScreen.route) {
             AboutScreen(rootNavController)

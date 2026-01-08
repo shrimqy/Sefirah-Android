@@ -1,12 +1,13 @@
 package sefirah.common.notifications
 
 import android.app.NotificationChannelGroup
+import android.app.NotificationManager.IMPORTANCE_DEFAULT
+import android.app.NotificationManager.IMPORTANCE_HIGH
+import android.app.NotificationManager.IMPORTANCE_LOW
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.app.NotificationManagerCompat.IMPORTANCE_DEFAULT
-import androidx.core.app.NotificationManagerCompat.IMPORTANCE_LOW
 import sefirah.common.R
 
 /**
@@ -19,22 +20,18 @@ object AppNotifications {
     const val TRANSFER_PROGRESS_CHANNEL = "file_transfer_progress_channel"
     const val TRANSFER_COMPLETE_CHANNEL = "file_transfer_complete_channel"
     const val TRANSFER_ERROR_CHANNEL = "file_transfer_error_channel"
-    const val TRANSFER_PROGRESS_ID = 1001
-    const val TRANSFER_COMPLETE_ID = 1002
-    const val TRANSFER_ERROR_ID = 1003
     
     // Network related constants
     private const val NETWORK_GROUP = "group_network"
     const val DEVICE_CONNECTION_CHANNEL = "device_connection_channel"
-    const val NETWORK_ERROR_CHANNEL = "network_error_channel"
+    const val PAIRING_REQUEST_CHANNEL = "pairing_request_channel"
     const val DEVICE_CONNECTION_ID = 2001
-    const val NETWORK_ERROR_ID = 2002
+    const val PAIRING_REQUEST_ID = 2003
     
     // Media related constants
     private const val MEDIA_GROUP = "group_media"
     const val MEDIA_PLAYBACK_CHANNEL = "media_playback_channel"
     const val MEDIA_PLAYBACK_ID = 3001
-    const val MEDIA_CONTROL_ID = 3002
 
     /**
      * Creates the notification channels introduced in Android Oreo.
@@ -74,6 +71,10 @@ object AppNotifications {
                     setName(context.getString(R.string.channel_device_connection))
                     setGroup(NETWORK_GROUP)
                     setShowBadge(false)
+                },
+                buildNotificationChannel(PAIRING_REQUEST_CHANNEL, IMPORTANCE_HIGH) {
+                    setName(context.getString(R.string.channel_pairing_request))
+                    setGroup(NETWORK_GROUP)
                 },
                 
                 // Media Channels

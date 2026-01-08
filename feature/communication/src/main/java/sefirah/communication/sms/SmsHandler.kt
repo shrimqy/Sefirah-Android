@@ -1,23 +1,21 @@
 package sefirah.communication.sms
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.database.ContentObserver
 import android.os.Handler
-import android.os.Looper
-import android.provider.Telephony
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import sefirah.common.util.smsPermissionGranted
 import sefirah.communication.sms.SMSHelper.MessageLooper.Companion.getLooper
 import sefirah.communication.sms.SMSHelper.getConversations
 import sefirah.communication.sms.SMSHelper.getMessagesInRange
 import sefirah.communication.sms.SMSHelper.getNewestMessageTimestamp
-import sefirah.communication.sms.SMSHelper.registerObserver
+import sefirah.communication.sms.SMSHelper.mConversationUri
 import sefirah.communication.sms.SmsMmsUtils.sendMessage
 import sefirah.communication.sms.SmsMmsUtils.toHelperSmsAddress
 import sefirah.communication.sms.SmsMmsUtils.toHelperSmsAttachment
@@ -26,6 +24,7 @@ import sefirah.domain.model.ConversationType
 import sefirah.domain.model.TextConversation
 import sefirah.domain.model.TextMessage
 import sefirah.domain.model.ThreadRequest
+import sefirah.domain.repository.DeviceManager
 import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import java.util.concurrent.locks.Lock
@@ -37,50 +36,56 @@ import javax.inject.Singleton
 class SmsHandler @Inject constructor(
     private val context: Context,
     private val networkManager: NetworkManager,
+    private val deviceManager: DeviceManager,
     private val preferencesRepository: PreferencesRepository
 ) {
-    private var smsReceiver: BroadcastReceiver? = null
-    private var messageObserver: ContentObserver? = null
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var messageObserver: ContentObserver = MessageContentObserver(Handler(getLooper()!!))
 
     // Cache of existing thread IDs
     private var existingThreadIds: Set<Long> = emptySet()
 
-    fun start() {
-        // Prevent multiple observers
-        if (messageObserver != null) {
-            Log.w(TAG, "SMS handler already started, stopping first")
-            stop()
+    private val deviceIds = MutableStateFlow<Set<String>>(emptySet())
+    private var isObserverRegistered = false
+
+    init {
+        scope.launch {
+            deviceManager.pairedDevices.collect { pairedDevices ->
+                val connectedDeviceIds = pairedDevices
+                    .filter {
+                        it.connectionState.isConnected &&
+                                preferencesRepository.readMessageSyncSettingsForDevice(it.deviceId).first()
+                    }
+                    .map { it.deviceId }
+                    .toSet()
+
+                deviceIds.value = connectedDeviceIds
+                
+                // Start content observer when deviceIds becomes non-empty
+                if (connectedDeviceIds.isNotEmpty() && !isObserverRegistered) {
+                    startContentObserver()
+                } else if (connectedDeviceIds.isEmpty() && isObserverRegistered) {
+                    stopContentObserver()
+                }
+            }
         }
-        
-        val helperLooper: Looper? = getLooper()
-        messageObserver = MessageContentObserver(Handler(helperLooper!!))
-        registerObserver(messageObserver!!, context)
+    }
+
+    private fun startContentObserver() {
+        if(!smsPermissionGranted(context)) return
+        Log.d(TAG, "Message content observer started")
+        context.contentResolver.registerContentObserver(mConversationUri, true, messageObserver)
+        isObserverRegistered = true
 
         mostRecentTimestampLock.lock()
         mostRecentTimestamp = getNewestMessageTimestamp(context)
         mostRecentTimestampLock.unlock()
         existingThreadIds = emptySet()
-
-        CoroutineScope(Dispatchers.IO).launch {
-            sendAllConversations()
-        }
     }
-    
-    fun stop() {
-        if (messageObserver == null && smsReceiver == null) return
 
-        messageObserver?.let { observer ->
-            try {
-                context.contentResolver.unregisterContentObserver(observer)
-                messageObserver = null
-            } catch (e: Exception) {
-                Log.w(TAG, "Error unregistering content observer", e)
-            }
-        }
-        
-        // Clean up SMS receiver
-        unregisterSmsReceiver()
-        
+    private fun stopContentObserver() {
+        context.contentResolver.unregisterContentObserver(messageObserver)
+        isObserverRegistered = false
         // Reset state
         mostRecentTimestampLock.lock()
         mostRecentTimestamp = 0
@@ -89,30 +94,8 @@ class SmsHandler @Inject constructor(
         haveMessagesBeenRequested = false
     }
 
-    fun registerSmsReceiver() {
-        smsReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
-                    val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
-                    messages.forEach { smsMessage ->
-                        val sender = smsMessage.originatingAddress ?: ""
-                        val messageBody = smsMessage.messageBody ?: ""
-                    }
-                }
-            }
-        }
-        
-        // Register the receiver
-        val filter = IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)
-        filter.priority = 500
-        context.registerReceiver(smsReceiver, filter)
-    }
-
-    fun unregisterSmsReceiver() {
-        smsReceiver?.let {
-            context.unregisterReceiver(it)
-            smsReceiver = null
-        }
+    fun stop() {
+        stopContentObserver()
     }
 
 
@@ -190,16 +173,17 @@ class SmsHandler @Inject constructor(
                 messages = textMessages
             )
             existingThreadIds = existingThreadIds.plus(threadId)
-
-            Log.d(TAG, "conversation: $conversation")
-            sendToDesktop(conversation)
+            sendToDesktop(conversation, deviceIds.value)
         }
     }
 
     /**
      * Send all conversations (one message per thread)
      */
-    private fun sendAllConversations() {
+    fun sendAllConversations(deviceId: String?) {
+        val targetDeviceIds = deviceId?.let { setOf(it) } ?: deviceIds.value
+        if (targetDeviceIds.isEmpty()) return
+        
         val conversations = getConversations(this.context)
         // Build a set of thread IDs while we process the conversations
         val currentThreadIds = mutableSetOf<Long>()
@@ -218,8 +202,7 @@ class SmsHandler @Inject constructor(
                 recipients = conversationInfo.recipients,
                 messages = listOf(textMessage)
             )
-            Log.d(TAG, "conversation: $conversation")
-            sendToDesktop(conversation)
+            sendToDesktop(conversation, targetDeviceIds)
         }
         
         // Store the current thread IDs for later comparison
@@ -254,18 +237,16 @@ class SmsHandler @Inject constructor(
         )
         
         // Send the conversation packet
-        sendToDesktop(conversation)
+        sendToDesktop(conversation, deviceIds.value)
     }
 
-    private fun sendToDesktop(conversation: TextConversation) {
-        CoroutineScope(Dispatchers.IO).launch {
-            if (preferencesRepository.readMessageSyncSettings().first())
-                networkManager.sendMessage(conversation)
+    private fun sendToDesktop(conversation: TextConversation, targetDeviceIds: Set<String> = deviceIds.value) {
+        targetDeviceIds.forEach { deviceId ->
+            networkManager.sendMessage(deviceId, conversation)
         }
     }
 
     fun sendTextMessage(message: TextMessage) {
-        Log.d(TAG, "Sending message: ${message.body}")
         val addresses = message.addresses.toHelperSmsAddress(context)
         val attachments = message.attachments?.toHelperSmsAttachment()
         sendMessage(
@@ -310,10 +291,7 @@ class SmsHandler @Inject constructor(
             conversationType = ConversationType.Removed,
             threadId = threadId,
         )
-
-        CoroutineScope(Dispatchers.IO).launch {
-            networkManager.sendMessage(deleteNotification)
-        }
+        sendToDesktop(deleteNotification, deviceIds.value)
     }
 
     companion object {

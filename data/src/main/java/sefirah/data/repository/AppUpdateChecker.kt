@@ -4,10 +4,12 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-
-class AppUpdateChecker(
-    val context: Context,
+@Singleton
+class AppUpdateChecker @Inject constructor(
+    private val context: Context,
     private val releaseRepository: ReleaseRepository,
 ) {
     suspend fun checkForUpdate() : ReleaseRepository.Result {

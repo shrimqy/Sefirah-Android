@@ -8,6 +8,7 @@ sealed class ConnectionState {
 
     val isDisconnected: Boolean
         get() = this is Disconnected || this is Error
+
     val isConnected: Boolean
         get() = this is Connected
     val isConnecting : Boolean

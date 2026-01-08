@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -24,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.castle.sefirah.presentation.settings.SettingsViewModel
@@ -36,9 +36,9 @@ internal class StorageStep : OnboardingStep {
     @Composable
     override fun Content(viewModel: SettingsViewModel) {
         val context = LocalContext.current
-        val preferencesSettings by viewModel.preferencesSettings.collectAsState()
+        val storageLocation by viewModel.storageLocation.collectAsState()
         val pickStorageLocation = storageLocationPicker(viewModel)
-        val storageLocation = preferencesSettings?.storageLocation ?: "/storage/emulated/0/Downloads"
+        val storageLocationDisplay = storageLocation.ifEmpty { "/storage/emulated/0/Downloads" }
 
         Column(
             modifier = Modifier
@@ -49,7 +49,7 @@ internal class StorageStep : OnboardingStep {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Folder,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_folder),
                     contentDescription = null,
                     modifier = Modifier
                         .padding(bottom = MaterialTheme.padding.small)
@@ -84,7 +84,7 @@ internal class StorageStep : OnboardingStep {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "${stringResource(R.string.selected_folder_label)}: ${getReadablePathFromUri(context, storageLocation)}",
+                        text = "${stringResource(R.string.selected_folder_label)}: ${getReadablePathFromUri(context, storageLocationDisplay)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

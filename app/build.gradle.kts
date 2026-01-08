@@ -53,6 +53,7 @@ kotlin {
             "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
             "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
             "-opt-in=kotlinx.coroutines.FlowPreview",
+            "-opt-in=androidx.camera.core.ExperimentalGetImage",
         )
     }
 }
@@ -78,9 +79,18 @@ dependencies {
 
     implementation(libs.richtext.m3)
     implementation(libs.richtext.commonmark)
+    implementation(libs.reorderable)
 
     implementation(libs.androidx.media)
     implementation(libs.androidx.hilt.work)
+    implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.camerax.mlkit.vision)
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.guava)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

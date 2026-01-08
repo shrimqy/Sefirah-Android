@@ -10,37 +10,27 @@ package sefirah.communication.sms
 import android.annotation.SuppressLint
 import android.content.ContentUris
 import android.content.Context
-import android.database.ContentObserver
 import android.database.sqlite.SQLiteException
 import android.media.MediaMetadataRetriever
 import android.media.ThumbnailUtils
 import android.net.Uri
-import android.os.Build
 import android.os.Looper
 import android.provider.Telephony
 import android.provider.Telephony.Threads
 import android.telephony.PhoneNumberUtils
 import android.telephony.TelephonyManager
 import android.util.Log
-import android.util.Pair
-import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import com.google.android.mms.pdu_alt.MultimediaMessagePdu
 import com.google.android.mms.pdu_alt.PduPersister
 import com.google.android.mms.util_alt.PduCache
 import com.google.android.mms.util_alt.PduCacheEntry
 import org.apache.commons.io.IOUtils
-import org.apache.commons.lang3.StringUtils
 import org.apache.commons.lang3.math.NumberUtils
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
 import sefirah.common.util.MimeType
-import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.communication.utils.TelephonyHelper.LocalPhoneNumber
 import java.io.IOException
-import java.util.Objects
 import java.util.SortedMap
 import java.util.TreeMap
 import java.util.concurrent.locks.Lock
@@ -55,28 +45,12 @@ object SMSHelper {
     // The constant Telephony.Mms.Part.CONTENT_URI was added in API 29
     val mMSPartUri : Uri = "content://mms/part/".toUri()
 
-    /**
-     * Get the base address for all message conversations
-     * We only use this to fetch thread_ids because the data it returns if often incomplete or useless
-     */
-    private fun getConversationUri(): Uri {
-        // Special case for Samsung
-        // For some reason, Samsung devices do not support the regular SmsMms column.
-        // However, according to https://stackoverflow.com/a/13640868/3723163, we can work around it this way.
-        // By my understanding, "simple=true" means we can't support multi-target messages.
-        // Go complain to Samsung about their annoying OS changes!
-        if ("Samsung".equals(Build.MANUFACTURER, ignoreCase = true)) {
-            Log.i("SMSHelper", "This appears to be a Samsung device. This may cause some features to not work properly.")
-        }
-        return "content://mms-sms/conversations?simple=true".toUri()
-    }
+    val mConversationUri : Uri = "content://mms-sms/conversations?simple=true".toUri()
 
-    private fun getCompleteConversationsUri(): Uri {
-        // This glorious - but completely undocumented - content URI gives us all messages, both MMS and SMS,
-        // in all conversations
-        // See https://stackoverflow.com/a/36439630/3723163
-        return "content://mms-sms/complete-conversations".toUri()
-    }
+    // This glorious - but completely undocumented - content URI gives us all messages, both MMS and SMS,
+    // in all conversations
+    // See https://stackoverflow.com/a/36439630/3723163
+    private val completeConversationsUri : Uri =  "content://mms-sms/complete-conversations".toUri()
 
     /**
      * Column used to discriminate between SMS and MMS messages
@@ -228,9 +202,9 @@ object SMSHelper {
             }
         } catch (e: SQLiteException) {
             // With uri content://mms-sms/conversations this query throws an exception if sub_id is not supported
-            return !StringUtils.contains(e.message, Telephony.Sms.SUBSCRIPTION_ID)
+            return !e.message.orEmpty().contains(Telephony.Sms.SUBSCRIPTION_ID)
         } catch (e: IllegalArgumentException) {
-            return !StringUtils.contains(e.message, Telephony.Sms.SUBSCRIPTION_ID)
+            return !e.message.orEmpty().contains(Telephony.Sms.SUBSCRIPTION_ID)
         }
     }
 
@@ -378,7 +352,7 @@ object SMSHelper {
         if (getSubscriptionIdSupport(uri, context)) {
             allColumns.addAll(Message.multiSIMColumns)
         }
-        if (uri != getConversationUri()) {
+        if (uri != mConversationUri) {
             // See https://issuetracker.google.com/issues/134592631
             allColumns.add(TRANSPORT_TYPE_DISCRIMINATOR_COLUMN)
         }
@@ -410,7 +384,7 @@ object SMSHelper {
     ): List<Message> {
         val sortOrder = Message.DATE + " DESC"
         return getMessages(
-            getCompleteConversationsUri(),
+            completeConversationsUri,
             context,
             selection,
             selectionArgs,
@@ -430,8 +404,6 @@ object SMSHelper {
      * @return Non-blocking iterable of conversation info (message with recipients)
      */
     fun getConversations(context: Context): Sequence<ConversationInfo> {
-        val uri = getConversationUri()
-
         // Used to avoid spewing logs in case there is an overall problem with fetching thread IDs
         var warnedForNullThreadIDs = false
 
@@ -445,7 +417,7 @@ object SMSHelper {
         // return conversations, but I doubt anyone will ever find it necessary.
         var threadInfoList: List<ThreadInfo>
         context.contentResolver.query(
-            uri,
+            mConversationUri,
             null,
             null,
             null,
@@ -462,7 +434,7 @@ object SMSHelper {
                 val recipientsColumn = threadIdCursor.getColumnIndex(Threads.RECIPIENT_IDS)
                 var threadID: ThreadID? = null
                 var messageDate: Long = -1
-                var recipients: MutableList<String> = ArrayList()
+                val recipients: MutableList<String> = ArrayList()
                 
                 if (!threadIdCursor.isNull(idColumn)) {
                     threadID = ThreadID(threadIdCursor.getLong(idColumn))
@@ -475,7 +447,7 @@ object SMSHelper {
                     messageDate = threadIdCursor.getLong(dateColumn)
                 }
                 if (!threadIdCursor.isNull(recipientsColumn)) {
-                    var recipientIDs = threadIdCursor.getString(recipientsColumn).split(" ")
+                    val recipientIDs = threadIdCursor.getString(recipientsColumn).split(" ")
                     for (recipient in recipientIDs) {
                         context.contentResolver.query("content://mms-sms/canonical-addresses".toUri(), null, "_id = ?", arrayOf(recipient.trim()), null).use { cursor ->
                             if (cursor != null && cursor.moveToFirst()) {
@@ -540,47 +512,20 @@ object SMSHelper {
      * Parse all parts of an SMS into a Message
      */
     private fun parseSMS(context: Context, messageInfo: Map<String, String?>): Message {
-        val event = addEventFlag(Message.EVENT_UNKNOWN, Message.EVENT_TEXT_MESSAGE)
-        val address = listOf(Address(context, messageInfo[Telephony.Sms.ADDRESS]!!))
-        val maybeBody = messageInfo.getOrDefault(Message.BODY, "")
-        val body = maybeBody ?: ""
-        val date = NumberUtils.toLong(messageInfo.getOrDefault(Message.DATE, null))
-        val type = NumberUtils.toInt(messageInfo.getOrDefault(Message.TYPE, null))
-        val read = NumberUtils.toInt(messageInfo.getOrDefault(Message.READ, null))
-        val threadID = ThreadID(
-            NumberUtils.toLong(
-                messageInfo.getOrDefault(Message.THREAD_ID, null),
-                ThreadID.invalidThreadId.threadID
-            )
-        )
-        val uID = NumberUtils.toLong(messageInfo.getOrDefault(Message.U_ID, null))
-        val subscriptionID = NumberUtils.toInt(messageInfo.getOrDefault(Message.SUBSCRIPTION_ID, null))
-
-        // Examine all the required SMS columns and emit a log if something seems amiss
-        val anyNulls = arrayOf(Telephony.Sms.ADDRESS,
-            Message.BODY,
-            Message.DATE,
-            Message.TYPE,
-            Message.READ,
-            Message.THREAD_ID,
-            Message.U_ID
-        )
-            .map { key: String -> messageInfo.getOrDefault(key, null) }
-            .any { obj: String? -> Objects.isNull(obj) }
-        if (anyNulls) {
-            Log.e("parseSMS", "Some fields were invalid. This indicates either a corrupted SMS database or an unsupported device.")
-        }
         return Message(
-            address,
-            body,
-            date,
-            type,
-            read,
-            threadID,
-            uID,
-            event,
-            subscriptionID,
-            null
+            addresses = listOf(Address(context, messageInfo[Telephony.Sms.ADDRESS]!!)),
+            body = messageInfo[Message.BODY] ?: "",
+            date = messageInfo[Message.DATE]?.toLongOrNull() ?: 0L,
+            type = messageInfo[Message.TYPE]?.toIntOrNull() ?: 0,
+            read = messageInfo[Message.READ]?.toIntOrNull() ?: 0,
+            threadID = ThreadID(messageInfo[Message.THREAD_ID]?.toLongOrNull() ?: ThreadID.invalidThreadId.threadID),
+            uID = messageInfo[Message.U_ID]?.toLongOrNull() ?: 0L,
+            event = addEventFlag(
+                Message.EVENT_UNKNOWN,
+                Message.EVENT_TEXT_MESSAGE
+            ),
+            subscriptionID = messageInfo[Message.SUBSCRIPTION_ID]?.toIntOrNull() ?: 0,
+            attachments = null,
         )
     }
 
@@ -644,41 +589,55 @@ object SMSHelper {
 
                             // Get the actual image from the mms database convert it into thumbnail and encode to Base64
                             val image = SmsMmsUtils.getMmsImage(context, partID)
-                            val thumbnailImage = ThumbnailUtils.extractThumbnail(
-                                image,
-                                THUMBNAIL_WIDTH,
-                                THUMBNAIL_HEIGHT
-                            )
-                            val encodedThumbnail = SmsMmsUtils.bitMapToBase64(thumbnailImage)
-                            attachments.add(
-                                Attachment(
-                                    partID,
-                                    contentType,
-                                    encodedThumbnail,
-                                    fileName
+                            if (image != null) {
+                                val thumbnailImage = ThumbnailUtils.extractThumbnail(
+                                    image,
+                                    THUMBNAIL_WIDTH,
+                                    THUMBNAIL_HEIGHT
                                 )
-                            )
+                                val encodedThumbnail = SmsMmsUtils.bitMapToBase64(thumbnailImage)
+                                attachments.add(
+                                    Attachment(
+                                        partID,
+                                        contentType,
+                                        encodedThumbnail,
+                                        fileName
+                                    )
+                                )
+                                thumbnailImage.recycle()
+                                if (!image.isRecycled) image.recycle()
+                            }
                         } else if (MimeType.isTypeVideo(contentType)) {
                             val fileName = data.substring(data.lastIndexOf('/') + 1)
 
                             // Can't use try-with-resources since MediaMetadataRetriever's close method was only added in API 29
                             val retriever = MediaMetadataRetriever()
-                            retriever.setDataSource(
-                                context,
-                                ContentUris.withAppendedId(mMSPartUri, partID)
-                            )
-                            val videoThumbnail = retriever.frameAtTime
-                            val encodedThumbnail = SmsMmsUtils.bitMapToBase64(
-                                videoThumbnail!!.scale(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
-                            )
-                            attachments.add(
-                                Attachment(
-                                    partID,
-                                    contentType,
-                                    encodedThumbnail,
-                                    fileName
+                            try {
+                                retriever.setDataSource(
+                                    context,
+                                    ContentUris.withAppendedId(mMSPartUri, partID)
                                 )
-                            )
+                                val videoThumbnail = retriever.getScaledFrameAtTime(
+                                    -1,
+                                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
+                                    THUMBNAIL_WIDTH,
+                                    THUMBNAIL_HEIGHT
+                                )
+                                if (videoThumbnail != null) {
+                                    val encodedThumbnail = SmsMmsUtils.bitMapToBase64(videoThumbnail)
+                                    attachments.add(
+                                        Attachment(
+                                            partID,
+                                            contentType,
+                                            encodedThumbnail,
+                                            fileName
+                                        )
+                                    )
+                                    videoThumbnail.recycle()
+                                }
+                            } finally {
+                                retriever.release()
+                            }
                         } else if (MimeType.isTypeAudio(contentType)) {
                             val fileName = data.substring(data.lastIndexOf('/') + 1)
                             attachments.add(Attachment(partID, contentType, null, fileName))
@@ -693,23 +652,18 @@ object SMSHelper {
         }
 
         // Determine whether the message was in- our out- bound
-        val messageBox = NumberUtils.toLong(messageInfo[Telephony.Mms.MESSAGE_BOX])
+        val messageBox = messageInfo[Telephony.Mms.MESSAGE_BOX]?.toIntOrNull() ?: 0
         val type = when (messageBox) {
-            Telephony.Mms.MESSAGE_BOX_INBOX.toLong() -> {
-                Telephony.Sms.MESSAGE_TYPE_INBOX
-            }
-            Telephony.Mms.MESSAGE_BOX_SENT.toLong() -> {
-                Telephony.Sms.MESSAGE_TYPE_SENT
-            }
+            Telephony.Mms.MESSAGE_BOX_INBOX -> Telephony.Sms.MESSAGE_TYPE_INBOX
+            Telephony.Mms.MESSAGE_BOX_SENT -> Telephony.Sms.MESSAGE_TYPE_SENT
             else -> {
                 // As an undocumented feature, it looks like the values of Mms.MESSAGE_BOX_*
                 // are the same as Sms.MESSAGE_TYPE_* of the same type. So by default let's just use
                 // the value we've got.
                 // This includes things like drafts, which are a far-distant plan to support
-                NumberUtils.toInt(messageInfo[Telephony.Mms.MESSAGE_BOX])
+                messageBox
             }
         }
-
         // Get address(es) of the message
         val msg = getMessagePdu(context, uID)
         val from = SmsMmsUtils.getMmsFrom(context, msg)
@@ -746,7 +700,7 @@ object SMSHelper {
 
         // Canonicalize the date field
         // SMS uses epoch milliseconds, MMS uses epoch seconds. Standardize on milliseconds.
-        val rawDate = NumberUtils.toLong(messageInfo[Message.DATE])
+        val rawDate = messageInfo[Message.DATE]?.toLongOrNull() ?: 0L
         val date = rawDate * 1000
         return Message(
             addresses,
@@ -802,64 +756,6 @@ object SMSHelper {
     }
 
     /**
-     * Register a ContentObserver for the Messages database
-     *
-     * @param observer ContentObserver to alert on Message changes
-     */
-    fun registerObserver(observer: ContentObserver, context: Context) {
-        context.contentResolver.registerContentObserver(getConversationUri(), true, observer)
-    }
-
-    /**
-     * Converts a given JSONArray of attachments into List<Attachment>
-     *
-     * The structure of the input is expected to be as follows:
-     * [
-     * {
-     * "fileName": <String>             // Name of the file
-     * "base64EncodedFile": <String>    // Base64 encoded file
-     * "mimeType": <String>             // File type (eg: image/jpg, video/mp4 etc.)
-     * },
-     * ...
-     * ]
-    </String></String></String></Attachment> */
-    fun jsonArrayToAttachmentsList(jsonArray: JSONArray?): List<Attachment> {
-        if (jsonArray == null) {
-            return emptyList()
-        }
-        val attachedFiles: MutableList<Attachment> = ArrayList(jsonArray.length())
-        try {
-            for (i in 0 until jsonArray.length()) {
-                val jsonObject = jsonArray.getJSONObject(i)
-                val base64EncodedFile = jsonObject.getString("base64EncodedFile")
-                val mimeType = jsonObject.getString("mimeType")
-                val fileName = jsonObject.getString("fileName")
-                attachedFiles.add(Attachment(-1, mimeType, base64EncodedFile, fileName))
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return attachedFiles
-    }
-
-    /**
-     * converts a given JSONArray into List<Address>
-    </Address> */
-    fun jsonArrayToAddressList(context: Context, jsonArray: JSONArray): List<Address> {
-        val addresses: MutableList<Address> = ArrayList()
-        try {
-            for (i in 0 until jsonArray.length()) {
-                val jsonObject = jsonArray.getJSONObject(i)
-                val address = jsonObject.getString("address")
-                addresses.add(Address(context, address))
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return addresses
-    }
-
-    /**
      * Represents thread information with recipients
      */
     data class ThreadInfo(
@@ -905,18 +801,6 @@ object SMSHelper {
         val uniqueIdentifier: String,
     ) {
 
-        @Throws(JSONException::class)
-        fun toJson(): JSONObject {
-            val json = JSONObject()
-            json.put(PART_ID, partID)
-            json.put(MIME_TYPE, mimeType)
-            if (base64EncodedFile != null) {
-                json.put(ENCODED_THUMBNAIL, base64EncodedFile)
-            }
-            json.put(UNIQUE_IDENTIFIER, uniqueIdentifier)
-            return json
-        }
-
         companion object {
             /**
              * Attachment object field names
@@ -928,14 +812,7 @@ object SMSHelper {
         }
     }
 
-    class Address(val context: Context, private val address: String) {
-        @Throws(JSONException::class)
-        fun toJson(): JSONObject {
-            val json = JSONObject()
-            json.put(ADDRESS, address)
-            return json
-        }
-
+    class Address(context: Context, private val address: String) {
         fun getAddress() = address
 
         override fun toString() = address
@@ -996,32 +873,6 @@ object SMSHelper {
         val subscriptionID: Int,
         val attachments: List<Attachment>?,
     ) {
-        @Throws(JSONException::class)
-        fun toJSONObject(): JSONObject {
-            val json = JSONObject()
-            val jsonAddresses = JSONArray()
-            for (address in addresses) {
-                jsonAddresses.put(address.toJson())
-            }
-            json.put(ADDRESSES, jsonAddresses)
-            json.put(BODY, body)
-            json.put(DATE, date)
-            json.put(TYPE, type)
-            json.put(READ, read)
-            json.put(THREAD_ID, threadID.threadID)
-            json.put(U_ID, uID)
-            json.put(SUBSCRIPTION_ID, subscriptionID)
-            json.put(EVENT, event)
-            if (attachments != null) {
-                val jsonAttachments = JSONArray()
-                for (attachment in attachments) {
-                    jsonAttachments.put(attachment.toJson())
-                }
-                json.put(ATTACHMENTS, jsonAttachments)
-            }
-            return json
-        }
-
         override fun toString() = body
 
         companion object {

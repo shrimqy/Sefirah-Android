@@ -1,49 +1,45 @@
 package com.castle.sefirah
 
-import android.content.Context
-import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.OnboardingRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import sefirah.data.repository.AppUpdateChecker
-import sefirah.data.repository.ReleaseRepository
+import kotlinx.coroutines.runBlocking
+import sefirah.domain.model.PendingDeviceApproval
+import sefirah.domain.repository.NetworkManager
 import sefirah.domain.repository.PreferencesRepository
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    context: Context,
+    private val networkManager: NetworkManager,
     private val preferencesRepository: PreferencesRepository,
-
 ): ViewModel() {
-    var splashCondition by mutableStateOf(true)
-        private set
+    
+    val startDestination: String = runBlocking(Dispatchers.IO) {
+        val hasCompletedOnboarding = preferencesRepository.readAppEntry()
+        if (hasCompletedOnboarding) {
+            Graph.MainScreenGraph
+        } else {
+            OnboardingRoute.OnboardingScreen.route
+        }
+    }
+    
+    val pendingDeviceApproval: StateFlow<PendingDeviceApproval?> = networkManager.pendingDeviceApproval
 
-    var startDestination by mutableStateOf(OnboardingRoute.OnboardingScreen.route)
-        private set
+    fun approveDevice(deviceId: String) {
+        viewModelScope.launch {
+            networkManager.approveDeviceConnection(deviceId)
+        }
+    }
 
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            val hasCompletedOnboarding = preferencesRepository.readAppEntry()
-            
-            withContext(Dispatchers.Main) {
-                startDestination = if (hasCompletedOnboarding) {
-                    Graph.MainScreenGraph
-                } else {
-                    OnboardingRoute.OnboardingScreen.route
-                }
-                delay(150)
-                splashCondition = false
-            }
+    fun rejectDevice(deviceId: String) {
+        viewModelScope.launch {
+            networkManager.rejectDeviceConnection(deviceId)
         }
     }
 }

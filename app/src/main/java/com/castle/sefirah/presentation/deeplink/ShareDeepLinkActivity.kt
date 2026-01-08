@@ -1,89 +1,78 @@
 package com.castle.sefirah.presentation.deeplink
 
+import android.app.AlertDialog
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import com.castle.sefirah.BaseActivity
+import androidx.activity.ComponentActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import sefirah.domain.model.ClipboardMessage
-import sefirah.network.FileTransferService
-import sefirah.network.FileTransferService.Companion.ACTION_SEND_FILE
-import sefirah.network.FileTransferService.Companion.ACTION_SEND_BULK_FILES
-import sefirah.network.FileTransferService.Companion.EXTRA_FILE_URIS
+import sefirah.domain.repository.DeviceManager
+import sefirah.domain.repository.NetworkManager
+import sefirah.network.NetworkService
+import javax.inject.Inject
 
 @AndroidEntryPoint
-class ShareDeepLinkActivity: BaseActivity() {
+class ShareDeepLinkActivity : ComponentActivity() {
+    @Inject lateinit var networkManager: NetworkManager
+    @Inject lateinit var deviceManager: DeviceManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Defer intent handling until service is bound
-        observeServiceBinding()
+        handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // Update the intent of the activity
         setIntent(intent)
-        // If the service is already connected, handle the new intent right away.
-        // Otherwise, the service connection callback in observeServiceBinding() will pick it up.
         handleIntent(intent)
-    }
-
-    private fun observeServiceBinding() {
-        // Override the connection callback from BaseActivity
-        setServiceConnectionCallback { isConnected ->
-            if (isConnected) {
-                handleIntent(intent)
-            } else {
-                Log.e("ShareDeepLinkActivity", "Service disconnected")
-                finishAffinity()
-            }
-        }
     }
 
     private fun handleIntent(intent: Intent?) {
         when (intent?.action) {
             Intent.ACTION_SEND -> {
-                Log.d("ShareDeepLinkActivity", "Handling single share intent: ${intent.type}")
+                Log.d(TAG, "Handling single share intent: ${intent.type}")
                 when {
                     intent.type?.startsWith("text/plain") == true -> handleText(intent)
-                    intent.type?.startsWith("image/") == true -> handleSingleFileTransfer(intent)
-                    intent.type?.startsWith("video/") == true -> handleSingleFileTransfer(intent)
-                    intent.type?.startsWith("application/") == true -> handleSingleFileTransfer(intent)
                     else -> {
                         handleSingleFileTransfer(intent)
                     }
                 }
             }
+
             Intent.ACTION_SEND_MULTIPLE -> {
-                Log.d("ShareDeepLinkActivity", "Handling multiple share intent: ${intent.type}")
+                Log.d(TAG, "Handling multiple share intent: ${intent.type}")
                 when {
                     intent.type?.startsWith("text/plain") == true -> handleText(intent)
-                    intent.type?.startsWith("image/") == true -> handleMultipleFileTransfer(intent)
-                    intent.type?.startsWith("video/") == true -> handleMultipleFileTransfer(intent)
-                    intent.type?.startsWith("application/") == true -> handleMultipleFileTransfer(intent)
                     else -> {
                         handleMultipleFileTransfer(intent)
                     }
                 }
             }
+
             else -> {
-                Log.e("ShareToPc", "Unsupported intent action: ${intent?.action}")
+                Log.e(TAG, "Unsupported intent action: ${intent?.action}")
                 finishAffinity()
             }
         }
     }
 
     private fun handleText(intent: Intent) {
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-        Log.d("ShareToPc", "Handling text share: $text")
-        if (text?.isNotEmpty() == true) {
+        val text = intent.getStringArrayListExtra(Intent.EXTRA_TEXT)
+            ?.takeIf { it.isNotEmpty() }
+            ?.joinToString("\n") { it.toString() }
+            ?: intent.getStringExtra(Intent.EXTRA_TEXT)
+
+        Log.d(TAG, "Handling text share: $text")
+        if (!text.isNullOrEmpty()) {
             CoroutineScope(Dispatchers.IO).launch {
-                networkService?.sendMessage(ClipboardMessage("text/plain", text))
+                networkManager.sendClipboardMessage(ClipboardMessage("text/plain", text))
             }
         } else {
             finishAffinity()
@@ -91,34 +80,84 @@ class ShareDeepLinkActivity: BaseActivity() {
     }
 
     private fun handleSingleFileTransfer(intent: Intent) {
-        val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-        Log.d("ShareToPc", "Handling single file share: $uri")
-
-        if (uri != null) {
-            val serviceIntent = Intent(applicationContext, FileTransferService::class.java).apply {
-                action = ACTION_SEND_FILE
-                data = uri
-            }
-            startForegroundService(serviceIntent)
+        val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
         } else {
-            Log.e("ShareToPc", "Received null URI")
-            finishAffinity()
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(Intent.EXTRA_STREAM)
+        }
+        Log.d(TAG, "Handling single file share: $uri")
+
+        pickTargetDevice { targetDeviceId ->
+            if (targetDeviceId == null) {
+                Log.e(TAG, "No connected device available for transfer")
+                finishAffinity()
+            } else {
+                uri?.let { sendAndFinish(targetDeviceId, listOf(it)) }
+                    ?: finishAffinity()
+            }
         }
     }
 
-    private fun handleMultipleFileTransfer(intent: Intent) {
-        val uris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
-        Log.d("ShareToPc", "Handling multiple file share: ${uris?.size} files")
-
-        if (!uris.isNullOrEmpty()) {
-            val serviceIntent = Intent(applicationContext, FileTransferService::class.java).apply {
-                action = ACTION_SEND_BULK_FILES
-                putParcelableArrayListExtra(EXTRA_FILE_URIS, uris)
-            }
-            startForegroundService(serviceIntent)
+    private fun handleMultipleFileTransfer(intent: Intent?) {
+        val uris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
         } else {
-            Log.e("ShareToPc", "Received null or empty URIs")
+            @Suppress("DEPRECATION")
+            intent?.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+        } ?: run {
+            Log.e(TAG, "No URIs provided in intent")
             finishAffinity()
+            return
         }
+
+        Log.d(TAG, "Handling multiple file share: ${uris.size} files")
+
+        pickTargetDevice { targetDeviceId ->
+            if (targetDeviceId == null) {
+                Log.e(TAG, "No connected device available for bulk transfer")
+                finishAffinity()
+            } else {
+                sendAndFinish(targetDeviceId, uris)
+            }
+        }
+    }
+
+    private fun sendAndFinish(deviceId: String, uris: List<Uri>) {
+        val intent = Intent(this, NetworkService::class.java).apply {
+            action = NetworkService.Companion.Actions.SEND_FILES.name
+            putExtra(NetworkService.DEVICE_ID_EXTRA, deviceId)
+
+            clipData = ClipData.newRawUri(null, uris.first()).apply {
+                uris.drop(1).forEach { addItem(ClipData.Item(it)) }
+            }
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startService(intent)
+        finishAffinity()
+    }
+
+    private fun pickTargetDevice(onSelected: (String?) -> Unit) {
+        val connectedDevices = deviceManager.pairedDevices.value.filter { it.connectionState.isConnected }
+
+        when (connectedDevices.size) {
+            0 -> onSelected(null)
+            1 -> onSelected(connectedDevices.first().deviceId)
+            else -> {
+                val deviceNames = connectedDevices.map { it.deviceName }
+                AlertDialog.Builder(this)
+                    .setTitle("Send to device")
+                    .setItems(deviceNames.toTypedArray()) { dialog, which ->
+                        onSelected(connectedDevices[which].deviceId)
+                    }
+                    .setOnCancelListener {
+                        finishAffinity()
+                    }.show()
+            }
+        }
+    }
+
+    companion object {
+        const val TAG = "DeepLinkActivity"
     }
 }

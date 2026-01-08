@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
@@ -39,11 +38,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.vectorResource
 import sefirah.domain.model.ActionMessage
 import sefirah.presentation.components.Button
 import sefirah.presentation.components.TextButton
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.PaddingValues
+import sefirah.common.R
 
 @Composable
 fun DeviceControlCard(
@@ -71,9 +72,7 @@ fun DeviceControlCard(
     }
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.animateContentSize()
@@ -141,7 +140,7 @@ private fun getIconForAction(actionId: String): ImageVector {
         "restart" -> Icons.Default.RestartAlt
         "shutdown" -> Icons.Default.PowerSettingsNew
         "sleep" -> Icons.Default.Schedule
-        else -> Icons.Default.Info
+        else -> ImageVector.vectorResource(R.drawable.ic_info_fill)
     }
 }
 

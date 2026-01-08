@@ -18,7 +18,7 @@ import java.io.IOException
 import kotlin.text.Charsets.UTF_8
 
 class ContactsHelper {
-        /**
+    /**
      * Get contact information including name, phone number and photo (if available)
      * @param context Context in which the method is called
      * @param phoneNumber Phone number to look up contact information for
@@ -73,7 +73,7 @@ class ContactsHelper {
         val encodedPhoto = ByteArrayOutputStream()
         try {
             context.contentResolver.openInputStream(photoUri).use { input ->
-                Base64OutputStream(encodedPhoto, Base64.DEFAULT).use { output ->
+                Base64OutputStream(encodedPhoto, Base64.NO_WRAP).use { output ->
                     IOUtils.copy(input, output, 1024)
                     return encodedPhoto.toString()
                 }

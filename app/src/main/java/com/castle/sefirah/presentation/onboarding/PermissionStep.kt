@@ -5,11 +5,9 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
@@ -39,21 +36,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
+import androidx.core.net.toUri
 import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.castle.sefirah.presentation.settings.SettingsViewModel
@@ -93,12 +89,12 @@ internal class PermissionStep : OnboardingStep {
                 .fillMaxSize()
                 .padding(horizontal = MaterialTheme.padding.medium)
         ) {
-            if (!viewModel.appEntryValue) {
+            if (!viewModel.appEntry) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SettingsSuggest,
+                        imageVector = ImageVector.vectorResource(R.drawable.ic_settings_alert_fill),
                         contentDescription = null,
                         modifier = Modifier
                             .padding(bottom = MaterialTheme.padding.small)
@@ -182,7 +178,6 @@ internal class PermissionStep : OnboardingStep {
                         permission = Manifest.permission.ACCESS_FINE_LOCATION,
                         granted = permissionStates.locationGranted,
                         onRequest = {
-
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                                 // First request foreground permissions
                                 foregroundLocationRequester.launch(
@@ -208,10 +203,11 @@ internal class PermissionStep : OnboardingStep {
                         title = stringResource(R.string.messages_permission),
                         subtitle = stringResource(R.string.messages_permission_rationale),
                         granted = permissionStates.smsPermissionGranted,
+                        permission = Manifest.permission_group.SMS,
                         onRequest = {
                             smsPermissionRequester.launch(
                                 arrayOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS) 
-                            ) 
+                            )
                         },
                         viewModel = viewModel
                     )
@@ -226,7 +222,7 @@ internal class PermissionStep : OnboardingStep {
                         onRequest = {
                             @SuppressLint("BatteryLife")
                             val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                data = Uri.parse("package:${context.packageName}")
+                                data = "package:${context.packageName}".toUri()
                             }
                             context.startActivity(intent)
                         },
@@ -359,7 +355,7 @@ internal class PermissionStep : OnboardingStep {
                 context.packageManager.getInstallerPackageName(context.packageName)
             }
             installer != "com.android.vending"
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             true // Assume side-loaded if we can't verify
         }
     }
@@ -386,19 +382,17 @@ fun PermissionItem(
     val activity = context as Activity
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    var permissionCheckTrigger by remember { mutableIntStateOf(0) }
-    val hasRequestedBefore = if (permission != null) {
-        viewModel.hasRequestedPermission(permission)
+    val hasRequestedBefore = permission?.let {
+        viewModel.hasRequestedPermission(it)
             .collectAsState(initial = false).value
-    } else {
-        false
-    }
+    } ?: false
 
-    // Force recomposition when permission result comes back
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                permissionCheckTrigger++ // Force recomposition
+    var canShowRationale by remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner.lifecycle, permission) {
+        val observer = object: DefaultLifecycleObserver {
+            override fun onResume(owner: LifecycleOwner) {
+                permission?.let { canShowRationale = shouldShowRequestPermissionRationale(activity, it) }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -407,25 +401,7 @@ fun PermissionItem(
         }
     }
 
-
-    // These will be recalculated when permissionCheckTrigger changes
-    val permissionDenied = remember(permissionCheckTrigger) {
-        permission?.let {
-            ActivityCompat.checkSelfPermission(activity, it) == PackageManager.PERMISSION_DENIED
-        } ?: false
-    }
-
-    val canShowRationale = remember(permissionCheckTrigger) {
-        permission?.let {
-            shouldShowRequestPermissionRationale(activity, it)
-        } ?: false
-    }
-
-    val showSettings = if (permission == null) {
-        false
-    } else {
-        permissionDenied && hasRequestedBefore && !canShowRationale
-    }
+    val showSettings = permission != null && !granted && hasRequestedBefore && !canShowRationale
 
     ListItem(
         headlineContent = { Text(text = title, style = MaterialTheme.typography.titleMedium) },
@@ -451,7 +427,6 @@ fun PermissionItem(
                         } else {
                             permission?.let { viewModel.savePermissionRequested(it) }
                             onRequest()
-                            permissionCheckTrigger++
                         }
                     }
                 ) {

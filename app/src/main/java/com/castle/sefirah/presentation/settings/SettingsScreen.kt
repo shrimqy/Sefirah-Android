@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -15,20 +14,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Help
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SettingsSuggest
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
@@ -50,6 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -63,11 +49,8 @@ import com.castle.sefirah.presentation.settings.components.SwitchPreferenceWidge
 import com.castle.sefirah.presentation.settings.components.TextPreferenceWidget
 import com.castle.sefirah.util.CrashLogUtil
 import kotlinx.coroutines.launch
-import sefirah.clipboard.ClipboardListener
 import sefirah.common.R
 import sefirah.common.util.getReadablePathFromUri
-import sefirah.common.util.isAccessibilityServiceEnabled
-import sefirah.common.util.isNotificationListenerEnabled
 import sefirah.common.util.openAppSettings
 
 @Composable
@@ -80,7 +63,7 @@ fun SettingsScreen(
     val viewModel: SettingsViewModel = hiltViewModel()
     
     val permissionStates by viewModel.permissionStates.collectAsState()
-    val preferencesSettings by viewModel.preferencesSettings.collectAsState()
+    val storageLocation by viewModel.storageLocation.collectAsState()
     val localDevice by viewModel.localDevice.collectAsState()
 
     // State for device name dialog
@@ -118,32 +101,6 @@ fun SettingsScreen(
         onResult = { viewModel.updatePermissionStates() }
     )
 
-    val telephonyPermissionRequester = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = {
-            viewModel.saveMessageSyncSettings(true)
-            viewModel.updatePermissionStates()
-        }
-    )
-
-    val contactsPermissionRequester = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = {
-            telephonyPermissionRequester.launch(Manifest.permission.READ_PHONE_STATE)
-        }
-    )
-
-    val smsPermissionRequester = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions(),
-        onResult = { permissions ->
-            val isGranted = permissions.entries.all { it.value }
-            if (isGranted) {
-                contactsPermissionRequester.launch(Manifest.permission.READ_CONTACTS)
-            }
-            viewModel.updatePermissionStates()
-        }
-    )
-
     val foregroundLocationRequester = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { permissions ->
@@ -155,7 +112,7 @@ fun SettingsScreen(
         }
     )
 
-    val storageLocation = preferencesSettings?.storageLocation ?: "\"/storage/emulated/0/Downloads\""
+    val storageLocationDisplay = storageLocation.ifEmpty { "\"/storage/emulated/0/Downloads\"" }
     val pickStorageLocation = storageLocationPicker(viewModel)
 
     LazyColumn(
@@ -166,167 +123,51 @@ fun SettingsScreen(
         item { LogoHeader() }
 
         item {
-            SwitchPermissionPrefWidget(
-                title = stringResource(R.string.clipboard_sync_preference),
-                subtitle = stringResource(R.string.clipboard_sync_subtitle),
-                icon = Icons.Filled.ContentCopy,
-                checked = preferencesSettings?.clipboardSync == true && permissionStates.accessibilityGranted,
-                permission = null,
-                onRequest = {
-                    if(!isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}") ) {
-                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                TextPreferenceWidget(
+                    title = stringResource(R.string.network_preference),
+                    subtitle = stringResource(R.string.network_subtitle),
+                    icon = ImageVector.vectorResource(R.drawable.ic_wifi),
+                    onPreferenceClick = {
+                        rootNavController.navigate(SettingsRouteScreen.NetworkScreen.route)
                     }
-                },
-                onCheckedChanged = { checked ->
-                    viewModel.saveClipboardSyncSettings(checked)
-                },
-                viewModel = viewModel
-            )
+                )   
+
         }
 
         item {
-            SwitchPermissionPrefWidget(
-                title = stringResource(R.string.image_clipboard_preference),
-                subtitle = stringResource(R.string.image_clipboard_subtitle),
-                icon = Icons.Filled.ContentPaste,
-                checked = preferencesSettings?.imageClipboard == true,
-                permission = null,
-                onRequest = {},
-                onCheckedChanged = { checked ->
-                    viewModel.saveImageClipboardSettings(checked)
-                },
-                viewModel = viewModel
-            )
-        }
-
-        item {
-            SwitchPermissionPrefWidget(
-                title = stringResource(R.string.notification_sync_preference),
-                subtitle = stringResource(R.string.notification_sync_subtitle),
-                icon = Icons.Filled.Notifications,
-                checked = preferencesSettings?.notificationSync == true && permissionStates.notificationListenerGranted,
-                permission = null,
-                onRequest = {
-                    if (!isNotificationListenerEnabled(context)) {
-                        context.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+                TextPreferenceWidget(
+                    title = stringResource(R.string.permissions_preference),
+                    icon = ImageVector.vectorResource(R.drawable.ic_settings_alert_fill),
+                    onPreferenceClick = {
+                        rootNavController.navigate(SettingsRouteScreen.PermissionScreen.route)
                     }
-                },
-                onCheckedChanged = { checked ->
-                    viewModel.saveNotificationSyncSettings(checked)
-                },
-                viewModel = viewModel
-            )
-        }
-
-        item {
-            SwitchPermissionPrefWidget(
-                title = stringResource(R.string.message_sync_preference),
-                subtitle = stringResource(R.string.message_sync_subtitle),
-                icon = Icons.AutoMirrored.Filled.Message,
-                checked = preferencesSettings?.messageSync == true && permissionStates.smsPermissionGranted,
-                permission = Manifest.permission.READ_SMS,
-                onRequest = { 
-                    smsPermissionRequester.launch(
-                        arrayOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS) 
-                    ) 
-                },
-                onCheckedChanged = { checked ->
-                    viewModel.saveMessageSyncSettings(checked)
-                },
-                viewModel = viewModel
-            )
-        }
-
-        item {
-            SwitchPermissionPrefWidget(
-                title = stringResource(R.string.media_session_preference),
-                subtitle = stringResource(R.string.media_session_subtitle),
-                icon = Icons.Filled.PlayArrow,
-                checked = preferencesSettings?.mediaSession == true && permissionStates.notificationGranted,
-                permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    Manifest.permission.POST_NOTIFICATIONS
-                } else null,
-                onRequest = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                },
-                onCheckedChanged = { checked ->
-                    viewModel.saveMediaSessionSettings(checked)
-                },
-                viewModel = viewModel
-            )
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            item {
-                SwitchPermissionPrefWidget(
-                    title = stringResource(R.string.storage_access_preference),
-                    subtitle = stringResource(R.string.storage_access_subtitle),
-                    icon = Icons.Default.Folder,
-                    checked = preferencesSettings?.remoteStorage == true && permissionStates.storageGranted,
-                    permission = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    } else null,
-                    onRequest = {
-                        if (!permissionStates.storageGranted) {
-                            context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-                        }
-                    },
-                    onCheckedChanged = { checked ->
-                        viewModel.saveRemoteStorageSettings(checked)
-                    },
-                    viewModel = viewModel
                 )
-            }
-        }
-
-        item {
-            TextPreferenceWidget(
-                title = stringResource(R.string.network_preference),
-                subtitle = stringResource(R.string.network_subtitle),
-                icon = Icons.Default.Wifi,
-                onPreferenceClick = {
-                    rootNavController.navigate(SettingsRouteScreen.NetworkScreen.route)
-                }
-            )   
 
         }
 
         item {
-            TextPreferenceWidget(
-                title = stringResource(R.string.permissions_preference),
-                icon = Icons.Default.SettingsSuggest,
-                onPreferenceClick = {
-                    rootNavController.navigate(SettingsRouteScreen.PermissionScreen.route)
-                }
-            )
-
-        }
-
-        item {
-            TextPreferenceWidget(
-                title = stringResource(R.string.storage_location_preference),
-                subtitle = getReadablePathFromUri(context, storageLocation),
-                icon = Icons.Default.Storage,
-                onPreferenceClick = {
-                    try {
-                        pickStorageLocation.launch(null)
-                    } catch (_: ActivityNotFoundException) {
+                TextPreferenceWidget(
+                    title = stringResource(R.string.storage_location_preference),
+                    subtitle = getReadablePathFromUri(context, storageLocationDisplay),
+                    icon = ImageVector.vectorResource(R.drawable.ic_storage),
+                    onPreferenceClick = {
+                        try {
+                            pickStorageLocation.launch(null)
+                        } catch (_: ActivityNotFoundException) {
+                        }
                     }
-                }
-            )
+                )
         }
 
         item {
-            TextPreferenceWidget(
-                title = stringResource(R.string.device_name_preference),
-                subtitle = localDevice?.deviceName,
-                icon = Icons.Default.PhoneAndroid,
-                onPreferenceClick = {
-                    showDeviceNameDialog = true
-                }
-            )
+                TextPreferenceWidget(
+                    title = stringResource(R.string.device_name_preference),
+                    subtitle = localDevice?.deviceName,
+                    icon = ImageVector.vectorResource(R.drawable.ic_mobile_fill),
+                    onPreferenceClick = {
+                        showDeviceNameDialog = true
+                    }
+                )
         }
 
         item {
@@ -334,24 +175,24 @@ fun SettingsScreen(
         }
 
         item {
-            TextPreferenceWidget(
-                title = stringResource(R.string.about),
-                icon = Icons.Default.Info,
-                onPreferenceClick = {
-                    rootNavController.navigate(SettingsRouteScreen.AboutScreen.route)
-                }
-            )
+                TextPreferenceWidget(
+                    title = stringResource(R.string.about),
+                    icon = ImageVector.vectorResource(R.drawable.ic_info_fill),
+                    onPreferenceClick = {
+                        rootNavController.navigate(SettingsRouteScreen.AboutScreen.route)
+                    }
+                )
 
         }
 
         item {
-            TextPreferenceWidget(
-                title = stringResource(R.string.help),
-                icon = Icons.AutoMirrored.Filled.Help,
-                onPreferenceClick = {
-                    uriHandler.openUri("https://github.com/shrimqy/Sekia/blob/master/README.MD")
-                }
-            )
+                TextPreferenceWidget(
+                    title = stringResource(R.string.help),
+                    icon = ImageVector.vectorResource(R.drawable.ic_help_fill),
+                    onPreferenceClick = {
+                        uriHandler.openUri("https://github.com/shrimqy/Sekia/blob/master/README.MD")
+                    }
+                )
         }
         
         item {
@@ -361,7 +202,7 @@ fun SettingsScreen(
             TextPreferenceWidget(
                 title = "Dump Logs",
                 subtitle = "Save diagnostic logs to your device",
-                icon = Icons.Default.BugReport,
+                icon = ImageVector.vectorResource(R.drawable.ic_bug_report_fill),
                 onPreferenceClick = {
                     scope.launch {
                         crashLogUtil.dumpLogs()

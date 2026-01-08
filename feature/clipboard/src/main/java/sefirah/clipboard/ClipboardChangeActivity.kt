@@ -13,8 +13,6 @@ import android.util.Log
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sefirah.domain.model.ClipboardMessage
@@ -26,7 +24,7 @@ class ClipboardChangeActivity : FragmentActivity() {
     @Inject lateinit var networkManager: NetworkManager
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
-        val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipboardManager = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         lifecycleScope.launch {
             /** Seems like adding a delay is giving [ClipboardManager] time to capture
              *  clipboard text.
@@ -53,9 +51,7 @@ class ClipboardChangeActivity : FragmentActivity() {
 
     private fun sendClip(data: String?) {
         if (data != null) {
-            CoroutineScope(Dispatchers.IO).launch {
-                networkManager.sendMessage(ClipboardMessage("text/plain", data))
-            }
+            networkManager.sendClipboardMessage(ClipboardMessage("text/plain", data))
         }
     }
 

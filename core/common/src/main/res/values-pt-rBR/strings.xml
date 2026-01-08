@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!-- App -->
-    <string name="app_name" translatable="false">Sefirah</string>
     <string name="version">Versão</string>
     <string name="windows_app">App para Windows</string>
     <string name="share_deep_link">Enviar ao PC</string>
@@ -15,6 +14,7 @@
     <string name="channel_transfer_progress">Progresso do envio</string>
     <string name="channel_transfer_complete">Envio completo</string>
     <string name="channel_device_connection">Conexão ao dispositivo</string>
+    <string name="channel_pairing_request">Pairing Request</string>
     <string name="channel_media_playback">Reprodução de mídia</string>
 
     <!-- Notification Content -->
@@ -22,14 +22,26 @@
     <string name="notification_status_disconnected">Não conectado</string>
     <string name="notification_status_connected">Conectado à %s</string>
     <string name="notification_disconnect_action">Desconectar</string>
-    <string name="notification_stop_action">Parar</string>
     <string name="notification_clipboard_action">Enviar área de transfência</string>
-    <string name="notification_media_playback">Reprodução de mídia</string>
-    <string name="notification_file_transfer">Envio de arquivos</string>
     <string name="notification_file_transfer_error">Falha no envio de arquivo</string>
-    <string name="notification_file_transfer_progress">Enviando arquivo</string>
     <string name="notification_file_transfer_complete">Envio concluído</string>
+    <string name="notification_transfer_preparing">Preparing transfer…</string>
+    <string name="notification_transfer_success">Transfer completed successfully</string>
+    <string name="notification_transfer_success_bulk">Successfully transferred %d files</string>
+    <string name="notification_sending_action">Sending</string>
+    <string name="notification_receiving_action">Receiving</string>
+    <string name="notification_file">file</string>
+    <string name="notification_files">files</string>
+    <string name="notification_to">to</string>
+    <string name="notification_from">from</string>
+    <string name="notification_progress_format">%1$d%% (%2$s/%3$s)</string>
+    <string name="notification_sending_title_format">%1$s %2$d %3$s %4$s %5$s</string>
+    <string name="notification_receiving_title_format">%1$s %2$d %3$s %4$s %5$s</string>
     <string name="notification_device_connection">Estado da conexão</string>
+    <string name="notification_pairing_request_title">Pairing Request</string>
+    <string name="notification_pairing_request_text">%1$s wants to pair.\nVerification code: %2$s</string>
+    <string name="notification_pairing_approve">Approve</string>
+    <string name="notification_pairing_reject">Reject</string>
 
     <!-- Screen Names -->
     <string name="home">Início</string>
@@ -49,15 +61,12 @@
     <string name="back_button">Voltar</string>
     <string name="connect_button">Conectar</string>
     <string name="grant">Permitir</string>
-    <string name="proceed">Continuar</string>
-    <string name="done">Concluir</string>
 
     <!-- Permissions -->
     <string name="notifications">Notificações</string>
     <string name="notification_permission_rationale">Para notificar o estado da conexão</string>
     <string name="location_permission">Localização</string>
     <string name="location_permission_rationale">Para descobertas de Redes Wi-Fi</string>
-    <string name="media_access">Acesso à mídia</string>
     <string name="media_access_rationale">Necessário para acessar arquivos de mídia</string>
     <string name="background_battery_usage">Uso em segundo plano</string>
     <string name="background_battery_usage_rationale">Para manter as conexões ativas e estáveis</string>
@@ -67,7 +76,6 @@
     <string name="accessibility_service_rationale">Para detectar a área de transferência</string>
     <string name="notification_access">Acesso às notificações</string>
     <string name="notification_access_rationale">Para a sincronização de notificações</string>
-    <string name="accessibility_settings">Configurações de acessibilidade</string>
     <string name="app_info">Informações do app</string>
     <string name="restricted_settings_instruction">Devido à restrições de segurança, será necessário: \n 1. Ativar o \'%s\' \n 2. Pressionar \'ok\' no aviso e voltar \n 3. Acessar as Informações do app \n 4. Abrir o menu adicional (3 pontos) \n 5. Pressionar \'Permitir configurações restritas\' \n 6. Retornar para tentar novamente ativar o \'%s\'</string>
 
@@ -77,11 +85,9 @@
     <string name="status_connected">Conectado</string>
     <string name="add_device">Adicionar dispositivo</string>
     <string name="no_device">Nenhum dispositivo encontrado</string>
-    <string name="last_connected">Última conexão</string>
-    <string name="ip_addresses">Endereços IP</string>
-    <string name="no_ip">Nenhum endereço configurado</string>
-    <string name="add_custom_ip_button">Endereço IP adicional</string>
-    <string name="custom_device_list">Dispositivos personalizados</string>
+    <string name="manage_addresses_title">Manage Addresses</string>
+    <string name="ip_address_subtitle">Addresses used for connecting to the device</string>
+    <string name="add_address">Add Address</string>
 
     <!-- Onboarding & Welcome -->
     <string name="welcome">Bem-vindo</string>
@@ -99,8 +105,6 @@
     <string name="notification_sync_subtitle">Envia notificações de apps ao computador</string>
     <string name="media_session_preference">Reprodução de mídia</string>
     <string name="media_session_subtitle">Exibe na área de notificações o que estiver tocando no computador</string>
-    <string name="auto_device_discovery_preference">Descoberta automática</string>
-    <string name="auto_device_discovery_subtitle">Busca por dispositivos pareados enquanto estiver conectado à uma rede confiável</string>
     <string name="storage_access_preference">Acesso ao armazenamento</string>
     <string name="storage_access_subtitle">Permite que o Windows acesse o armazenamento do seu Android</string>
     <string name="permissions_preference">Permissões</string>
@@ -110,17 +114,7 @@
 
     <!-- Dialogs -->
     <string name="delete_dialog">Deseja excluir</string>
-    <string name="connection_options">Opções de conexão</string>
-    <string name="connection_options_subtitle">Deseja se conectar à</string>
-    <string name="manual_connection">Conexão manual</string>
-    <string name="available_ip_addresses">Endereços IP disponíveis:</string>
-    <string name="custom_ip_placeholder">Inserir IP personalizado</string>
     <string name="custom_ip_text_label">Nome do host ou endereço IP</string>
-    <string name="ip_example">Exemplo: 192.168.1.100</string>
-
-    <!-- Network -->
-    <string name="associated_networks">Redes associadas</string>
-    <string name="no_associated_network">Nenhuma rede associada</string>
 
     <!-- Storage -->
     <string name="choose_storage_location">Local de armazenamento</string>
@@ -139,10 +133,7 @@
     <string name="available_devices">Dispositivos disponíveis</string>
     <string name="sync_screen_subtitle">Dispositivos executando o app para Windows:</string>
     <string name="key">Chave</string>
-    <string name="manual_connect">Manual</string>
-    <string name="auto_connect">Automático</string>
     <string name="restricted_settings_title">Configurações restritas</string>
-    <string name="connection_error">Falha na conexão: o dispositivo recusou ou não está disponível</string>
     <string name="device_name_preference">Nome do dispositivo</string>
     <string name="rename_device">Renomear dispositivo</string>
     <string name="rename">Renomear</string>
@@ -152,12 +143,8 @@
     <string name="user_display_name">Você</string>
     <string name="set_default_sms_app_title">Enviar MMS</string>
     <string name="set_group_message_as_mms_title">Enviar Grupo de MMS</string>
-    <string name="set_group_message_as_mms" translatable="false">set_group_message_as_mms</string>
     <string name="set_long_text_as_mms_title">Enviar texto longo como MMS</string>
-    <string name="set_long_text_as_mms" translatable="false">set_long_text_as_mms</string>
     <string name="convert_to_mms_after_title">Converter para MMS</string>
-    <string name="convert_to_mms_after" translatable="false">convert_to_mms_after</string>
-    <string name="convert_to_mms_after_default" translatable="false">3</string>
     <string name="messages_permission">Mensagens</string>
     <string name="messages_permission_rationale">Para visualizar e enviar mensagens</string>
     <string name="message_sync_preference">Sincronizar mensagens</string>
@@ -169,13 +156,6 @@
         <item>Após quatro mensagens</item>
         <item>Após cinco mensagens</item>
     </string-array>
-    <string-array name="convert_to_mms_after_values" translatable="false">
-        <item>1</item>
-        <item>2</item>
-        <item>3</item>
-        <item>4</item>
-        <item>5</item>
-    </string-array>
 
     <!-- Toast Messages -->
     <string name="toast_network">Certifique-se de estar conectado à mesma rede que seu PC</string>
@@ -183,5 +163,8 @@
     <string name="update_check_confirm">Download</string>
     <string name="action_not_now">Agora não</string>
     <string name="update_check_open">Abrir no GitHub</string>
+    <string name="error">Error</string>
+    <string name="connection_toggle">Connection toggle</string>
+    <string name="trust_all_networks">Trust all networks</string>
 
 </resources>

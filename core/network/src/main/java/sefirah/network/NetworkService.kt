@@ -10,7 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
-import android.net.ConnectivityManager
+import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Binder
 import android.os.Build
@@ -18,31 +18,32 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
-import io.ktor.network.sockets.Socket
-import io.ktor.network.sockets.isClosed
 import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
+import io.ktor.network.sockets.toJavaAddress
+import io.ktor.util.network.address
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
-import io.ktor.utils.io.close
+import io.ktor.utils.io.cancel
+import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import io.ktor.utils.io.readUTF8Line
+import io.ktor.utils.io.streams.asByteWriteChannel
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import sefirah.clipboard.ClipboardHandler
-import sefirah.common.R
+import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
 import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.smsPermissionGranted
@@ -50,50 +51,104 @@ import sefirah.communication.sms.SmsHandler
 import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.database.AppRepository
-import sefirah.database.model.toDomain
-import sefirah.domain.model.ApplicationList
+import sefirah.domain.model.AddressEntry
+import sefirah.domain.model.AuthenticationMessage
 import sefirah.domain.model.ClipboardMessage
+import sefirah.domain.model.CommandMessage
+import sefirah.domain.model.CommandType
+import sefirah.domain.model.ConnectionDetails
 import sefirah.domain.model.ConnectionState
+import sefirah.domain.model.DeviceConnection
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.DeviceStatus
-import sefirah.domain.model.DiscoveryMode
-import sefirah.domain.model.PhoneNumber
-import sefirah.domain.model.RemoteDevice
+import sefirah.domain.model.DiscoveredDevice
+import sefirah.domain.model.PairMessage
+import sefirah.domain.model.PairedDevice
+import sefirah.domain.model.PendingDeviceApproval
 import sefirah.domain.model.SocketMessage
-import sefirah.domain.model.SocketType
+import sefirah.domain.repository.DeviceManager
 import sefirah.domain.repository.PreferencesRepository
 import sefirah.domain.repository.SocketFactory
-import sefirah.network.NetworkDiscovery.NetworkAction
+import sefirah.domain.util.MessageSerializer
 import sefirah.network.extensions.ActionHandler
-import sefirah.network.extensions.handleDeviceInfo
+import sefirah.network.extensions.cancelPairingVerificationNotification
 import sefirah.network.extensions.handleMessage
 import sefirah.network.extensions.setNotification
-import sefirah.network.sftp.SftpServer
+import sefirah.network.transfer.FileTransferService
+import sefirah.network.transfer.SftpServer
 import sefirah.network.util.ECDHHelper
-import sefirah.network.util.MessageSerializer
+import sefirah.network.util.TrustManager
 import sefirah.network.util.getInstalledApps
 import sefirah.notification.NotificationHandler
 import sefirah.presentation.util.drawableToBase64Compressed
 import sefirah.projection.media.MediaHandler
 import javax.inject.Inject
+import javax.net.ssl.SSLSocket
+import kotlin.properties.Delegates
 
 @AndroidEntryPoint
 class NetworkService : Service() {
-    @Inject lateinit var socketFactory: SocketFactory
-    @Inject lateinit var appRepository: AppRepository
-    @Inject lateinit var messageSerializer: MessageSerializer
-    @Inject lateinit var notificationHandler: NotificationHandler
-    @Inject lateinit var notificationCenter: NotificationCenter
-    @Inject lateinit var clipboardHandler: ClipboardHandler
-    @Inject lateinit var networkDiscovery: NetworkDiscovery
-    @Inject lateinit var mediaHandler: MediaHandler
-    @Inject lateinit var sftpServer: SftpServer
-    @Inject lateinit var preferencesRepository: PreferencesRepository
-    @Inject lateinit var smsHandler: SmsHandler
-    @Inject lateinit var actionHandler: ActionHandler
+    @Inject
+    lateinit var socketFactory: SocketFactory
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Inject
+    lateinit var appRepository: AppRepository
+
+    @Inject
+    lateinit var notificationHandler: NotificationHandler
+
+    @Inject
+    lateinit var notificationCenter: NotificationCenter
+
+    @Inject
+    lateinit var clipboardHandler: ClipboardHandler
+
+    @Inject
+    lateinit var networkDiscovery: NetworkDiscovery
+
+    @Inject
+    lateinit var mediaHandler: MediaHandler
+
+    @Inject
+    lateinit var sftpServer: SftpServer
+
+    @Inject
+    lateinit var preferencesRepository: PreferencesRepository
+
+    @Inject
+    lateinit var smsHandler: SmsHandler
+
+    @Inject
+    lateinit var actionHandler: ActionHandler
+
+    @Inject
+    lateinit var deviceManager: DeviceManager
+
+    @Inject
+    lateinit var customTrustManager: TrustManager
+
+    @Inject
+    lateinit var fileTransferService: FileTransferService
+
+    val audioManager: AudioManager by lazy {
+        getSystemService(AUDIO_SERVICE) as AudioManager
+    }
+
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
+
+    private val _pendingDeviceApproval = MutableStateFlow<PendingDeviceApproval?>(null)
+    val pendingDeviceApproval: StateFlow<PendingDeviceApproval?> = _pendingDeviceApproval.asStateFlow()
+
+    fun emitPendingApproval(device: PendingDeviceApproval) {
+        _pendingDeviceApproval.value = device
+    }
+
+    fun clearPendingApproval(deviceId: String) {
+        if (_pendingDeviceApproval.value?.deviceId == deviceId) {
+            _pendingDeviceApproval.value = null
+        }
+    }
 
     inner class LocalBinder : Binder() {
         fun getService(): NetworkService = this@NetworkService
@@ -104,367 +159,651 @@ class NetworkService : Service() {
     }
 
     lateinit var notificationBuilder: NotificationCompat.Builder
-    private lateinit var connectivityManager: ConnectivityManager
-
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
-    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
-
-    private var socket: Socket? = null
-    private var writeChannel: ByteWriteChannel? = null
-    private var readChannel: ByteReadChannel? = null
-
-    private var connectedDevice: RemoteDevice? = null
-    private var deviceName: String? = null
-    private var connectedIpAddress: String? = null
 
     private var deviceStatus: DeviceStatus? = null
 
-    private var connectionJob: Job? = null
+    private var tcpServerSocket: javax.net.ssl.SSLServerSocket? = null
+    private var serverAcceptJob: Job? = null
+
+    private val connections = mutableMapOf<String, DeviceConnection>()
+
+    private var tcpServerPort by Delegates.notNull<Int>()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            Actions.START.name -> {
-                val remoteInfo = intent.getParcelableExtra<RemoteDevice>(REMOTE_INFO)
-                if (remoteInfo != null && _connectionState.value.isDisconnected) {
-                    deviceName = remoteInfo.deviceName
-                    _connectionState.value = ConnectionState.Connecting(deviceName)
-                    start(remoteInfo)
-                } else if (remoteInfo == null && _connectionState.value.isDisconnected) {
+            Actions.CONNECT.name -> {
+                val connectionDetails = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(EXTRA_CONNECTION_DETAILS, ConnectionDetails::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(EXTRA_CONNECTION_DETAILS)
+                }
+                connectionDetails?.let {
                     scope.launch {
-                        val lastDevice = appRepository.getLastConnectedDevice()
-                        if (lastDevice != null) {
-                            deviceName = lastDevice.deviceName
-                            _connectionState.value = ConnectionState.Connecting(deviceName)
-                            start(lastDevice.toDomain())
+                        // Check if device is already paired - if so, use connectPaired, otherwise connectTo
+                        val pairedDevice = deviceManager.getPairedDevice(it.deviceId)
+                        if (pairedDevice != null) {
+                            connectPaired(pairedDevice)
                         } else {
-                            Log.w(TAG, "No last connected device found for Tasker action")
+                            connectTo(it)
                         }
                     }
                 }
             }
-            Actions.STOP.name -> {
-                if (connectionJob?.isActive == true) connectionJob?.cancel()
-                stop(true)
+
+            Actions.APPROVE_DEVICE.name -> {
+                scope.launch {
+                    intent.getStringExtra(DEVICE_ID_EXTRA)?.let {
+                        approveDeviceConnection(it)
+                    }
+                }
+            }
+
+            Actions.REJECT_DEVICE.name -> {
+                scope.launch {
+                    intent.getStringExtra(DEVICE_ID_EXTRA)?.let {
+                        rejectDeviceConnection(it)
+                    }
+                }
+            }
+
+            Actions.DISCONNECT.name -> {
+                scope.launch {
+                    val deviceId = intent.getStringExtra(DEVICE_ID_EXTRA) ?: return@launch
+                    disconnect(deviceId)
+                }
+            }
+
+            Actions.CANCEL_TRANSFER.name -> {
+                val transferId = intent.getStringExtra(EXTRA_TRANSFER_ID) ?: return START_STICKY
+                fileTransferService.cancelTransfer(transferId)
+            }
+
+            Actions.SEND_FILES.name -> {
+                val deviceId = intent.getStringExtra(DEVICE_ID_EXTRA) ?: return START_STICKY
+                val clipData = intent.clipData ?: return START_STICKY
+                val uris = (0 until clipData.itemCount).mapNotNull { clipData.getItemAt(it).uri }
+                if (uris.isNotEmpty()) {
+                    fileTransferService.sendFiles(deviceId, uris)
+                }
             }
             Actions.SEND_CLIPBOARD.name -> {
                 val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-                if (!text.isNullOrEmpty() && _connectionState.value.isConnected) {
-                    scope.launch {
-                        sendMessage(ClipboardMessage("text/plain", text))
-                    }
+                if (!text.isNullOrEmpty()) {
+                    sendClipboardMessage(ClipboardMessage("text/plain", text))
                 }
             }
         }
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
-    private fun start(remoteInfo: RemoteDevice) {
-        try {
-            connectionJob = scope.launch {
-                actionHandler.clearActions()
+    override fun onCreate() {
+        super.onCreate()
 
-                var connected = false
-                if (remoteInfo.prefAddress != null) {
-                    connected = initializeConnection(remoteInfo.prefAddress!!, remoteInfo.port)
+        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED))
+        registerReceiver(interruptionFilterReceiver, IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
+        registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED))
+        registerReceiver(screenOnReceiver, IntentFilter(Intent.ACTION_SCREEN_ON))
+        registerReceiver(wifiStateReceiver, IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION))
+
+        setNotification(null, null, AppNotifications.DEVICE_CONNECTION_ID)
+
+        scope.launch {
+            tcpServerPort = startTcpServer()
+            networkDiscovery.initialize(tcpServerPort)
+        }
+
+        scope.launch {
+            deviceManager.pairedDevices.collect { pairedDevices ->
+                // Get connected devices
+                val connectedDevices = pairedDevices.filter { it.connectionState.isConnected }
+
+                if (connectedDevices.isNotEmpty()) {
+                    val deviceNames = connectedDevices.joinToString(", ") { it.deviceName }
+                    // Only pass deviceId for disconnect action when single device connected
+                    val deviceId = if (connectedDevices.size == 1) connectedDevices.first().deviceId else null
+                    setNotification(deviceNames, deviceId, AppNotifications.DEVICE_CONNECTION_ID)
+                } else {
+                    setNotification(null, null, AppNotifications.DEVICE_CONNECTION_ID)
                 }
-                if (!connected) {
-                    val addresses: MutableList<String> = remoteInfo.ipAddresses.toMutableList()
-                    addresses.remove(remoteInfo.prefAddress)
+            }
+        }
+    }
 
-                    for (ipAddress in addresses) {
-                        if (initializeConnection(ipAddress, remoteInfo.port)) {
-                            connected = true
+    suspend fun startTcpServer(): Int {
+        try {
+            tcpServerSocket = socketFactory.tcpServerSocket(PORT_RANGE)
+                ?: throw IllegalStateException("Failed to create TCP server socket")
+            val port = tcpServerSocket!!.localPort
+            Log.d(TAG, "TCP server started successfully on port $port")
+
+            // Start accepting connections
+            serverAcceptJob = scope.launch {
+                while (tcpServerSocket?.isClosed == false) {
+                    try {
+                        val sslSocket = withContext(Dispatchers.IO) {
+                            tcpServerSocket?.accept() as? SSLSocket
+                        } ?: break
+
+                        Log.d(TAG, "Accepted incoming connection from ${sslSocket.remoteSocketAddress}")
+                        handleIncomingConnection(sslSocket)
+                    } catch (e: Exception) {
+                        if (tcpServerSocket?.isClosed == true) {
+                            Log.d(TAG, "Server socket closed, stopping acceptance loop")
                             break
                         }
+                        Log.e(TAG, "Error accepting connection", e)
                     }
                 }
-
-                if (!connected) {
-                    Log.e(TAG, "All connection attempts failed")
-                    _connectionState.value = ConnectionState.Error("Device not reachable")
-                    delay(100)
-                    stop(false)
-                    return@launch
-                }
-
-                // Send initial device info for verification
-                sendDeviceInfo(remoteInfo)
-
-                // Wait for device info
-                _connectionState.value = withTimeoutOrNull(30000) { // 30 seconds timeout
-                    readChannel?.readUTF8Line()?.let { jsonMessage ->
-                        val message = messageSerializer.deserialize(jsonMessage)
-                        if (message == null) {
-                            Log.e(TAG, "Invalid device info received")
-                            return@withTimeoutOrNull ConnectionState.Error(getString(R.string.connection_error))
-                        }
-                        when (message) {
-                            is DeviceInfo -> {
-                                connectedDevice = remoteInfo
-                                handleDeviceInfo(message, remoteInfo, connectedIpAddress!!)
-                                return@withTimeoutOrNull ConnectionState.Connected
-                            }
-
-                            else -> {
-                                Log.w(TAG, "Authentication rejected")
-                                return@withTimeoutOrNull ConnectionState.Error(getString(R.string.connection_error))
-                            }
-                        }
-                    }
-                    null
-                } ?: run {
-                    Log.e(TAG, "Timeout waiting for device info")
-                    stop(false)
-                    _connectionState.value = ConnectionState.Error(getString(R.string.connection_error))
-                    return@launch
-                }
-
-                if (_connectionState.value.isConnected) {
-                    startListening()
-                    finalizeConnection(remoteInfo.lastConnected == null)
-                }
+                Log.d(TAG, "TCP server stopped")
             }
+            return port
         } catch (e: Exception) {
-            if (_connectionState.value.isForcedDisconnect) {
-                stop(true)
-            } else {
-                stop(false)
-                Log.e(TAG, "Error in connecting", e)
-                _connectionState.value = ConnectionState.Error(getString(R.string.connection_error))
-            }
+            Log.e(TAG, "Error starting TCP server", e)
+            throw e
         }
     }
 
-    private suspend fun initializeConnection(ipAddress: String, port: Int): Boolean {
+    private suspend fun handleIncomingConnection(sslSocket: SSLSocket) {
         try {
-            socket = socketFactory.tcpClientSocket(SocketType.DEFAULT, ipAddress, port)
-            if (socket != null) {
-                try {
-                    writeChannel = socket?.openWriteChannel()
-                    readChannel = socket?.openReadChannel()
-                    connectedIpAddress = ipAddress
-                    return true
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to open channels", e)
-                    withContext(Dispatchers.IO) {
-                        socket?.close()
-                        socket = null
-                    }
-                    return false
-                }
+            val readChannel = sslSocket.inputStream.toByteReadChannel()
+            val writeChannel = sslSocket.outputStream.asByteWriteChannel()
+
+            val authMessage = readChannel.readUTF8Line()?.let {
+                val message = MessageSerializer.deserialize(it)
+                message as? AuthenticationMessage
+            } ?: run {
+                Log.e(TAG, "Timeout waiting for Authentication message from incoming connection")
+                sslSocket.close()
+                return
             }
-            return false
+            val address = sslSocket.remoteSocketAddress.address
+
+            Log.d(TAG, "Received Authentication from ${authMessage.deviceId}: ${authMessage.deviceName}")
+
+            val existingDevice = deviceManager.getPairedDevice(authMessage.deviceId)
+            if (existingDevice != null) {
+                authenticatePairedDevice(
+                    sslSocket,
+                    readChannel,
+                    writeChannel,
+                    authMessage,
+                    existingDevice,
+                    address,
+                )
+            } else {
+                authenticateNewDevice(
+                    sslSocket,
+                    readChannel,
+                    writeChannel,
+                    authMessage,
+                    address
+                )
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Connection failed", e)
-            withContext(Dispatchers.IO) {
-                socket?.close()
-                socket = null
+            Log.e(TAG, "Error handling incoming connection", e)
+            sslSocket.close()
+        }
+    }
+
+    private suspend fun authenticatePairedDevice(
+        sslSocket: SSLSocket,
+        readChannel: ByteReadChannel,
+        writeChannel: ByteWriteChannel,
+        authMessage: AuthenticationMessage,
+        device: PairedDevice,
+        address: String
+    ) {
+        // Verify authentication
+        if (!verifyAuthentication(device.publicKey, authMessage)) {
+            Log.e(TAG, "Authentication failed for paired device ${authMessage.deviceId}")
+            sslSocket.close()
+            return
+        }
+
+        Log.d(TAG, "Authentication successful for paired device ${authMessage.deviceId}")
+
+        // Create/update DeviceConnection
+        val connection = DeviceConnection(
+            deviceId = device.deviceId,
+            sslSocket = sslSocket,
+            readChannel = readChannel,
+            writeChannel = writeChannel
+        )
+        setConnection(device.deviceId, connection)
+
+        val updatedDevice = device.copy(
+            deviceName = authMessage.deviceName,
+            lastConnected = System.currentTimeMillis(),
+            addresses = if (device.addresses.none { it.address == address }) {
+                device.addresses + AddressEntry(address)
+            } else {
+                device.addresses
+            },
+            address = address,
+            connectionState = ConnectionState.Connected
+        )
+
+        sendAuthMessage(device.publicKey, writeChannel)
+
+        deviceManager.addOrUpdatePairedDevice(updatedDevice)
+        finalizeConnection(updatedDevice, false)
+    }
+
+    private suspend fun authenticateNewDevice(
+        sslSocket: SSLSocket,
+        readChannel: ByteReadChannel,
+        writeChannel: ByteWriteChannel,
+        authMessage: AuthenticationMessage,
+        address: String
+    ) {
+        val existingDevice = deviceManager.getDiscoveredDevice(authMessage.deviceId)
+        if (existingDevice != null) {
+            deviceManager.removeDiscoveredDevice(existingDevice.deviceId)
+        }
+
+        if (!verifyAuthentication(authMessage.publicKey, authMessage)) {
+            Log.e(TAG, "Authentication failed for new device ${authMessage.deviceId}")
+            sslSocket.close()
+            return
+        }
+        sendAuthMessage(authMessage.publicKey, writeChannel)
+
+        val localDevice = deviceManager.localDevice
+        val sharedSecret = ECDHHelper.deriveSharedSecret(
+            localDevice.privateKey,
+            authMessage.publicKey
+        )
+        val verificationCode = generateVerificationCode(sharedSecret)
+
+        val newDevice = DiscoveredDevice(
+            deviceId = authMessage.deviceId,
+            deviceName = authMessage.deviceName,
+            publicKey = authMessage.publicKey,
+            addresses = listOfNotNull(address),
+            address = address,
+            verificationCode = verificationCode
+        )
+
+        val connection = DeviceConnection(
+            deviceId = newDevice.deviceId,
+            sslSocket = sslSocket,
+            readChannel = readChannel,
+            writeChannel = writeChannel
+        )
+        setConnection(newDevice.deviceId, connection)
+
+        deviceManager.addOrUpdateDiscoveredDevice(newDevice)
+    }
+
+    suspend fun connectPaired(device: PairedDevice) {
+        deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Connecting(device.deviceId)))
+
+        val port = device.port ?: PORT_RANGE.first
+
+        try {
+            val socket = run {
+                for (ip in device.getAddressesToTry()) {
+                    try {
+                        socketFactory.tcpClientSocket(ip, port)?.let { return@run it }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Failed to connect to $ip:$port", e)
+                    }
+                }
+                null
+            } ?: run {
+                Log.e(TAG, "All connection attempts failed")
+                deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected()))
+                return
             }
-            return false
+
+            val writeChannel = socket.openWriteChannel()
+            val readChannel = socket.openReadChannel()
+
+            sendAuthMessage(device.publicKey, writeChannel)
+
+            val authResponse = try {
+                withTimeoutOrNull(3000) {
+                    readChannel.readUTF8Line()?.let {
+                        MessageSerializer.deserialize(it) as? AuthenticationMessage
+                    }
+                }
+            } catch (_: Exception) {
+                null
+            } ?: run {
+                Log.e(TAG, "Timeout or null response waiting for authentication message")
+                socket.close()
+                deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected()))
+                return
+            }
+
+            if (!verifyAuthentication(device.publicKey, authResponse)) {
+                Log.e(TAG, "Authentication failed ${authResponse.deviceId}")
+                socket.close()
+                deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected()))
+                return
+            }
+
+            val connection = DeviceConnection(
+                deviceId = device.deviceId,
+                socket = socket,
+                readChannel = readChannel,
+                writeChannel = writeChannel
+            )
+            setConnection(device.deviceId, connection)
+
+            val updatedDevice = device.copy(
+                lastConnected = System.currentTimeMillis(),
+                connectionState = ConnectionState.Connected,
+                port = port,
+                address = socket.remoteAddress.toJavaAddress().address
+            )
+            deviceManager.addOrUpdatePairedDevice(updatedDevice)
+
+            Log.d(TAG, "Device ${updatedDevice.deviceId} connected")
+            finalizeConnection(updatedDevice, false)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during connection", e)
+            deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected()))
+        }
+    }
+
+
+    suspend fun connectTo(connectionDetails: ConnectionDetails) {
+        removeConnection(connectionDetails.deviceId)
+        deviceManager.removeDiscoveredDevice(connectionDetails.deviceId)
+
+        val addresses = connectionDetails.addresses
+        val port = connectionDetails.port
+        val remotePublicKey = connectionDetails.publicKey
+
+        try {
+            val socket = run {
+                for (ip in addresses) {
+                    try {
+                        socketFactory.tcpClientSocket(ip, port)?.let { return@run it }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Failed to connect to $ip:$port", e)
+                    }
+                }
+                null
+            } ?: run {
+                Log.e(TAG, "All connection attempts failed")
+                return
+            }
+
+            val writeChannel = socket.openWriteChannel()
+            val readChannel = socket.openReadChannel()
+
+            sendAuthMessage(remotePublicKey, writeChannel)
+
+            val authResponse = try {
+                withTimeoutOrNull(3000) {
+                    readChannel.readUTF8Line()?.let {
+                        MessageSerializer.deserialize(it) as? AuthenticationMessage
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception while reading Authentication message: ${e.message}", e)
+                null
+            } ?: run {
+                Log.e(TAG, "Timeout or null response waiting for Authentication message")
+                readChannel.cancel()
+                socket.close()
+                return
+            }
+
+            val sharedSecret = ECDHHelper.deriveSharedSecret(deviceManager.localDevice.privateKey, remotePublicKey)
+
+            if (!ECDHHelper.verifyProof(sharedSecret, authResponse.nonce, authResponse.proof)) {
+                Log.e(TAG, "Authentication failed")
+                readChannel.cancel()
+                socket.close()
+                return
+            }
+
+            val verificationCode = generateVerificationCode(sharedSecret)
+
+            val connectedDevice = DiscoveredDevice(
+                deviceId = authResponse.deviceId,
+                deviceName = authResponse.deviceName,
+                publicKey = authResponse.publicKey,
+                addresses = addresses,
+                verificationCode = verificationCode,
+                port = port
+            )
+
+            // Create and store DeviceConnection
+            val connection = DeviceConnection(
+                deviceId = connectedDevice.deviceId,
+                socket = socket,
+                readChannel = readChannel,
+                writeChannel = writeChannel
+            )
+            setConnection(connectedDevice.deviceId, connection)
+
+            deviceManager.addOrUpdateDiscoveredDevice(connectedDevice)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in connectTo", e)
         }
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun sendDeviceInfo(remoteInfo: RemoteDevice) {
-        val localDevice = appRepository.getLocalDevice()
-        // Generate nonce and proof
-        val nonce = ECDHHelper.generateNonce()
-        val sharedSecret = ECDHHelper.deriveSharedSecret(
-            localDevice.privateKey,
-            remoteInfo.publicKey
-        )
-        val proof = ECDHHelper.generateProof(sharedSecret, nonce)
-
-        val wallpaperBase64 = try {
-            val wallpaperManager = WallpaperManager.getInstance(applicationContext)
-            wallpaperManager.drawable?.let { drawable ->
-                drawableToBase64Compressed(drawable)
+    fun sendDeviceInfo(device: PairedDevice) {
+        try {
+            val wallpaperBase64 = try {
+                val wallpaperManager = WallpaperManager.getInstance(applicationContext)
+                wallpaperManager.drawable?.let { drawable ->
+                    drawableToBase64Compressed(drawable)
+                }
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Unable to access wallpaper", e)
+                null
             }
-        } catch (e: SecurityException) {
-            Log.w(TAG, "Unable to access wallpaper", e)
-            null
-        }
 
-        val localPhoneNumbers : List<PhoneNumber> = try {
-            TelephonyHelper.getAllPhoneNumbers(this).map { it.toDto() }
+            val localPhoneNumbers = try {
+                TelephonyHelper.getAllPhoneNumbers(this).map { it.toDto() }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get local phone numbers", e)
+                emptyList()
+            }
+
+            val deviceInfo = DeviceInfo(
+                deviceName = deviceManager.localDevice.deviceName,
+                avatar = wallpaperBase64,
+                phoneNumbers = localPhoneNumbers
+            )
+            sendMessage(device.deviceId, deviceInfo)
+            Log.d(TAG, "DeviceInfo sent to ${device.deviceId}")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get local phone numbers", e)
-            emptyList()
-        }
-
-        sendMessage(DeviceInfo(
-            deviceId = localDevice.deviceId,
-            deviceName = localDevice.deviceName,
-            model = localDevice.model,
-            publicKey = localDevice.publicKey,
-            avatar = wallpaperBase64,
-            nonce = nonce,
-            proof = proof,
-            phoneNumbers = localPhoneNumbers
-        ))
-    }
-
-    private suspend fun sendInstalledApps() {
-        sendMessage(getInstalledApps(packageManager))
-    }
-
-
-    private suspend fun sendContacts() {
-        ContactsHelper().getAllContacts(this).forEach { contact ->
-            sendMessage(contact)
-            delay(10)
+            Log.e(TAG, "Failed to send DeviceInfo to ${device.deviceId}", e)
         }
     }
 
-    private suspend fun finalizeConnection(isNewDevice: Boolean) {
-        networkDiscovery.register(NetworkAction.SAVE_NETWORK)
-        sendDeviceStatus()
-        notificationHandler.sendActiveNotifications()
+    suspend fun disconnect(deviceId: String) {
+        deviceManager.getPairedDevice(deviceId)?.let {
+            if (it.connectionState.isConnected) {
+                sendMessage(it.deviceId, CommandMessage(CommandType.Disconnect))
+            }
+            disconnectDevice(it, true)
+        }
+    }
+
+
+
+    suspend fun disconnectDevice(device: PairedDevice, forcedDisconnect: Boolean = false) {
+        deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected(forcedDisconnect)))
+        removeConnection(device.deviceId)
+
+        mediaHandler.clearDeviceData(device.deviceId)
+        actionHandler.clearDeviceActions(device.deviceId)
+    }
+
+    private suspend fun disconnectDevice(device: DiscoveredDevice) {
+        deviceManager.removeDiscoveredDevice(device.deviceId)
+        removeConnection(device.deviceId)
+    }
+
+    fun broadcastMessage(message: SocketMessage) {
+        deviceManager.pairedDevices.value.forEach { device ->
+            if (device.connectionState.isConnected) {
+                sendMessage(device.deviceId, message)
+            }
+        }
+    }
+
+    fun sendClipboardMessage(message: ClipboardMessage) {
+        scope.launch {
+            deviceManager.pairedDevices.value.forEach { device ->
+                if (device.connectionState.isConnected) {
+                    if (preferencesRepository.readClipboardSyncSettingsForDevice(device.deviceId).first()) {
+                        sendMessage(device.deviceId, message)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Starts listening for messages from a device connection.
+     */
+    private fun startListeningForDevice(connection: DeviceConnection) {
+        connection.startListening(
+            getDevice = { deviceManager.getDevice(it) },
+            onMessage = { device, message -> scope.launch { handleMessage(device, message) } },
+            onClose = { id ->
+                scope.launch {
+                    when (val device = deviceManager.getDevice(id)) {
+                        is PairedDevice -> connections[id]?.let { disconnectDevice(device) }
+                        is DiscoveredDevice -> disconnectDevice(device)
+                    }
+                }
+            }
+        )
+    }
+
+    suspend fun finalizeConnection(device: PairedDevice, isNewDevice: Boolean) {
+        sendDeviceInfo(device)
+        sendMessage(device.deviceId, getDeviceStatus())
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-            && preferencesRepository.readRemoteStorageSettings().first()
+            && preferencesRepository.readRemoteStorageSettingsForDevice(device.deviceId).first()
             && checkStoragePermission(this)
         ) {
             sftpServer.initialize()
-            sftpServer.start()?.let { sendMessage(it) }
+            sftpServer.start()?.let { sendMessage(device.deviceId, it) }
         }
-        if (preferencesRepository.readMessageSyncSettings().first() && smsPermissionGranted(this)) {
-            smsHandler.start()
+
+        if (preferencesRepository.readMessageSyncSettingsForDevice(device.deviceId).first()
+            && smsPermissionGranted(this)
+        ) {
+            smsHandler.sendAllConversations(device.deviceId)
         }
+
+        if (preferencesRepository.readNotificationSyncSettingsForDevice(device.deviceId).first()) {
+            notificationHandler.sendActiveNotifications(device.deviceId)
+        }
+
+        networkDiscovery.saveCurrentNetworkAsTrusted()
+
         if (isNewDevice) {
-            sendInstalledApps()
-            sendContacts()
-        }
-        networkDiscovery.unregister()
-    }
-
-    fun stop(forcedStop: Boolean) {
-        if (forcedStop) {
-            networkDiscovery.unregister()
-            networkDiscovery.stopPairedDeviceListener()
-            _connectionState.value = ConnectionState.Disconnected(true)
-        } else {
-            scope.launch {
-                if (preferencesRepository.readDiscoveryMode() != DiscoveryMode.DISABLED)
-                    networkDiscovery.register(NetworkAction.START_DEVICE_DISCOVERY)
-            }
-            _connectionState.value = ConnectionState.Disconnected()
-        }
-        deviceStatus = null
-        sftpServer.stop()
-        mediaHandler.release(true)
-        actionHandler.clearActions()
-        smsHandler.stop()
-        CoroutineScope(Dispatchers.IO).launch {
-            writeChannel?.flushAndClose()
-            socket?.close()
+            sendInstalledApps(device)
+            sendContacts(device)
         }
     }
 
-    private val mutex = Mutex() // Mutex to control write access
-    suspend fun sendMessage(message: SocketMessage) {
-        // Only one coroutine at a time can acquire the lock and send the message
-        mutex.withLock {
-            try {
-                if (socket?.isClosed == false) {
-                    writeChannel?.let { channel ->
-                        val jsonMessage = messageSerializer.serialize(message)
-                        channel.writeStringUtf8("$jsonMessage\n") // Add newline to separate messages
-                        channel.flush()
-
-                        Log.d(TAG, "Message sent")
-                    } ?: run {
-                        Log.e(TAG, "Write channel is not available")
-                    }
-                } else {
-                    // Disconnected
-                    return
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to send message", e)
-            }
-        }
+    private fun verifyAuthentication(
+        remotePublicKey: String,
+        authMessage: AuthenticationMessage
+    ): Boolean {
+        val sharedSecret = ECDHHelper.deriveSharedSecret(deviceManager.localDevice.privateKey, remotePublicKey)
+        return ECDHHelper.verifyProof(sharedSecret, authMessage.nonce, authMessage.proof)
     }
 
-    private fun startListening() {
+    private fun generateVerificationCode(sharedSecret: ByteArray): String {
+        val rawKey = kotlin.math.abs(java.nio.ByteBuffer.wrap(sharedSecret).order(java.nio.ByteOrder.LITTLE_ENDIAN).int)
+        return rawKey.toString().takeLast(6).padStart(6, '0')
+    }
+
+    private suspend fun sendAuthMessage(
+        remotePublicKey: String,
+        writeChannel: ByteWriteChannel
+    ) {
+        val localDevice = deviceManager.localDevice
+
+        val nonce = ECDHHelper.generateNonce()
+        val sharedSecret = ECDHHelper.deriveSharedSecret(
+            localDevice.privateKey,
+            remotePublicKey
+        )
+
+        val proof = ECDHHelper.generateProof(sharedSecret, nonce)
+        val authenticationMessage = AuthenticationMessage(
+            localDevice.deviceId,
+            localDevice.deviceName,
+            localDevice.publicKey,
+            nonce,
+            proof,
+            localDevice.model
+        )
+        val jsonMessage = MessageSerializer.serialize(authenticationMessage)
+        writeChannel.writeStringUtf8("$jsonMessage\n")
+        writeChannel.flush()
+    }
+
+    private fun broadcastDeviceStatus() {
         scope.launch {
-            try {
-                Log.d(TAG, "listening started")
-                readChannel?.let { channel ->
-                    while (!channel.isClosedForRead) {
-                        try {
-                            // Read the incoming data as a line
-                            val receivedData = channel.readUTF8Line()
-                            receivedData?.let { jsonMessage ->
-                                Log.d(TAG, "Raw received data: $jsonMessage")
-                                messageSerializer.deserialize(jsonMessage).also { socketMessage ->
-                                    socketMessage?.let { handleMessage(it) }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.d(TAG, "Error while receiving data")
-                            e.printStackTrace()
-                            break
-                        }
-                    }
-                } ?: run {
-                   stop(false)
-                }
-            } catch (e: Exception) {
-                Log.d(TAG, "Session error")
-                e.printStackTrace()
-            } finally {
-                Log.d(TAG, "Session closed")
-                if (_connectionState.value == ConnectionState.Connected) {
-                    stop(false)
-                }
+            val currentDeviceStatus = getDeviceStatus()
+            // Send status if any field has changed
+            if (currentDeviceStatus != deviceStatus) {
+                // Broadcast to all connected devices
+                broadcastMessage(currentDeviceStatus)
+                deviceStatus = currentDeviceStatus
             }
         }
     }
 
-    private fun sendDeviceStatus() {
-        scope.launch {
-            try {
-                val currentDeviceStatus = getDeviceStatus()
-                // Send status if any field has changed
-                if (currentDeviceStatus != deviceStatus) {
-                    deviceStatus = currentDeviceStatus
-                    sendMessage(currentDeviceStatus)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to send device status", e)
-            }
-        }
+    private fun sendInstalledApps(device: PairedDevice) {
+        sendMessage(device.deviceId, getInstalledApps(packageManager))
     }
-    override fun onCreate() {
-        super.onCreate()
-        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
 
-        registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED))
-        registerReceiver(interruptionFilterReceiver, IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
-        registerReceiver(interruptionFilterReceiver, IntentFilter(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED))
-
-        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        scope.launch {
-            _connectionState.collect { state ->
-                setNotification(state, deviceName)
+    private suspend fun sendContacts(device: PairedDevice) {
+        try {
+            if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "READ_CONTACTS permission not granted, skipping contacts sync")
+                return
             }
+            ContactsHelper().getAllContacts(this).forEach { contact ->
+                sendMessage(device.deviceId, contact)
+                delay(10)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending contacts", e)
         }
     }
 
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (_connectionState.value == ConnectionState.Connected) {
-                sendDeviceStatus()
-            }
+            broadcastDeviceStatus()
         }
     }
 
     private val interruptionFilterReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (_connectionState.value == ConnectionState.Connected) {
-                sendDeviceStatus()
-            }
+            broadcastDeviceStatus()
+        }
+    }
+
+    private val screenOnReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            networkDiscovery.broadcastDevice()
+        }
+    }
+
+    private val wifiStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            networkDiscovery.broadcastDevice()
         }
     }
 
@@ -477,23 +816,18 @@ class NetworkService : Service() {
                 registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
                     ?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
 
-//        val wifiManager = getSystemService(Context.WIFI_SERVICE) as WifiManager
-//        val wifi = wifiManager.isWifiEnabled
-
         val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val bluetooth = bluetoothManager.adapter.isEnabled
 
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
 
         // Get DND state
-        val isDndEnabled = notificationManager.currentInterruptionFilter != 
-            NotificationManager.INTERRUPTION_FILTER_ALL
+        val isDndEnabled = notificationManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
 
-        val ringerMode = audioManager.ringerMode
         // RINGER_MODE_SILENT = 0
         // RINGER_MODE_VIBRATE = 1
         // RINGER_MODE_NORMAL = 2
+        val ringerMode = audioManager.ringerMode
 
         return DeviceStatus(
             batteryStatus = batteryStatus,
@@ -504,25 +838,102 @@ class NetworkService : Service() {
         )
     }
 
-    companion object {
-        enum class Actions {
-            START,
-            STOP,
-            SEND_CLIPBOARD,
+    suspend fun approveDeviceConnection(deviceId: String) {
+        clearPendingApproval(deviceId)
+        cancelPairingVerificationNotification(deviceId)
+
+        val discoveredDevice = deviceManager.getDiscoveredDevice(deviceId) ?: return
+
+        val pairedDevice = PairedDevice(
+            deviceId = discoveredDevice.deviceId,
+            deviceName = discoveredDevice.deviceName,
+            avatar = null,
+            lastConnected = System.currentTimeMillis(),
+            addresses = discoveredDevice.addresses.map { AddressEntry(it) },
+            publicKey = discoveredDevice.publicKey,
+            connectionState = ConnectionState.Connected,
+            port = discoveredDevice.port,
+            address = discoveredDevice.address
+        )
+
+        // Send pairing message before removing DiscoveredDevice
+        sendMessage(deviceId, PairMessage(true))
+
+        deviceManager.removeDiscoveredDevice(deviceId)
+        deviceManager.addOrUpdatePairedDevice(pairedDevice)
+        Log.d(TAG, "Approved $deviceId")
+
+        delay(100)
+        finalizeConnection(pairedDevice, true)
+    }
+
+    suspend fun rejectDeviceConnection(deviceId: String) {
+        val remoteDevice = deviceManager.getDiscoveredDevice(deviceId)
+
+        if (remoteDevice != null) {
+            // Send rejection message
+            sendMessage(deviceId, PairMessage(pair = false))
         }
 
-        const val TAG = "NetworkService"
-        const val REMOTE_INFO = "remote_info"
+        // Clear pending approval and cancel notification
+        clearPendingApproval(deviceId)
+        cancelPairingVerificationNotification(deviceId)
+
+        Log.d(TAG, "Rejected pairing request from device $deviceId")
+    }
+
+    // Connection management methods
+    private fun setConnection(deviceId: String, connection: DeviceConnection) {
+        connections.remove(deviceId)?.close()
+        connections[deviceId] = connection
+        startListeningForDevice(connection)
+    }
+
+    private fun removeConnection(deviceId: String) {
+        connections.remove(deviceId)?.close()
+    }
+
+    fun sendMessage(deviceId: String, message: SocketMessage) {
+        connections[deviceId]?.sendMessage(message) ?: run {
+            Log.w(TAG, "Cannot send message to $deviceId: no connection found")
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        scope.cancel()
         unregisterReceiver(batteryReceiver)
         unregisterReceiver(interruptionFilterReceiver)
+        unregisterReceiver(screenOnReceiver)
+        unregisterReceiver(wifiStateReceiver)
         sftpServer.stop()
-        mediaHandler.release(true)
+        mediaHandler.release()
         smsHandler.stop()
-        writeChannel?.close()
-        socket?.close()
+        serverAcceptJob?.cancel()
+
+        try {
+            tcpServerSocket?.close()
+            Log.d(TAG, "TCP server closed")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error closing TCP server", e)
+        }
+    }
+
+    companion object {
+        enum class Actions {
+            CONNECT,
+            APPROVE_DEVICE,
+            REJECT_DEVICE,
+            DISCONNECT,
+            CANCEL_TRANSFER,
+            SEND_CLIPBOARD,
+            SEND_FILES
+        }
+
+        val PORT_RANGE = 5150..5169
+        const val TAG = "NetworkService"
+        const val DEVICE_ID_EXTRA = "device_id"
+        const val EXTRA_CONNECTION_DETAILS = "extra_connection_details"
+        const val EXTRA_TRANSFER_ID = "extra_transfer_id"
     }
 }

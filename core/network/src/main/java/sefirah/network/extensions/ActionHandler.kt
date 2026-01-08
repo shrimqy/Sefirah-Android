@@ -1,25 +1,39 @@
 package sefirah.network.extensions
 
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import sefirah.domain.model.ActionMessage
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ActionHandler @Inject constructor() {
+    private val _actionsByDevice = MutableStateFlow<Map<String, List<ActionMessage>>>(emptyMap())
+    val actionsByDevice: StateFlow<Map<String, List<ActionMessage>>> = _actionsByDevice.asStateFlow()
 
-    private val _actions = MutableStateFlow<List<ActionMessage>>(emptyList())
-    val actions = _actions.asStateFlow()
+    private val mutex = Mutex()
 
-    fun addAction(action: ActionMessage) {
-        val currentActions = _actions.value.toMutableList()
-        if (currentActions.none { it.actionId == action.actionId }) {
-            _actions.value = currentActions + action
+    suspend fun addAction(deviceId: String, action: ActionMessage) {
+        mutex.withLock {
+            val currentMap = _actionsByDevice.value.toMutableMap()
+            val deviceActions = currentMap.getOrDefault(deviceId, emptyList()).toMutableList()
+            
+            if (deviceActions.none { it.actionId == action.actionId }) {
+                deviceActions.add(action)
+                currentMap[deviceId] = deviceActions
+                _actionsByDevice.value = currentMap
+            }
         }
     }
 
-    fun clearActions() {
-        _actions.value = emptyList()
+    suspend fun clearDeviceActions(deviceId: String) {
+        mutex.withLock {
+            val currentMap = _actionsByDevice.value.toMutableMap()
+            currentMap.remove(deviceId)
+            _actionsByDevice.value = currentMap
+        }
     }
 } 

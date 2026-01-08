@@ -1,6 +1,5 @@
 package sefirah.network.util
 
-import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -30,13 +29,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import javax.security.auth.x500.X500Principal
 
-class CryptoUtils(private val context: Context) {
-    companion object {
-        private const val TAG = "CryptoUtils"
-        private const val CERT_VALIDITY_YEARS = 10
-        const val KEY_ALIAS = "Sefirah"
-    }
-
+class CryptoUtils() {
     init {
         Security.addProvider(BouncyCastleProvider())
     }
@@ -90,6 +83,11 @@ class CryptoUtils(private val context: Context) {
             return@withContext createECDSACertificate()
         }
     }
+
+    companion object {
+        private const val CERT_VALIDITY_YEARS = 10
+        const val KEY_ALIAS = "Sefirah"
+    }
 }
 
 object ECDHHelper {
@@ -107,14 +105,14 @@ object ECDHHelper {
         val publicKeyBase64 = Base64.encodeToString(encodedPoint, Base64.NO_WRAP)
 
         // Get private key in Base64
-        val privateKey = BCECPrivateKey::class.java.cast(keyPair.private)
-        val privateKeyBase64 = Base64.encodeToString(privateKey.encoded, Base64.NO_WRAP)
+//        val privateKey = BCECPrivateKey::class.java.cast()
+        val privateKeyBase64 = Base64.encodeToString(keyPair.private.encoded, Base64.NO_WRAP)
 
         return Pair(publicKeyBase64, privateKeyBase64)
     }
 
-    fun deriveSharedSecret(privateKeyBase64: String, otherPublicKeyBase64: String): ByteArray {
-        val publicKeyBytes = Base64.decode(otherPublicKeyBase64, Base64.NO_WRAP)
+    fun deriveSharedSecret(privateKeyBase64: String, remotePublicKeyBase64: String): ByteArray {
+        val publicKeyBytes = Base64.decode(remotePublicKeyBase64, Base64.NO_WRAP)
         val privateKeyBytes = Base64.decode(privateKeyBase64, Base64.NO_WRAP)
 
         // Create EC point from the public key bytes
@@ -144,8 +142,6 @@ object ECDHHelper {
             sharedSecretBytes.copyOfRange(1, sharedSecretBytes.size)
         else
             sharedSecretBytes
-
-//        Log.d("SharedSecret", "Raw shared secret: ${trimmedSecret.joinToString("") { "%02X".format(it) }}")
 
         // Use BouncyCastle's SHA256Digest
         val sha256 = SHA256Digest()

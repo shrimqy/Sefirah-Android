@@ -9,8 +9,8 @@ import androidx.navigation.navigation
 import com.castle.sefirah.navigation.DeviceRouteScreen
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.MainRouteScreen
-import com.castle.sefirah.presentation.devices.deviceDetails.EditDeviceScreen
-import com.castle.sefirah.presentation.devices.customDevice.CustomDeviceScreen
+import com.castle.sefirah.presentation.devices.DeviceSettingsScreen
+import com.castle.sefirah.presentation.devices.AddressScreen
 
 fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
     navigation(
@@ -26,15 +26,23 @@ fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
             ),
         ) { backStackEntry ->
             backStackEntry.arguments?.getString("deviceId")?.let { deviceId ->
-                EditDeviceScreen(
+                DeviceSettingsScreen(
                     deviceId = deviceId,
-                    onNavigateBack = { rootNavController.navigateUp() }
+                    onNavigateBack = { rootNavController.navigateUp() },
+                    onNavigateToAddressScreen = {
+                        rootNavController.navigate(DeviceRouteScreen.AddressScreen.route)
+                    }
                 )
             }
         }
 
-        composable(route = DeviceRouteScreen.CustomDeviceScreen.route) {
-            CustomDeviceScreen(rootNavController)
+        composable(
+            route = DeviceRouteScreen.AddressScreen.route
+        ) {
+            AddressScreen(
+                rootNavController = rootNavController,
+                onNavigateBack = { rootNavController.navigateUp() }
+            )
         }
     }
 }

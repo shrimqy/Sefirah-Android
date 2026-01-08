@@ -18,6 +18,7 @@ sealed class MainRouteScreen(var route: String) {
 
 sealed class SyncRoute(var route: String) {
     data object SyncScreen: SyncRoute("syncing")
+    data object QrCodeScannerScreen: SyncRoute("qr_code_scanner")
 }
 
 sealed class SettingsRouteScreen(var route: String) {
@@ -28,7 +29,7 @@ sealed class SettingsRouteScreen(var route: String) {
 }
 
 sealed class DeviceRouteScreen(var route: String) {
-    data object CustomDeviceScreen: DeviceRouteScreen("customDevice")
+    data object AddressScreen: DeviceRouteScreen("addressScreen")
 }
 
 sealed class OnboardingRoute(var route: String) {

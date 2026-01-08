@@ -2,46 +2,42 @@ package sefirah.database.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import sefirah.domain.model.RemoteDevice
+import sefirah.domain.model.AddressEntry
+import sefirah.domain.model.PairedDevice
 
 @Entity
 data class RemoteDeviceEntity (
     @PrimaryKey val deviceId: String,
-    val ipAddresses: List<String> ,
-    val prefAddress: String? = null,
-    val port: Int,
+    val addresses: List<AddressEntry>,
     val publicKey: String,
     val deviceName: String,
     val avatar: String? = null,
     var lastConnected: Long? = null,
 )
 
-fun RemoteDeviceEntity.toDomain(): RemoteDevice {
-    return RemoteDevice(
+fun RemoteDeviceEntity.toDomain(): PairedDevice {
+    return PairedDevice(
         deviceId = deviceId,
-        ipAddresses = ipAddresses,
-        prefAddress = prefAddress,
-        port = port,
+        addresses = addresses,
         avatar = avatar,
         publicKey = publicKey,
         deviceName = deviceName,
         lastConnected = lastConnected,
+        port = null // Port is discovered at runtime, not persisted
     )
 }
 
-fun List<RemoteDeviceEntity>.toDomain(): List<RemoteDevice> {
+fun List<RemoteDeviceEntity>.toDomain(): List<PairedDevice> {
     return map { it.toDomain() }
 }
 
-fun RemoteDevice.toEntity(): RemoteDeviceEntity {
+fun PairedDevice.toEntity(): RemoteDeviceEntity {
     return RemoteDeviceEntity(
         deviceId = deviceId,
-        ipAddresses = ipAddresses,
-        prefAddress = prefAddress,
-        port = port,
+        deviceName = deviceName,
+        addresses = addresses,
         avatar = avatar,
         publicKey = publicKey,
-        deviceName = deviceName,
         lastConnected = lastConnected
     )
 }
