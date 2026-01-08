@@ -65,7 +65,7 @@ class NetworkDiscovery @Inject constructor(
     private var udpSocket: BoundDatagramSocket? = null
     private var lastBroadcastTime: Long = 0
     private lateinit var udpBroadcast: UdpBroadcast
-    private lateinit var bytePacket: Source
+    private lateinit var udpBroadcastMessage: String
     private var tcpServerPort by Delegates.notNull<Int>()
 
     private val scope = CoroutineScope(Dispatchers.IO) + SupervisorJob()
@@ -86,8 +86,7 @@ class NetworkDiscovery @Inject constructor(
             tcpServerPort,
             localDevice.publicKey,
         )
-        val message = MessageSerializer.serialize(udpBroadcast) ?: throw Exception("Failed to serialize UDP broadcast")
-        bytePacket = buildPacket { writeString(message) }
+        udpBroadcastMessage = MessageSerializer.serialize(udpBroadcast) ?: throw Exception("Failed to serialize UDP broadcast")
 
         preferencesRepository.readTrustAllNetworks().collectLatest { trustAllNetworks ->
             this.trustAllNetworks = trustAllNetworks
@@ -318,6 +317,7 @@ class NetworkDiscovery @Inject constructor(
                 broadcastList.forEach { hostname ->
                     try {
                         val address = InetSocketAddress(hostname, udpPort)
+                        val bytePacket = buildPacket { writeString(udpBroadcastMessage) }
                         udpSocket?.send(Datagram(bytePacket, address))
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to broadcast to $hostname: ${e.message?.take(30)}")
