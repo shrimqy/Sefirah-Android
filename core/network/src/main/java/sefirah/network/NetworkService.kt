@@ -808,13 +808,9 @@ class NetworkService : Service() {
     }
 
     private fun getDeviceStatus(): DeviceStatus {
-        val batteryStatus: Int? =
-            registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-                ?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-
-        val isCharging = batteryStatus != null &&
-                registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-                    ?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
+        val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val batteryStatus = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val isCharging = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
 
         val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val bluetooth = bluetoothManager.adapter.isEnabled
