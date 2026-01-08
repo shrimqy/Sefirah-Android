@@ -23,16 +23,10 @@
     <string name="notification_status_disconnected">Not connected</string>
     <string name="notification_status_connected">Connected to %s</string>
     <string name="notification_disconnect_action">Disconnect</string>
-    <string name="notification_stop_action">Stop</string>
     <string name="notification_clipboard_action">Send Clipboard</string>
-    <string name="notification_media_playback">Desktop Media Playback</string>
-    <string name="notification_file_transfer">File Transfer</string>
     <string name="notification_file_transfer_error">File Transfer Error</string>
-    <string name="notification_file_transfer_progress">Ongoing file transfer</string>
     <string name="notification_file_transfer_complete">File Transfer Complete</string>
     <string name="notification_transfer_preparing">Preparing transfer…</string>
-    <string name="notification_sending">Sending: %.1f MB / %.1f MB</string>
-    <string name="notification_receiving">Receiving: %.1f MB / %.1f MB</string>
     <string name="notification_transfer_success">Transfer completed successfully</string>
     <string name="notification_transfer_success_bulk">Successfully transferred %d files</string>
     <string name="notification_sending_action">Sending</string>
@@ -66,15 +60,12 @@
     <string name="back_button">Back</string>
     <string name="connect_button">Connect</string>
     <string name="grant">Grant</string>
-    <string name="proceed">Proceed</string>
-    <string name="done">Done</string>
 
     <!-- Permissions -->
     <string name="notifications">Notifications</string>
     <string name="notification_permission_rationale">For connection status updates</string>
     <string name="location_permission">Location Permission</string>
     <string name="location_permission_rationale">Required for WiFi network discovery</string>
-    <string name="media_access">Media Access</string>
     <string name="media_access_rationale">Required for accessing the media files</string>
     <string name="background_battery_usage">Background Battery Usage</string>
     <string name="background_battery_usage_rationale">Allow the app to maintain stable connections by disabling battery optimizations</string>
@@ -84,7 +75,6 @@
     <string name="accessibility_service_rationale">Required for detecting clipboard</string>
     <string name="notification_access">Notification Access</string>
     <string name="notification_access_rationale">Required for notification synchronization</string>
-    <string name="accessibility_settings">Accessibility settings</string>
     <string name="app_info">App info</string>
     <string name="restricted_settings_instruction">Due to security restrictions, you\'ll need to: \n 1. Try to enable the \'%s\' \n 2. Tap \'ok\' on the warning and come back \n 3. Go to App Info \n 4. Open the overflow menu (3 dots) \n 5. Tap \'allow restricted settings\' \n 6. Go back and try again to enable the \'%s\'</string>
 
@@ -94,18 +84,11 @@
     <string name="status_connected">Connected</string>
     <string name="add_device">Add Device</string>
     <string name="no_device">No devices found</string>
-    <string name="last_connected">Last connected</string>
-    <string name="connected_to">Connected to</string>
-    <string name="no_ip_addresses">No IP addresses</string>
-    <string name="enabled">enabled</string>
-    <string name="all_addresses_fallback">All addresses (none enabled)</string>
     <string name="manage_addresses_title">Manage Addresses</string>
     <string name="ip_address_subtitle">Addresses used for connecting to the device</string>
-    <string name="add_ip_address">Add IP Address</string>
+    <string name="add_address">Add Address</string>
     <string name="add">Add</string>
     <string name="cancel">Cancel</string>
-    <string name="ip_addresses">Preferred hostname or IP address</string>
-    <string name="custom_device_list">Custom device list</string>
 
     <!-- Onboarding & Welcome -->
     <string name="welcome">Welcome</string>
@@ -123,8 +106,6 @@
     <string name="notification_sync_subtitle">Reads notifications from apps and syncs them to desktop</string>
     <string name="media_session_preference">Show Desktop media playback as Media Session</string>
     <string name="media_session_subtitle">Media playback will be shown in the notification bar</string>
-    <string name="auto_device_discovery_preference">Auto device discovery</string>
-    <string name="auto_device_discovery_subtitle">Listen for paired devices when connected to a familiar network</string>
     <string name="storage_access_preference">Storage access</string>
     <string name="storage_access_subtitle">Allows Windows to access your Android storage</string>
     <string name="permissions_preference">App Permissions</string>
@@ -134,17 +115,7 @@
 
     <!-- Dialogs -->
     <string name="delete_dialog">Do you want to delete</string>
-    <string name="select_address_title">Select Address/Hostname</string>
     <string name="custom_ip_text_label">Hostname or IP Address</string>
-    <string name="manual_connection">Manual Connection</string>
-    <string name="available_ip_addresses">Available IP addresses:</string>
-    <string name="custom_ip_placeholder">Or enter custom IP</string>
-
-    <string name="ip_example">Example: 192.168.1.100</string>
-
-    <!-- Network -->
-    <string name="associated_networks">Associated Networks</string>
-    <string name="no_associated_network">No associated network</string>
 
     <!-- Storage -->
     <string name="choose_storage_location">Choose Storage Location</string>
@@ -163,10 +134,7 @@
     <string name="available_devices">Available Devices</string>
     <string name="sync_screen_subtitle">Devices running the Windows app will appear here:</string>
     <string name="key">Key</string>
-    <string name="manual_connect">Manual Connect</string>
-    <string name="auto_connect">Auto Connect</string>
     <string name="restricted_settings_title">Restricted settings</string>
-    <string name="connection_error">Connection failed: Device declined pairing or is unavailable</string>
     <string name="device_name_preference">Device name</string>
     <string name="rename_device">Rename device</string>
     <string name="rename">Rename</string>
@@ -209,10 +177,6 @@
     <string name="update_check_open">Open on Github</string>
     <string name="error">Error</string>
     <string name="connection_toggle">Connection toggle</string>
-    <string name="auto_discovery">Auto discovery</string>
-    <string name="always_on">Always on</string>
-    <string name="disabled">Disabled</string>
-    <string name="device_discovery">Device discovery</string>
     <string name="trust_all_networks">Trust all networks</string>
 
 </resources>

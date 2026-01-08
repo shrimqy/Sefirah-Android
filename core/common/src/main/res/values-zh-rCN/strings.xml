@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App -->
     <string name="version">版本</string>
     <string name="windows_app">Windows端</string>
     <string name="share_deep_link">分享至桌面端</string>
@@ -9,19 +10,32 @@
     <string name="channel_transfer_progress">传输进度</string>
     <string name="channel_transfer_complete">传输完成</string>
     <string name="channel_device_connection">设备连接</string>
+    <string name="channel_pairing_request">Pairing Request</string>
     <string name="channel_media_playback">PC媒体播放控制</string>
     <string name="notification_status_connecting">正在连接%s</string>
     <string name="notification_status_disconnected">未连接</string>
     <string name="notification_status_connected">已连接至%s</string>
     <string name="notification_disconnect_action">断开连接</string>
-    <string name="notification_stop_action">停止</string>
     <string name="notification_clipboard_action">发送剪贴板</string>
-    <string name="notification_media_playback">PC媒体播放控制</string>
-    <string name="notification_file_transfer">文件传输</string>
     <string name="notification_file_transfer_error">文件传输错误</string>
-    <string name="notification_file_transfer_progress">正在进行的传输</string>
-    <string name="notification_file_transfer_complete">完成的传输</string>
+    <string name="notification_file_transfer_complete">File Transfer Complete</string>
+    <string name="notification_transfer_preparing">Preparing transfer…</string>
+    <string name="notification_transfer_success">Transfer completed successfully</string>
+    <string name="notification_transfer_success_bulk">Successfully transferred %d files</string>
+    <string name="notification_sending_action">Sending</string>
+    <string name="notification_receiving_action">Receiving</string>
+    <string name="notification_file">file</string>
+    <string name="notification_files">files</string>
+    <string name="notification_to">to</string>
+    <string name="notification_from">from</string>
+    <string name="notification_progress_format">%1$d%% (%2$s/%3$s)</string>
+    <string name="notification_sending_title_format">%1$s %2$d %3$s %4$s %5$s</string>
+    <string name="notification_receiving_title_format">%1$s %2$d %3$s %4$s %5$s</string>
     <string name="notification_device_connection">连接状态</string>
+    <string name="notification_pairing_request_title">Pairing Request</string>
+    <string name="notification_pairing_request_text">%1$s wants to pair.\nVerification code: %2$s</string>
+    <string name="notification_pairing_approve">Approve</string>
+    <string name="notification_pairing_reject">Reject</string>
     <string name="home">主页</string>
     <string name="devices">设备</string>
     <string name="settings">设置</string>
@@ -37,13 +51,10 @@
     <string name="back_button">返回</string>
     <string name="connect_button">连接</string>
     <string name="grant">授权</string>
-    <string name="proceed">已完成</string>
-    <string name="done">好</string>
     <string name="notifications">通知权限</string>
     <string name="notification_permission_rationale">用于推送连接状态</string>
     <string name="location_permission">位置权限</string>
     <string name="location_permission_rationale">用于WiFi局域网扫描</string>
-    <string name="media_access">媒体权限</string>
     <string name="media_access_rationale">用于访问媒体文件</string>
     <string name="background_battery_usage">后台运行权限</string>
     <string name="background_battery_usage_rationale">通过关闭“电池优化”实现保持稳定连接</string>
@@ -53,19 +64,16 @@
     <string name="accessibility_service_rationale">用于检测剪贴板内容</string>
     <string name="notification_access">通知访问权限</string>
     <string name="notification_access_rationale">用于向桌面端推送本机通知</string>
-    <string name="accessibility_settings">无障碍设置</string>
     <string name="app_info">应用信息</string>
-    <string name="restricted_settings_instruction">由于安全限制，你需要：\n1. 尝试打开“%s”\n2. 在警告界面点击\"确认\"并返回\n3. 返回应用信息页\n4. 点击右上角三点展开更多选项\n5. 点击“允许受限制的设置”\n6. 返回并再次尝试开启“%s”</string>
+    <string name="restricted_settings_instruction">由于安全限制，你需要：\n1. 尝试打开"%s"\n2. 在警告界面点击\"确认\"并返回\n3. 返回应用信息页\n4. 点击右上角三点展开更多选项\n5. 点击"允许受限制的设置"\n6. 返回并再次尝试开启"%s"</string>
     <string name="status_connecting">正在连接</string>
     <string name="status_disconnected">已断开</string>
     <string name="status_connected">已连接</string>
     <string name="add_device">添加设备</string>
     <string name="no_device">什么都没有¯\\_(ツ)_/¯</string>
-    <string name="last_connected">上次连接</string>
-    <string name="ip_addresses">IP地址</string>
-    <string name="no_ip">未配置地址</string>
-    <string name="add_custom_ip_button">添加自定义IP地址</string>
-    <string name="custom_device_list">自定义设备列表</string>
+    <string name="manage_addresses_title">Manage Addresses</string>
+    <string name="ip_address_subtitle">Addresses used for connecting to the device</string>
+    <string name="add_address">Add Address</string>
     <string name="welcome">欢迎</string>
     <string name="welcome_instructions">请先按照Github上的指南在Windows上安装配套软件</string>
     <string name="welcome_instructions_2">完成后，请前往安卓APP的Github仓库了解更多：</string>
@@ -79,8 +87,6 @@
     <string name="notification_sync_subtitle">读取通知并同步至桌面端</string>
     <string name="media_session_preference">将桌面端媒体空间作为媒体会话显示在本机</string>
     <string name="media_session_subtitle">将在通知栏显示媒体控件</string>
-    <string name="auto_device_discovery_preference">自动发现设备</string>
-    <string name="auto_device_discovery_subtitle">连接至相似网络时尝试监听来自已配对设备的连接</string>
     <string name="storage_access_preference">存储访问</string>
     <string name="storage_access_subtitle">允许桌面端访问本机文件</string>
     <string name="permissions_preference">应用权限</string>
@@ -88,15 +94,7 @@
     <string name="network_subtitle">配置网络偏好</string>
     <string name="storage_location_preference">存储位置</string>
     <string name="delete_dialog">确认删除</string>
-    <string name="connection_options">连接选项</string>
-    <string name="connection_options_subtitle">确认连接</string>
-    <string name="manual_connection">手动连接</string>
-    <string name="available_ip_addresses">可用的IP地址：</string>
-    <string name="custom_ip_placeholder">或者手动输入IP</string>
-    <string name="custom_ip_text_label">主机名/IP地址</string>
-    <string name="ip_example">例如：192.168.1.100</string>
-    <string name="associated_networks">关联的网络</string>
-    <string name="no_associated_network">无关联的网络</string>
+    <string name="custom_ip_text_label">Hostname or IP Address</string>
     <string name="choose_storage_location">选择存储位置</string>
     <string name="storage_location_description">选择用于存储接收文件的文件夹，将默认使用“Download”</string>
     <string name="select_folder_button">选择一个目录</string>
@@ -107,13 +105,10 @@
     <string name="available_devices">可用设备</string>
     <string name="sync_screen_subtitle">运行Windows端的设备如下：</string>
     <string name="key">配对码</string>
-    <string name="manual_connect">手动连接</string>
-    <string name="auto_connect">自动连接</string>
-    <string name="restricted_settings_title">受限制的设置</string>
-    <string name="connection_error">连接失败：设备拒绝配对或不可用</string>
-    <string name="device_name_preference">设备名称</string>
-    <string name="rename_device">重命名设备</string>
-    <string name="rename">重命名</string>
+    <string name="restricted_settings_title">Restricted settings</string>
+    <string name="device_name_preference">Device name</string>
+    <string name="rename_device">Rename device</string>
+    <string name="rename">Rename</string>
     <string name="message_reply_label">回复</string>
     <string name="mark_as_read_label">设为已读</string>
     <string name="user_display_name">你</string>
@@ -125,5 +120,21 @@
     <string name="messages_permission_rationale">用于读取与发送短信</string>
     <string name="message_sync_preference">同步短信</string>
     <string name="message_sync_subtitle">允许在桌面端读取与发送短信</string>
+    <string-array name="convert_to_mms_after_entries">
+        <item>After one message</item>
+        <item>After two messages</item>
+        <item>After three messages</item>
+        <item>After four messages</item>
+        <item>After five messages</item>
+    </string-array>
+
+    <!-- Toast Messages -->
     <string name="toast_network">请确保与要连接的PC处于同一网络</string>
+    <string name="update_check_notification_update_available">New version available!</string>
+    <string name="update_check_confirm">Download</string>
+    <string name="action_not_now">Not now</string>
+    <string name="update_check_open">Open on Github</string>
+    <string name="error">Error</string>
+    <string name="connection_toggle">Connection toggle</string>
+    <string name="trust_all_networks">Trust all networks</string>
 </resources>

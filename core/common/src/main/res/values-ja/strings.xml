@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <!-- App -->
-  <string name="app_name" translatable="false">Sefirah</string>
   <string name="version">バージョン</string>
   <string name="windows_app">Windows アプリ</string>
   <string name="share_deep_link">デスクトップに共有</string>
@@ -13,20 +12,33 @@
   <string name="channel_transfer_progress">転送の進捗</string>
   <string name="channel_transfer_complete">転送が完了しました</string>
   <string name="channel_device_connection">デバイスの接続</string>
+  <string name="channel_pairing_request">Pairing Request</string>
   <string name="channel_media_playback">デスクトップメディアを再生</string>
   <!-- Notification Content -->
   <string name="notification_status_connecting">「%s」に接続中</string>
   <string name="notification_status_disconnected">何も接続されていません</string>
   <string name="notification_status_connected">「%s」に接続しました</string>
   <string name="notification_disconnect_action">切断しました</string>
-  <string name="notification_stop_action">停止</string>
   <string name="notification_clipboard_action">クリップボードを送信</string>
-  <string name="notification_media_playback">デスクトップメディアを再生</string>
-  <string name="notification_file_transfer">ファイル転送</string>
   <string name="notification_file_transfer_error">ファイル転送に失敗しました</string>
-  <string name="notification_file_transfer_progress">進行中のファイル転送</string>
-  <string name="notification_file_transfer_complete">ファイル転送が完了しました</string>
+  <string name="notification_file_transfer_complete">File Transfer Complete</string>
+  <string name="notification_transfer_preparing">Preparing transfer…</string>
+  <string name="notification_transfer_success">Transfer completed successfully</string>
+  <string name="notification_transfer_success_bulk">Successfully transferred %d files</string>
+  <string name="notification_sending_action">Sending</string>
+  <string name="notification_receiving_action">Receiving</string>
+  <string name="notification_file">file</string>
+  <string name="notification_files">files</string>
+  <string name="notification_to">to</string>
+  <string name="notification_from">from</string>
+  <string name="notification_progress_format">%1$d%% (%2$s/%3$s)</string>
+  <string name="notification_sending_title_format">%1$s %2$d %3$s %4$s %5$s</string>
+  <string name="notification_receiving_title_format">%1$s %2$d %3$s %4$s %5$s</string>
   <string name="notification_device_connection">デバイス接続の状態</string>
+  <string name="notification_pairing_request_title">Pairing Request</string>
+  <string name="notification_pairing_request_text">%1$s wants to pair.\nVerification code: %2$s</string>
+  <string name="notification_pairing_approve">Approve</string>
+  <string name="notification_pairing_reject">Reject</string>
   <!-- Screen Names -->
   <string name="home">ホーム</string>
   <string name="devices">デバイス</string>
@@ -44,14 +56,11 @@
   <string name="back_button">戻る</string>
   <string name="connect_button">接続</string>
   <string name="grant">許可</string>
-  <string name="proceed">進む</string>
   <!-- Permissions -->
-  <string name="done">完了</string>
   <string name="notifications">通知</string>
   <string name="notification_permission_rationale">接続状態の更新で必要です</string>
   <string name="location_permission">位置情報のアクセス</string>
   <string name="location_permission_rationale">Wi-Fi ネットワークの検出で必要です</string>
-  <string name="media_access">メディアのアクセス</string>
   <string name="media_access_rationale">メディアファイルにアクセスするために必要です</string>
   <string name="background_battery_usage">バッテリーの最適化を無効化</string>
   <string name="background_battery_usage_rationale">バッテリーの最適化を無効化してアプリが安定した接続を維持します</string>
@@ -61,7 +70,6 @@
   <string name="accessibility_service_rationale">クリップボードの検出で必要です</string>
   <string name="notification_access">通知のアクセス</string>
   <string name="notification_access_rationale">通知の同期で必要です</string>
-  <string name="accessibility_settings">ユーザー補助の設定</string>
   <string name="app_info">アプリ情報</string>
   <string name="restricted_settings_instruction">セキュリティによる制限のため次の操作を行う必要があります: \n 1. 「%s」 ユーザー補助サービスを有効化してみる \n 2. アプリ情報を開く \n 3. オーバーフローメニューを開く (3 つのドット) \n 4. 制限された設定を許可を選択 \n 5. 画面に戻って 「%s」 が有効化できるか確認</string>
   <!-- Device Management -->
@@ -70,12 +78,10 @@
   <string name="status_connected">接続中</string>
   <string name="add_device">デバイスを追加</string>
   <string name="no_device">デバイスがありません</string>
-  <string name="last_connected">最終接続</string>
-  <string name="ip_addresses">IP アドレス</string>
-  <string name="no_ip">アドレスが設定されていません</string>
-  <string name="add_custom_ip_button">カスタム IP アドレスを追加</string>
+    <string name="manage_addresses_title">Manage Addresses</string>
+  <string name="ip_address_subtitle">Addresses used for connecting to the device</string>
+  <string name="add_address">Add Address</string>
   <!-- Onboarding & Welcome -->
-  <string name="custom_device_list">カスタムデバイスの一覧</string>
   <string name="welcome">ようこそ</string>
   <string name="welcome_instructions">それでは始めましょう。まずは GitHub での指示に従って Windows のアプリをダウンロードしてインストールしてください。</string>
   <string name="welcome_instructions_2">完了後に Android アプリの GitHub ページで詳細を確認してください。</string>
@@ -90,8 +96,6 @@
   <string name="notification_sync_subtitle">アプリからの通知を読み取ってデスクトップに同期します</string>
   <string name="media_session_preference">デスクトップメディアの再生をメディアセッションで表示</string>
   <string name="media_session_subtitle">メディアの再生を通知に表示します</string>
-  <string name="auto_device_discovery_preference">デバイスの自動検出</string>
-  <string name="auto_device_discovery_subtitle">使用しているネットワークの接続時にペアリングされたデバイスを自動で検出します</string>
   <string name="storage_access_preference">ストレージのアクセス</string>
   <string name="storage_access_subtitle">Windows で Android のストレージにアクセスできるようにします</string>
   <string name="permissions_preference">アプリの権限</string>
@@ -100,16 +104,7 @@
   <string name="storage_location_preference">ファイルの保存先</string>
   <!-- Dialogs -->
   <string name="delete_dialog">削除しますか</string>
-  <string name="connection_options">接続オプション</string>
-  <string name="connection_options_subtitle">どのように接続をするか設定します</string>
-  <string name="manual_connection">手動接続</string>
-  <string name="available_ip_addresses">利用可能な IP アドレス:</string>
-  <string name="custom_ip_placeholder">またはカスタム IP を入力</string>
-  <string name="custom_ip_text_label">ホスト名/IP アドレス</string>
-  <string name="ip_example">例: 192.168.1.100</string>
-  <!-- Network -->
-  <string name="associated_networks">関連したネットワーク</string>
-  <string name="no_associated_network">関連したネットワークはありません</string>
+  <string name="custom_ip_text_label">Hostname or IP Address</string>
   <!-- Storage -->
   <string name="choose_storage_location">ファイルの保存先を選択してください</string>
   <string name="storage_location_description">アプリが受信したファイルを保存するフォルダを選択します。デフォルトは「Downloads」フォルダが指定されます。</string>
@@ -124,6 +119,35 @@
   <string name="available_devices">利用可能なデバイス</string>
   <string name="sync_screen_subtitle">Windows アプリを実行しているデバイスがここに表示されます:</string>
   <string name="key">キー</string>
-  <string name="manual_connect">手動接続</string>
-  <string name="auto_connect">自動接続</string>
+  <string name="restricted_settings_title">Restricted settings</string>
+  <string name="device_name_preference">Device name</string>
+  <string name="rename_device">Rename device</string>
+  <string name="rename">Rename</string>
+  <string name="message_reply_label">REPLY</string>
+  <string name="mark_as_read_label">MARK AS READ</string>
+  <string name="user_display_name">You</string>
+  <string name="set_default_sms_app_title">Send MMS</string>
+  <string name="set_group_message_as_mms_title">Send group MMS</string>
+  <string name="set_long_text_as_mms_title">Send long text as MMS</string>
+  <string name="convert_to_mms_after_title">Convert to MMS</string>
+  <string name="messages_permission">Messages permission</string>
+  <string name="messages_permission_rationale">For sending and reading messages</string>
+  <string name="message_sync_preference">Sync messages</string>
+  <string name="message_sync_subtitle">Enables reading and texting messages from desktop</string>
+  <string-array name="convert_to_mms_after_entries">
+    <item>After one message</item>
+    <item>After two messages</item>
+    <item>After three messages</item>
+    <item>After four messages</item>
+    <item>After five messages</item>
+  </string-array>
+  <!-- Toast Messages -->
+  <string name="toast_network">Make sure you\'re connected to the same network as your PC</string>
+  <string name="update_check_notification_update_available">New version available!</string>
+  <string name="update_check_confirm">Download</string>
+  <string name="action_not_now">Not now</string>
+  <string name="update_check_open">Open on Github</string>
+  <string name="error">Error</string>
+  <string name="connection_toggle">Connection toggle</string>
+  <string name="trust_all_networks">Trust all networks</string>
 </resources>

@@ -3,7 +3,6 @@ package com.castle.sefirah.presentation.devices
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -84,30 +83,14 @@ fun AddressScreen(
         }
     ) { paddingValues ->
         device?.let { currentDevice ->
-            if (currentDevice.addresses.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.no_ip_addresses),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            } else {
-                AddressContent(
-                    addresses = currentDevice.addresses,
-                    lazyListState = lazyListState,
-                    paddingValues = paddingValues,
-                    onToggleEnabled = { viewModel.toggleIpEnabled(it) },
-                    onRemove = { viewModel.removeIp(it) },
-                    onReorder = { address, newPriority -> viewModel.updateIpPriority(address, newPriority) }
-                )
-            }
+            AddressContent(
+                addresses = currentDevice.addresses,
+                lazyListState = lazyListState,
+                paddingValues = paddingValues,
+                onToggleEnabled = { viewModel.toggleIpEnabled(it) },
+                onRemove = { viewModel.removeIp(it) },
+                onReorder = { address, newPriority -> viewModel.updateIpPriority(address, newPriority) }
+            )
         }
     }
 
@@ -244,7 +227,7 @@ private fun AddAddressDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.add_ip_address)) },
+        title = { Text(stringResource(R.string.add_address)) },
         text = {
             OutlinedTextField(
                 value = address,
