@@ -13,8 +13,6 @@ import android.util.Log
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sefirah.domain.model.ClipboardMessage
@@ -53,9 +51,7 @@ class ClipboardChangeActivity : FragmentActivity() {
 
     private fun sendClip(data: String?) {
         if (data != null) {
-            CoroutineScope(Dispatchers.IO).launch {
-                networkManager.sendClipboardMessage(ClipboardMessage("text/plain", data))
-            }
+            networkManager.sendClipboardMessage(ClipboardMessage("text/plain", data))
         }
     }
 

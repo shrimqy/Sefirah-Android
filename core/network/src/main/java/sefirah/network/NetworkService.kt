@@ -584,7 +584,7 @@ class NetworkService : Service() {
     }
 
     @SuppressLint("MissingPermission")
-    suspend fun sendDeviceInfo(device: PairedDevice) {
+    fun sendDeviceInfo(device: PairedDevice) {
         try {
             val wallpaperBase64 = try {
                 val wallpaperManager = WallpaperManager.getInstance(applicationContext)
@@ -647,11 +647,13 @@ class NetworkService : Service() {
         }
     }
 
-    suspend fun sendClipboardMessage(message: ClipboardMessage) {
-        deviceManager.pairedDevices.value.forEach { device ->
-            if (device.connectionState.isConnected) {
-                if (preferencesRepository.readClipboardSyncSettingsForDevice(device.deviceId).first()) {
-                    sendMessage(device.deviceId, message)
+    fun sendClipboardMessage(message: ClipboardMessage) {
+        scope.launch {
+            deviceManager.pairedDevices.value.forEach { device ->
+                if (device.connectionState.isConnected) {
+                    if (preferencesRepository.readClipboardSyncSettingsForDevice(device.deviceId).first()) {
+                        sendMessage(device.deviceId, message)
+                    }
                 }
             }
         }
@@ -756,7 +758,7 @@ class NetworkService : Service() {
         }
     }
 
-    private suspend fun sendInstalledApps(device: PairedDevice) {
+    private fun sendInstalledApps(device: PairedDevice) {
         sendMessage(device.deviceId, getInstalledApps(packageManager))
     }
 

@@ -61,7 +61,7 @@ class NetworkManagerImpl @Inject constructor(
         networkService?.sendMessage(deviceId, message)
     }
 
-    override suspend fun sendClipboardMessage(message: ClipboardMessage) {
+    override fun sendClipboardMessage(message: ClipboardMessage) {
         networkService?.sendClipboardMessage(message)
     }
 
