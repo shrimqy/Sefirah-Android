@@ -30,9 +30,6 @@ class DeviceConnection(
     private val mutex = Mutex()
     private var listeningJob: Job? = null
 
-    /**
-     * Sends a message through the connection's write channel (fire-and-forget)
-     */
     fun sendMessage(message: SocketMessage) {
         scope.launch {
             mutex.withLock {

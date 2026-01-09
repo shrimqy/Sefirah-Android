@@ -859,7 +859,6 @@ class NetworkService : Service() {
         deviceManager.addOrUpdatePairedDevice(pairedDevice)
         Log.d(TAG, "Approved $deviceId")
 
-        delay(100)
         finalizeConnection(pairedDevice, true)
     }
 
