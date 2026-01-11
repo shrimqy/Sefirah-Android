@@ -5,7 +5,8 @@ import sefirah.database.dao.NetworkDao
 import sefirah.database.dao.DeviceDao
 import sefirah.database.model.LocalDeviceEntity
 import sefirah.database.model.NetworkEntity
-import sefirah.database.model.RemoteDeviceEntity
+import sefirah.database.model.PairedDeviceEntity
+import sefirah.database.model.toDomain
 import sefirah.domain.model.AddressEntry
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,13 +18,10 @@ class AppRepository @Inject constructor(
     private val networkDao: NetworkDao
 ){
     fun getAllDevicesFlow() = deviceDao.getAllDevicesFlow()
-    suspend fun addDevice(device: RemoteDeviceEntity) = deviceDao.addDevice(device)
+    suspend fun addDevice(device: PairedDeviceEntity) = deviceDao.addDevice(device)
     suspend fun removeDevice(deviceId: String) = deviceDao.removeDevice(deviceId)
-    suspend fun updateDevice(device: RemoteDeviceEntity) = deviceDao.updateDevice(device)
+    suspend fun updateDevice(device: PairedDeviceEntity) = deviceDao.updateDevice(device)
     suspend fun updateDeviceAddresses(deviceId: String, ipAddresses: List<AddressEntry>) = deviceDao.updateDeviceAddresses(deviceId, ipAddresses)
-    fun getLastConnectedDevice() = deviceDao.getLastConnectedDevice()
-
-    fun getLastConnectedDeviceFlow() = deviceDao.getLastConnectedDeviceFlow()
 
     fun getRemoteDevice(deviceId: String) = deviceDao.getRemoteDevice(deviceId)
 

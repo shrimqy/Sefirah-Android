@@ -10,7 +10,7 @@ import sefirah.database.dao.DeviceDao
 import sefirah.database.dao.NetworkDao
 import sefirah.database.model.LocalDeviceEntity
 import sefirah.database.model.NetworkEntity
-import sefirah.database.model.RemoteDeviceEntity
+import sefirah.database.model.PairedDeviceEntity
 
 interface AppDatabase {
     fun devicesDao(): DeviceDao
@@ -33,7 +33,7 @@ interface AppDatabase {
 
 @Database(
     entities = [
-        RemoteDeviceEntity::class,
+        PairedDeviceEntity::class,
         NetworkEntity::class,
         LocalDeviceEntity::class
     ],

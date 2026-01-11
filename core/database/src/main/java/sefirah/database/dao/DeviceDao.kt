@@ -7,34 +7,28 @@ import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import sefirah.database.model.LocalDeviceEntity
-import sefirah.database.model.RemoteDeviceEntity
+import sefirah.database.model.PairedDeviceEntity
 import sefirah.domain.model.AddressEntry
 
 @Dao
 interface DeviceDao {
-    @Query("SELECT * FROM RemoteDeviceEntity")
-    suspend fun getAllDevices(): List<RemoteDeviceEntity>
+    @Query("SELECT * FROM PairedDeviceEntity")
+    suspend fun getAllDevices(): List<PairedDeviceEntity>
 
-    @Query("SELECT * FROM RemoteDeviceEntity")
-    fun getAllDevicesFlow(): Flow<List<RemoteDeviceEntity>>
+    @Query("SELECT * FROM PairedDeviceEntity")
+    fun getAllDevicesFlow(): Flow<List<PairedDeviceEntity>>
 
-    @Query("SELECT * FROM RemoteDeviceEntity WHERE deviceId = :deviceId")
-    fun getRemoteDevice(deviceId: String): Flow<RemoteDeviceEntity?>
+    @Query("SELECT * FROM PairedDeviceEntity WHERE deviceId = :deviceId")
+    fun getRemoteDevice(deviceId: String): Flow<PairedDeviceEntity?>
 
-    @Query("SELECT * FROM RemoteDeviceEntity ORDER BY lastConnected DESC LIMIT 1")
-    fun getLastConnectedDevice(): RemoteDeviceEntity?
-
-    @Query("SELECT * FROM RemoteDeviceEntity ORDER BY lastConnected DESC LIMIT 1")
-    fun getLastConnectedDeviceFlow(): Flow<RemoteDeviceEntity?>
-
-    @Query("DELETE FROM REMOTEDEVICEENTITY WHERE deviceId = :deviceId")
+    @Query("DELETE FROM PairedDeviceEntity WHERE deviceId = :deviceId")
     suspend fun removeDevice(deviceId: String)
 
     @Update
-    suspend fun updateDevice(device: RemoteDeviceEntity)
+    suspend fun updateDevice(device: PairedDeviceEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addDevice(device: RemoteDeviceEntity)
+    suspend fun addDevice(device: PairedDeviceEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addLocalDevice(device: LocalDeviceEntity)
@@ -51,6 +45,6 @@ interface DeviceDao {
     @Query("SELECT * FROM LocalDeviceEntity LIMIT 1")
     fun getLocalDeviceFlow(): Flow<LocalDeviceEntity?>
 
-    @Query("UPDATE RemoteDeviceEntity SET addresses = :addresses WHERE deviceId = :deviceId")
+    @Query("UPDATE PairedDeviceEntity SET addresses = :addresses WHERE deviceId = :deviceId")
     suspend fun updateDeviceAddresses(deviceId: String, addresses: List<AddressEntry>)
 }

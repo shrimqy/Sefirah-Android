@@ -6,7 +6,7 @@ import sefirah.domain.model.AddressEntry
 import sefirah.domain.model.PairedDevice
 
 @Entity
-data class RemoteDeviceEntity (
+data class PairedDeviceEntity (
     @PrimaryKey val deviceId: String,
     val addresses: List<AddressEntry>,
     val publicKey: String,
@@ -15,7 +15,7 @@ data class RemoteDeviceEntity (
     var lastConnected: Long? = null,
 )
 
-fun RemoteDeviceEntity.toDomain(): PairedDevice {
+fun PairedDeviceEntity.toDomain(): PairedDevice {
     return PairedDevice(
         deviceId = deviceId,
         addresses = addresses,
@@ -27,12 +27,12 @@ fun RemoteDeviceEntity.toDomain(): PairedDevice {
     )
 }
 
-fun List<RemoteDeviceEntity>.toDomain(): List<PairedDevice> {
+fun List<PairedDeviceEntity>.toDomain(): List<PairedDevice> {
     return map { it.toDomain() }
 }
 
-fun PairedDevice.toEntity(): RemoteDeviceEntity {
-    return RemoteDeviceEntity(
+fun PairedDevice.toEntity(): PairedDeviceEntity {
+    return PairedDeviceEntity(
         deviceId = deviceId,
         deviceName = deviceName,
         addresses = addresses,

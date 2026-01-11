@@ -178,14 +178,22 @@ class NetworkService : Service() {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra(EXTRA_CONNECTION_DETAILS)
                 }
-                connectionDetails?.let {
-                    scope.launch {
+
+                scope.launch {
+                    if (connectionDetails != null) {
                         // Check if device is already paired - if so, use connectPaired, otherwise connectTo
-                        val pairedDevice = deviceManager.getPairedDevice(it.deviceId)
+                        val pairedDevice = deviceManager.getPairedDevice(connectionDetails.deviceId)
                         if (pairedDevice != null) {
                             connectPaired(pairedDevice)
                         } else {
-                            connectTo(it)
+                            connectTo(connectionDetails)
+                        }
+                    } else {
+                        val lastConnectedDevice = deviceManager.pairedDevices.value
+                            .maxByOrNull { it.lastConnected ?: 0L }
+                        
+                        lastConnectedDevice?.let { device ->
+                            connectPaired(device)
                         }
                     }
                 }
