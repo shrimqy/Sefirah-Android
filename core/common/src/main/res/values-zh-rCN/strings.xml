@@ -39,7 +39,6 @@
     <string name="home">主页</string>
     <string name="devices">设备</string>
     <string name="settings">设置</string>
-    <string name="device_details">设备详情</string>
     <string name="about">关于</string>
     <string name="permissions">权限</string>
     <string name="network">网络</string>
@@ -89,7 +88,6 @@
     <string name="media_session_subtitle">将在通知栏显示媒体控件</string>
     <string name="storage_access_preference">存储访问</string>
     <string name="storage_access_subtitle">允许桌面端访问本机文件</string>
-    <string name="permissions_preference">应用权限</string>
     <string name="network_preference">网络设置</string>
     <string name="network_subtitle">配置网络偏好</string>
     <string name="storage_location_preference">存储位置</string>
@@ -137,4 +135,5 @@
     <string name="error">Error</string>
     <string name="connection_toggle">Connection toggle</string>
     <string name="trust_all_networks">Trust all networks</string>
+    <string name="device_settings">Device settings</string>
 </resources>

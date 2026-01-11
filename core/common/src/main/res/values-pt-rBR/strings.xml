@@ -47,7 +47,6 @@
     <string name="home">Início</string>
     <string name="devices">Dispositivos</string>
     <string name="settings">Configurações</string>
-    <string name="device_details">Detalhes do dispositivo</string>
     <string name="about">Sobre</string>
     <string name="permissions">Permissões</string>
     <string name="network">Rede</string>
@@ -107,7 +106,6 @@
     <string name="media_session_subtitle">Exibe na área de notificações o que estiver tocando no computador</string>
     <string name="storage_access_preference">Acesso ao armazenamento</string>
     <string name="storage_access_subtitle">Permite que o Windows acesse o armazenamento do seu Android</string>
-    <string name="permissions_preference">Permissões</string>
     <string name="network_preference">Rede</string>
     <string name="network_subtitle">Configure as preferências de conexão</string>
     <string name="storage_location_preference">Local de armazenamento</string>
@@ -166,5 +164,6 @@
     <string name="error">Error</string>
     <string name="connection_toggle">Connection toggle</string>
     <string name="trust_all_networks">Trust all networks</string>
+    <string name="device_settings">Device settings</string>
 
 </resources>

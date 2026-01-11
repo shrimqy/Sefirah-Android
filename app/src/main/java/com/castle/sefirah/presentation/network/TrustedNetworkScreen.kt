@@ -102,7 +102,7 @@ fun TrustedNetworkScreen(rootNavController: NavHostController) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 ),
-                title = { Text(stringResource(R.string.network)) },
+                title = { Text(stringResource(R.string.network_preference)) },
                 navigationIcon = {
                     IconButton(
                         onClick = { rootNavController.navigateUp() }

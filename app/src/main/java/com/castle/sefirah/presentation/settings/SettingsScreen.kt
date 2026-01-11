@@ -136,7 +136,7 @@ fun SettingsScreen(
 
         item {
                 TextPreferenceWidget(
-                    title = stringResource(R.string.permissions_preference),
+                    title = stringResource(R.string.permissions),
                     icon = ImageVector.vectorResource(R.drawable.ic_settings_alert_fill),
                     onPreferenceClick = {
                         rootNavController.navigate(SettingsRouteScreen.PermissionScreen.route)

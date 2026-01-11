@@ -43,8 +43,7 @@
   <string name="home">ホーム</string>
   <string name="devices">デバイス</string>
   <string name="settings">設定</string>
-  <string name="device_details">デバイスの詳細</string>
-  <string name="about">アプリについて</string>
+    <string name="about">アプリについて</string>
   <string name="permissions">権限</string>
   <string name="network">ネットワーク</string>
   <!-- Common UI Elements -->
@@ -98,8 +97,7 @@
   <string name="media_session_subtitle">メディアの再生を通知に表示します</string>
   <string name="storage_access_preference">ストレージのアクセス</string>
   <string name="storage_access_subtitle">Windows で Android のストレージにアクセスできるようにします</string>
-  <string name="permissions_preference">アプリの権限</string>
-  <string name="network_preference">ネットワーク設定</string>
+    <string name="network_preference">ネットワーク設定</string>
   <string name="network_subtitle">接続設定を構成します</string>
   <string name="storage_location_preference">ファイルの保存先</string>
   <!-- Dialogs -->
@@ -150,4 +148,5 @@
   <string name="error">Error</string>
   <string name="connection_toggle">Connection toggle</string>
   <string name="trust_all_networks">Trust all networks</string>
+    <string name="device_settings">Device settings</string>
 </resources>

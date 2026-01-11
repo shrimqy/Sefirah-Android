@@ -86,7 +86,7 @@ fun DeviceSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.device_details)) },
+                title = { Text(stringResource(R.string.device_settings)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(painterResource(R.drawable.ic_arrow_back), "Back")
