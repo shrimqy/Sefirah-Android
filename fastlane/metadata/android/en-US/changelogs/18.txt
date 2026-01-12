@@ -1,0 +1,16 @@
+• Added intent filter for 3rd party apps to send clipboard
+• Added QR code scanner for device connection
+• Added wavy slider for media playback
+• Added address management
+• Moved feature preferences to device settings screen
+• Implemented desktop to Android connection
+• Added support for multiple connections
+• Improved device discovery
+• Fixed media notification timeline
+• Improved connection handling
+• Improved file transfer handling
+• Added support for multiple file transfers
+• Updated transfer notification handling
+• Updated UI icons
+• Updated device cards
+• Small UI fixes
