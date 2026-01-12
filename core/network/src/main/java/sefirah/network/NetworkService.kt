@@ -217,8 +217,17 @@ class NetworkService : Service() {
 
             Actions.DISCONNECT.name -> {
                 scope.launch {
-                    val deviceId = intent.getStringExtra(DEVICE_ID_EXTRA) ?: return@launch
-                    disconnect(deviceId)
+                    val deviceId = intent.getStringExtra(DEVICE_ID_EXTRA)
+                    if (deviceId != null) {
+                        disconnect(deviceId)
+                    } else {
+                        val lastConnectedDevice = deviceManager.pairedDevices.value
+                            .maxByOrNull { it.lastConnected ?: 0L }
+
+                        lastConnectedDevice?.let { device ->
+                            disconnect(device.deviceId)
+                        }
+                    }
                 }
             }
 
