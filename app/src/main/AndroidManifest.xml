@@ -84,8 +84,8 @@
             android:exported="true"
             android:foregroundServiceType="connectedDevice">
             <intent-filter>
-                <action android:name="START" />
-                <action android:name="STOP" />
+                <action android:name="CONNECT" />
+                <action android:name="DISCONNECT" />
                 <action android:name="SEND_CLIPBOARD" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
