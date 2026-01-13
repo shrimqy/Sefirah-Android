@@ -4,13 +4,14 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -28,6 +29,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -37,10 +47,8 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import com.castle.sefirah.navigation.SyncRoute
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
 import sefirah.network.util.QrCodeParser
+import zxingcpp.BarcodeReader
 import java.util.concurrent.Executors
 
 @Composable
@@ -86,18 +94,23 @@ fun QrCodeScanner(
                 )
             }
             hasCameraPermission -> {
-                CameraPreview(
-                    onQrCodeScanned = { qrCodeData ->
-                        // Parse QR code and navigate back to SyncScreen with the parsed data
-                        val connectionData = QrCodeParser.parseQrCode(qrCodeData)
-                        if (connectionData != null) {
-                            rootNavController.getBackStackEntry(SyncRoute.SyncScreen.route)
-                                .savedStateHandle["qr_code_result"] = connectionData
-                        }
-                        rootNavController.popBackStack()
-                    },
-                    lifecycleOwner = lifecycleOwner
-                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    CameraPreview(
+                        onQrCodeScanned = { qrCodeData ->
+                            // Parse QR code and navigate back to SyncScreen with the parsed data
+                            QrCodeParser.parseQrCode(qrCodeData)?.let { parsedData ->
+                                runCatching {
+                                    rootNavController.getBackStackEntry(SyncRoute.SyncScreen.route)
+                                }.getOrNull()?.let { syncScreenEntry ->
+                                    syncScreenEntry.savedStateHandle["qr_code_result"] = parsedData
+                                    rootNavController.popBackStack(SyncRoute.SyncScreen.route, inclusive = false)
+                                }
+                            }
+                        },
+                        lifecycleOwner
+                    )
+                    QrCodeScanningOverlay()
+                }
             }
         }
 
@@ -117,15 +130,12 @@ fun QrCodeScanner(
     }
 }
 
-@OptIn(ExperimentalGetImage::class)
 @Composable
 private fun CameraPreview(
     onQrCodeScanned: (String) -> Unit,
     lifecycleOwner: LifecycleOwner
 ) {
     val context = LocalContext.current
-    var scanned by remember { mutableStateOf(false) }
-
     AndroidView(
         factory = { ctx ->
             val previewView = PreviewView(ctx)
@@ -140,44 +150,42 @@ private fun CameraPreview(
                         it.surfaceProvider = previewView.surfaceProvider
                     }
 
+                    val resolutionSelector = ResolutionSelector.Builder()
+                        .setResolutionStrategy(
+                            ResolutionStrategy(
+                                android.util.Size(1280, 720),
+                                ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                            )
+                        )
+                        .build()
+
                     val imageAnalysis = ImageAnalysis.Builder()
+                        .setResolutionSelector(resolutionSelector)
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
 
-                    val barcodeScanner = BarcodeScanning.getClient()
+                    val barcodeReader = BarcodeReader()
+                    barcodeReader.options = BarcodeReader.Options(
+                        formats = setOf(BarcodeReader.Format.QR_CODE),
+                        tryHarder = true,
+                        tryRotate = true,
+                        tryInvert = true,
+                        tryDownscale = true
+                    )
 
-                    imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
-                        if (!scanned) {
-                            val mediaImage = imageProxy.image
-                            if (mediaImage == null) {
-                                imageProxy.close()
-                                return@setAnalyzer
-                            }
-                            val image = InputImage.fromMediaImage(
-                                mediaImage,
-                                imageProxy.imageInfo.rotationDegrees
-                            )
-
-                            barcodeScanner.process(image)
-                                .addOnSuccessListener { barcodes ->
-                                    for (barcode in barcodes) {
-                                        when (barcode.valueType) {
-                                            Barcode.TYPE_URL, Barcode.TYPE_TEXT -> {
-                                                barcode.rawValue?.let { qrCodeData ->
-                                                    if (!scanned) {
-                                                        scanned = true
-                                                        onQrCodeScanned(qrCodeData)
-                                                    }
-                                                }
-                                            }
+                    imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor()) { image ->
+                        image.use {
+                            try {
+                                val results = barcodeReader.read(it)
+                                if (results.isNotEmpty()) {
+                                    results.first().text?.let { qrCodeText ->
+                                        executor.execute {
+                                            onQrCodeScanned(qrCodeText)
                                         }
                                     }
                                 }
-                                .addOnCompleteListener {
-                                    imageProxy.close()
-                                }
-                        } else {
-                            imageProxy.close()
+                            } catch (_: Exception) {
+                            }
                         }
                     }
 
@@ -204,4 +212,116 @@ private fun CameraPreview(
         modifier = Modifier.fillMaxSize()
     )
 }
+
+@Composable
+private fun QrCodeScanningOverlay() {
+    val strokeWidth = 4.dp
+    val cornerRadius = 24.dp
+    val arcRadius = 40.dp
+    val arcOffset = 20.dp
+    val overlayColor = MaterialTheme.colorScheme.primary
+    val overlayAlpha = 0.6f
+    val scanningAreaRatio = 0.7f
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val scanningBounds = calculateScanningBounds(size, scanningAreaRatio)
+            val radiusPx = cornerRadius.toPx()
+            val arcRadiusPx = arcRadius.toPx()
+            val arcOffsetPx = arcOffset.toPx()
+            val strokeWidthPx = strokeWidth.toPx()
+
+            drawDimmedOverlay(scanningBounds, radiusPx, overlayAlpha)
+            drawCornerArcs(scanningBounds, overlayColor, arcRadiusPx, arcOffsetPx, strokeWidthPx)
+        }
+    }
+}
+
+private data class ScanningBounds(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float
+)
+
+private fun calculateScanningBounds(size: Size, ratio: Float): ScanningBounds {
+    val centerX = size.width / 2
+    val centerY = size.height / 2
+    val scanningSize = size.width * ratio.coerceAtMost(size.height * ratio)
+    val halfSize = scanningSize / 2
+
+    return ScanningBounds(
+        left = centerX - halfSize,
+        top = centerY - halfSize,
+        right = centerX + halfSize,
+        bottom = centerY + halfSize
+    )
+}
+
+private fun DrawScope.drawDimmedOverlay(
+    bounds: ScanningBounds,
+    cornerRadius: Float,
+    alpha: Float
+) {
+    val fullScreenPath = Path().apply {
+        addRect(Rect(0f, 0f, this@drawDimmedOverlay.size.width, this@drawDimmedOverlay.size.height))
+    }
+
+    val cutoutPath = Path().apply {
+        addRoundRect(
+            RoundRect(
+                left = bounds.left,
+                top = bounds.top,
+                right = bounds.right,
+                bottom = bounds.bottom,
+                radiusX = cornerRadius,
+                radiusY = cornerRadius
+            )
+        )
+    }
+
+    val overlayPath = Path.combine(
+        operation = PathOperation.Difference,
+        path1 = fullScreenPath,
+        path2 = cutoutPath
+    )
+
+    drawPath(
+        path = overlayPath,
+        color = Color.Black.copy(alpha = alpha)
+    )
+}
+
+private fun DrawScope.drawCornerArcs(
+    bounds: ScanningBounds,
+    color: Color,
+    arcRadius: Float,
+    arcOffset: Float,
+    strokeWidth: Float
+) {
+    val cornerConfigs = listOf(
+        CornerConfig(180f, bounds.left - arcRadius + arcOffset, bounds.top - arcRadius + arcOffset),
+        CornerConfig(270f, bounds.right - arcRadius - arcOffset, bounds.top - arcRadius + arcOffset),
+        CornerConfig(90f, bounds.left - arcRadius + arcOffset, bounds.bottom - arcRadius - arcOffset),
+        CornerConfig(0f, bounds.right - arcRadius - arcOffset, bounds.bottom - arcRadius - arcOffset)
+    )
+
+    cornerConfigs.forEach { config ->
+        drawArc(
+            color = color,
+            startAngle = config.startAngle,
+            sweepAngle = 90f,
+            useCenter = false,
+            topLeft = Offset(config.x, config.y),
+            size = Size(arcRadius * 2, arcRadius * 2),
+            style = Stroke(strokeWidth)
+        )
+    }
+}
+
+private data class CornerConfig(
+    val startAngle: Float,
+    val x: Float,
+    val y: Float
+)
 

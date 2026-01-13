@@ -65,10 +65,8 @@ reorderable = "2.4.3"
 # Material Design
 material = "1.13.0"
 documentfile = "1.1.0"
-firebaseCrashlyticsBuildtools = "3.0.3"
-
-# ML Kit
-mlkitBarcodeScanning = "17.3.0"
+# ZXing-C++
+zxingCpp = "2.3.0"
 cameraX = "1.4.0"
 
 [libraries]
@@ -160,15 +158,14 @@ reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reo
 # Material Design
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
-# ML Kit
-mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkitBarcodeScanning" }
+# ZXing-C++
+zxing-cpp-android = { module = "io.github.zxing-cpp:android", version.ref = "zxingCpp" }
 
 # CameraX
 camerax-core = { module = "androidx.camera:camera-core", version.ref = "cameraX" }
 camerax-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraX" }
 camerax-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraX" }
 camerax-view = { module = "androidx.camera:camera-view", version.ref = "cameraX" }
-camerax-mlkit-vision = { module = "androidx.camera:camera-mlkit-vision", version.ref = "cameraX" }
 
 
 richtext-commonmark = { module = "com.halilibo.compose-richtext:richtext-commonmark", version.ref = "richtext" }
@@ -184,7 +181,6 @@ android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref 
 kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
-firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
