@@ -1,0 +1,2 @@
+• replace ML Kit with ZXing-C++ for QR code scanning
+• add scanner overlayAlpha
