@@ -198,28 +198,23 @@ class MediaHandler @Inject constructor(
 
             val mediaSessionCallback : MediaSessionCompat.Callback = object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
-                    val action = PlaybackAction(PlaybackActionType.Play, session.source)
-                    handleMediaAction(deviceId, action)
+                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Play, session.source))
                 }
 
                 override fun onPause() {
-                    val action = PlaybackAction(PlaybackActionType.Pause, session.source)
-                    handleMediaAction(deviceId, action)
+                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Pause, session.source))
                 }
 
                 override fun onSkipToNext() {
-                    val action = PlaybackAction(PlaybackActionType.Next, session.source)
-                    handleMediaAction(deviceId, action)
+                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Next, session.source))
                 }
 
                 override fun onSkipToPrevious() {
-                    val action = PlaybackAction(PlaybackActionType.Previous, session.source)
-                    handleMediaAction(deviceId, action)
+                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Previous, session.source))
                 }
 
                 override fun onSeekTo(pos: Long) {
-                    val action = PlaybackAction(PlaybackActionType.Seek, session.source, pos.toDouble())
-                    handleMediaAction(deviceId, action)
+                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Seek, session.source, pos.toDouble()))
                 }
             }
 
@@ -256,9 +251,17 @@ class MediaHandler @Inject constructor(
 
             val mediaStyle = NotificationCompat.MediaStyle().setShowActionsInCompactView(0, 1, 2)
 
-            val mediaSession = mediaSession ?: MediaSessionCompat(context, MEDIA_SESSION_TAG).apply {
-                setCallback(mediaSessionCallback, Handler(context.mainLooper))
+            // Get or create MediaSession
+            val mediaSession = this@MediaHandler.mediaSession ?: try {
+                MediaSessionCompat(context, MEDIA_SESSION_TAG).also {
+                    this@MediaHandler.mediaSession = it
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create MediaSession", e)
+                return@launch
             }
+
+            mediaSession.setCallback(mediaSessionCallback, Handler(context.mainLooper))
             mediaSession.setMetadata(metadata.build())
             mediaSession.setPlaybackState(playbackState.build())
             mediaStyle.setMediaSession(mediaSession.sessionToken)
@@ -304,14 +307,11 @@ class MediaHandler @Inject constructor(
                 setSilent(true)
                 setOngoing(true)
             }
-            if (this@MediaHandler.mediaSession == null) {
-                this@MediaHandler.mediaSession = mediaSession
-            }
         }
     }
 
     fun handleMediaAction(deviceId: String, action: PlaybackAction) {
-        Log.d(TAG, "Action received: ${action.playbackActionType}" + action.source)
+        Log.d(TAG, "Action received: ${action.playbackActionType}${action.source} device: $deviceId")
         networkManager.sendMessage(deviceId, action)
     }
 
@@ -323,6 +323,7 @@ class MediaHandler @Inject constructor(
         _activeSessionsByDevice.value[deviceId]?.forEach { session ->
             session.source?.let { lastPositionUpdateTimeMap.remove(it) }
         }
+        
         // Release media session if no sessions exist for any device
         if (_activeSessionsByDevice.value.isEmpty()) {
             release()
