@@ -126,7 +126,6 @@ class MediaHandler @Inject constructor(
                     showMediaSession(deviceId, updatedSession)
                     updatedSession
                 } else {
-                    showMediaSession(deviceId, session)
                     session
                 }
             }
