@@ -523,6 +523,14 @@ class NetworkService : Service() {
 
         try {
             val socket = run {
+                // Try prefAddress first if available
+                connectionDetails.prefAddress?.let { prefAddress ->
+                    try {
+                        socketFactory.tcpClientSocket(prefAddress, port)?.let { return@run it }
+                    } catch (_: Exception) { }
+                }
+
+                // Then try other addresses
                 for (ip in addresses) {
                     try {
                         socketFactory.tcpClientSocket(ip, port)?.let { return@run it }

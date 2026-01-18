@@ -22,8 +22,8 @@ object QrCodeParser {
         return ConnectionDetails(
             deviceId = qrData.deviceId,
             prefAddress = selectedIp,
-            addresses = if (!selectedIp.isNullOrEmpty() && !qrData.addresses.contains(selectedIp)) {
-                qrData.addresses + selectedIp
+            addresses = if (!selectedIp.isNullOrEmpty() && qrData.addresses.contains(selectedIp)) {
+                qrData.addresses - selectedIp
             } else {
                 qrData.addresses
             },
