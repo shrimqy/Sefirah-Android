@@ -10,12 +10,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import sefirah.domain.model.FileTransferMessage
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.model.ServerInfo
-import sefirah.domain.repository.NetworkManager
-import sefirah.domain.repository.PreferencesRepository
-import sefirah.domain.repository.SocketFactory
 import sefirah.clipboard.ClipboardHandler
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.model.ServerInfo
+import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.interfaces.PreferencesRepository
+import sefirah.domain.interfaces.SocketFactory
 import sefirah.network.util.generateRandomPassword
 import sefirah.network.util.getFileMetadata
 import java.io.IOException

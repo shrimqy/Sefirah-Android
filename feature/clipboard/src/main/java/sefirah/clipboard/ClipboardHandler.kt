@@ -22,9 +22,7 @@ class ClipboardHandler @Inject constructor(
     fun setClipboard(clipboard: ClipboardMessage) {
         try {
             val clip: ClipData = when {
-                clipboard.clipboardType == "text/plain" -> {
-                    ClipData.newPlainText("Received clipboard", clipboard.content)
-                }
+                clipboard.clipboardType == "text/plain" -> ClipData.newPlainText("Received clipboard", clipboard.content)
 
                 clipboard.clipboardType.startsWith("image/") -> {
                     val imageBytes = Base64.decode(clipboard.content, Base64.DEFAULT)
@@ -37,9 +35,7 @@ class ClipboardHandler @Inject constructor(
                     ClipData.newUri(context.contentResolver, "Received image", uri)
                 }
 
-                else -> {
-                    ClipData.newPlainText("Received clipboard", clipboard.content)
-                }
+                else -> ClipData.newPlainText("Received clipboard", clipboard.content)
             }
             clipboardManager.setPrimaryClip(clip)
         } catch (ex: Exception) {
@@ -49,9 +45,9 @@ class ClipboardHandler @Inject constructor(
 
     fun setClipboardUri(uri: Uri) {
         try {
+            Log.d(TAG, "File added to clipboard: $uri")
             val clip = ClipData.newUri(context.contentResolver, "Received file", uri)
             clipboardManager.setPrimaryClip(clip)
-            Log.d(TAG, "File added to clipboard: $uri")
         } catch (ex: Exception) {
             Log.e(TAG, "Exception setting clipboard URI", ex)
         }

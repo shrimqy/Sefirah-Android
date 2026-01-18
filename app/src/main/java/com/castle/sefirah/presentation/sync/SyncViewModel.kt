@@ -18,8 +18,8 @@ import android.util.Log
 import sefirah.domain.model.ConnectionDetails
 import sefirah.domain.model.DiscoveredDevice
 import sefirah.domain.model.PairMessage
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
 import sefirah.network.NetworkDiscovery
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
@@ -69,7 +69,7 @@ class SyncViewModel @Inject constructor(
                         }
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Reset pairing state on error
                 val resetDevice = device.copy(isPairing = false)
                 deviceManager.addOrUpdateDiscoveredDevice(resetDevice)

@@ -21,11 +21,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,7 +48,7 @@ import kotlinx.coroutines.launch
 import sefirah.common.R
 import sefirah.domain.model.PlaybackSession
 import sefirah.presentation.components.WavySlider
-import sefirah.presentation.util.base64ToBitmap
+import sefirah.common.util.base64ToBitmap
 import java.util.Locale
 import kotlin.math.abs
 

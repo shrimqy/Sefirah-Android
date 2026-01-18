@@ -22,14 +22,14 @@ import kotlinx.coroutines.launch
 import sefirah.common.R
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
+import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.model.AudioDevice
 import sefirah.domain.model.AudioMessageType
 import sefirah.domain.model.PlaybackAction
 import sefirah.domain.model.PlaybackActionType
 import sefirah.domain.model.PlaybackSession
 import sefirah.domain.model.SessionType
-import sefirah.domain.repository.NetworkManager
-import sefirah.presentation.util.base64ToBitmap
+import sefirah.common.util.base64ToBitmap
 import sefirah.projection.media.MediaActionReceiver.Companion.ACTION_NEXT
 import sefirah.projection.media.MediaActionReceiver.Companion.ACTION_PLAY
 import sefirah.projection.media.MediaActionReceiver.Companion.ACTION_PREVIOUS

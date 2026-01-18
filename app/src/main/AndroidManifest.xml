@@ -95,7 +95,7 @@
             android:name="sefirah.network.ConnectionToggleTileService"
             android:exported="true"
             android:label="@string/connection_toggle"
-            android:icon="@drawable/sync_desktop"
+            android:icon="@drawable/ic_sync_desktop"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             tools:targetApi="24">
             <intent-filter>

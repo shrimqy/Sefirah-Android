@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import sefirah.domain.model.PendingDeviceApproval
-import sefirah.domain.repository.NetworkManager
-import sefirah.domain.repository.PreferencesRepository
+import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.interfaces.PreferencesRepository
 import javax.inject.Inject
 
 @HiltViewModel

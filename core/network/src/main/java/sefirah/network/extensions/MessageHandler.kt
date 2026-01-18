@@ -1,6 +1,6 @@
 package sefirah.network.extensions
 
-import android.media.AudioManager
+import android.app.NotificationManager
 import android.util.Log
 import kotlinx.coroutines.flow.first
 import sefirah.domain.model.ActionMessage
@@ -12,8 +12,8 @@ import sefirah.domain.model.CommandMessage
 import sefirah.domain.model.CommandType
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
-import sefirah.domain.model.DeviceRingerMode
 import sefirah.domain.model.DiscoveredDevice
+import sefirah.domain.model.DndStatus
 import sefirah.domain.model.FileTransferMessage
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationMessage
@@ -23,6 +23,7 @@ import sefirah.domain.model.PairedDevice
 import sefirah.domain.model.PendingDeviceApproval
 import sefirah.domain.model.PlaybackSession
 import sefirah.domain.model.ReplyAction
+import sefirah.domain.model.RingerMode
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.TextMessage
 import sefirah.domain.model.ThreadRequest
@@ -50,7 +51,8 @@ suspend fun NetworkService.handleMessage(device: BaseRemoteDevice, message: Sock
             is PlaybackSession -> handleMediaInfo(device.deviceId, message)
             is ClipboardMessage -> clipboardHandler.setClipboard(message)
             is FileTransferMessage ->  fileTransferService.receiveFiles(device.deviceId, message)
-            is DeviceRingerMode -> handleRingerMode(message)
+            is RingerMode -> handleRingerMode(message)
+            is DndStatus -> handleDndStatus(message)
             is ThreadRequest -> smsHandler.handleThreadRequest(message)
             is TextMessage -> smsHandler.sendTextMessage(message)
             is AudioDevice -> mediaHandler.handleAudioDevice(device.deviceId, message)
@@ -105,13 +107,12 @@ private suspend fun NetworkService.handlePairMessage(device: DiscoveredDevice, m
 }
 
 suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo, device: PairedDevice) {
-    Log.d(TAG, "Handling DeviceInfo for paired device ${device.deviceId}")
     val updatedDevice = device.copy(
         deviceName = deviceInfo.deviceName,
         avatar = deviceInfo.avatar
     )
     deviceManager.addOrUpdatePairedDevice(updatedDevice)
-    Log.d(TAG, "DeviceInfo processed successfully for ${device.deviceId}")
+    Log.d(TAG, "DeviceInfo updated for ${device.deviceId}")
 }
 
 suspend fun NetworkService.handleMediaInfo(deviceId: String, playbackSession: PlaybackSession) {
@@ -133,21 +134,27 @@ private fun NetworkService.handleAppListRequest(device: PairedDevice) {
     sendMessage(device.deviceId, appList)
 }
 
-fun NetworkService.handleRingerMode(ringerMode: DeviceRingerMode) {
-    when (ringerMode.ringerMode) {
-        AudioManager.RINGER_MODE_SILENT -> {
-            audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
-        }
-
-        AudioManager.RINGER_MODE_VIBRATE -> {
-            audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
-        }
-
-        AudioManager.RINGER_MODE_NORMAL -> {
-            audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
-        }
+fun NetworkService.handleRingerMode(ringerMode: RingerMode) {
+    try {
+        audioManager.ringerMode = ringerMode.mode
+    } catch (e: Exception) {
+        Log.e(TAG, "Error changing ringer mode", e)
     }
 }
+
+fun NetworkService.handleDndStatus(dndStatus: DndStatus) {
+    try {
+        if (dndStatus.isEnabled) {
+            notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+        } else {
+            notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error setting DND mode", e)
+    }
+}
+
+
 
 private fun NetworkService.handleNotificationMessage(message: NotificationMessage) {
     when (message.notificationType) {

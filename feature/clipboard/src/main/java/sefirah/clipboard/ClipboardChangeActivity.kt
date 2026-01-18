@@ -15,8 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.model.ClipboardMessage
-import sefirah.domain.repository.NetworkManager
 import javax.inject.Inject
 
 @AndroidEntryPoint

@@ -12,7 +12,7 @@ import sefirah.domain.model.ConnectionDetails
 import sefirah.domain.model.PairedDevice
 import sefirah.domain.model.PendingDeviceApproval
 import sefirah.domain.model.SocketMessage
-import sefirah.domain.repository.NetworkManager
+import sefirah.domain.interfaces.NetworkManager
 import javax.inject.Inject
 import javax.inject.Singleton
 

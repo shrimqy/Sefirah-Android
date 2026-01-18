@@ -1,4 +1,4 @@
-package sefirah.domain.repository
+package sefirah.domain.interfaces
 
 import kotlinx.coroutines.flow.StateFlow
 import sefirah.domain.model.BaseRemoteDevice

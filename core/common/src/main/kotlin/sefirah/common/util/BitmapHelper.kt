@@ -1,4 +1,4 @@
-package sefirah.presentation.util
+package sefirah.common.util
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

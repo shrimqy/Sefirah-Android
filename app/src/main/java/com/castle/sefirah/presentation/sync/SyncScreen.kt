@@ -96,7 +96,6 @@ fun SyncScreen(
                         value = customIp,
                         onValueChange = { customIp = it },
                         label = { Text(stringResource(R.string.custom_ip_text_label)) },
-                        placeholder = { Text("192.168.1.100") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 8.dp),

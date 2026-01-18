@@ -22,7 +22,7 @@ import sefirah.common.R
 import sefirah.common.util.createTempFileUri
 import sefirah.domain.model.FileMetadata
 import sefirah.domain.model.ServerInfo
-import sefirah.domain.repository.PreferencesRepository
+import sefirah.domain.interfaces.PreferencesRepository
 import sefirah.network.util.formatSize
 import java.io.File
 import java.io.IOException

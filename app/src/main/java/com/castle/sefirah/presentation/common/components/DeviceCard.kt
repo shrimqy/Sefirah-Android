@@ -32,7 +32,7 @@ import coil.compose.rememberAsyncImagePainter
 import sefirah.common.R
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.PairedDevice
-import sefirah.presentation.util.base64ToBitmap
+import sefirah.common.util.base64ToBitmap
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

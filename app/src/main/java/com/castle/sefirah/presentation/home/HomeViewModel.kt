@@ -14,10 +14,10 @@ import sefirah.domain.model.PlaybackAction
 import sefirah.domain.model.PlaybackActionType
 import sefirah.domain.model.PlaybackSession
 import sefirah.domain.model.SocketMessage
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
-import sefirah.network.extensions.ActionHandler
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
 import sefirah.projection.media.MediaHandler
+import sefirah.network.extensions.ActionHandler
 import javax.inject.Inject
 
 @HiltViewModel

@@ -5,6 +5,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
+import sefirah.domain.interfaces.NotificationCallback
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -39,9 +40,3 @@ class NotificationListener : NotificationListenerService() {
     }
 }
 
-interface NotificationCallback {
-    fun onNotificationPosted(notification: StatusBarNotification)
-    fun onNotificationRemoved(notification: StatusBarNotification)
-    fun onListenerConnected(service: NotificationListenerService)
-    fun onListenerDisconnected()
-}

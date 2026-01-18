@@ -2,13 +2,12 @@ package sefirah.network.util
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.BitmapDrawable
 import sefirah.domain.model.ApplicationInfo
 import sefirah.domain.model.ApplicationList
-import sefirah.presentation.util.bitmapToBase64
-import sefirah.presentation.util.drawableToBitmap
+import sefirah.common.util.bitmapToBase64
+import sefirah.common.util.drawableToBitmap
 
 @SuppressLint("QueryPermissionsNeeded")
 fun getInstalledApps(packageManager: PackageManager): ApplicationList {

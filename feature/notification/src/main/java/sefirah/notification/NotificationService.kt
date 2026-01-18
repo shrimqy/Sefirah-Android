@@ -27,12 +27,13 @@ import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationMessage
 import sefirah.domain.model.NotificationType
 import sefirah.domain.model.ReplyAction
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
-import sefirah.domain.repository.PreferencesRepository
-import sefirah.presentation.util.bitmapToBase64
-import sefirah.presentation.util.drawableToBase64
-import sefirah.presentation.util.drawableToBitmap
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.interfaces.NotificationCallback
+import sefirah.domain.interfaces.PreferencesRepository
+import sefirah.common.util.bitmapToBase64
+import sefirah.common.util.drawableToBase64
+import sefirah.common.util.drawableToBitmap
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale.getDefault
@@ -45,7 +46,7 @@ class NotificationService @Inject constructor(
     private val networkManager: NetworkManager,
     private val deviceManager: DeviceManager,
     private val preferencesRepository: PreferencesRepository
-) : NotificationHandler, NotificationCallback {
+) : NotificationCallback {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var isListenerConnected : Boolean = false
@@ -69,7 +70,7 @@ class NotificationService @Inject constructor(
         }
     }
 
-    override fun sendActiveNotifications(deviceId: String?) {
+    fun sendActiveNotifications(deviceId: String? = null) {
         val targetDeviceIds = deviceId?.let { setOf(it) } ?: deviceIds.value
 
         if (!isListenerConnected && targetDeviceIds.isEmpty()) {
@@ -94,11 +95,11 @@ class NotificationService @Inject constructor(
         }
     }
 
-    override fun removeAllNotification() {
+    fun removeAllNotification() {
         listener.cancelAllNotifications()
     }
 
-    override fun removeNotification(notificationId: String?) {
+    fun removeNotification(notificationId: String?) {
         listener.cancelNotification(notificationId)
     }
 
@@ -130,7 +131,7 @@ class NotificationService @Inject constructor(
         isListenerConnected = false
     }
 
-    override fun performNotificationAction(action: NotificationAction) {
+    fun performNotificationAction(action: NotificationAction) {
         val activeNotification = listener.activeNotifications.find {
             it.key == action.notificationKey
         } ?: return
@@ -145,7 +146,7 @@ class NotificationService @Inject constructor(
         }
     }
 
-    override fun openNotification(notificationKey: String?) {
+    fun openNotification(notificationKey: String?) {
         val notification = listener.activeNotifications
             .find { it.key == notificationKey }
             ?.notification ?: return
@@ -160,7 +161,7 @@ class NotificationService @Inject constructor(
         }
     }
 
-    override fun performReplyAction(action: ReplyAction) {
+    fun performReplyAction(action: ReplyAction) {
         // Get notification and its first reply action (usually messaging apps only have one)
         val notification = listener.activeNotifications
             .find { it.key == action.notificationKey }

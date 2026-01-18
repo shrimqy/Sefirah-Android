@@ -21,7 +21,7 @@ import org.apache.sshd.sftp.server.SftpFileSystemAccessor
 import org.apache.sshd.sftp.server.SftpSubsystemFactory
 import org.apache.sshd.sftp.server.SftpSubsystemProxy
 import sefirah.domain.model.SftpServerInfo
-import sefirah.domain.repository.DeviceManager
+import sefirah.domain.interfaces.DeviceManager
 import sefirah.network.util.MediaStoreHelper
 import sefirah.network.util.NetworkHelper.localAddress
 import sefirah.network.util.TrustManager
@@ -229,7 +229,6 @@ class SftpServer @Inject constructor(
 
     companion object {
         private const val TAG = "SftpServer"
-        private const val USER = "sun"
         val SUPPORTS_NATIVEFS = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
         private val PORT_RANGE = 5151..5169

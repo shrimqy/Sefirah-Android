@@ -20,13 +20,13 @@ import sefirah.communication.sms.SmsMmsUtils.sendMessage
 import sefirah.communication.sms.SmsMmsUtils.toHelperSmsAddress
 import sefirah.communication.sms.SmsMmsUtils.toHelperSmsAttachment
 import sefirah.communication.sms.SmsMmsUtils.toTextMessage
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.interfaces.PreferencesRepository
 import sefirah.domain.model.ConversationType
 import sefirah.domain.model.TextConversation
 import sefirah.domain.model.TextMessage
 import sefirah.domain.model.ThreadRequest
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
-import sefirah.domain.repository.PreferencesRepository
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import javax.inject.Inject

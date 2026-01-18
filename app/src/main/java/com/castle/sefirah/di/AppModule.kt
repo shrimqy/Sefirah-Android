@@ -11,16 +11,15 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.interfaces.NotificationCallback
+import sefirah.domain.interfaces.PreferencesRepository
+import sefirah.domain.interfaces.SocketFactory
 import sefirah.data.repository.DeviceManagerImpl
-import sefirah.data.repository.PreferencesDatastore
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
-import sefirah.domain.repository.PreferencesRepository
-import sefirah.domain.repository.SocketFactory
+import sefirah.data.repository.PreferencesRepositoryImpl
 import sefirah.network.NetworkManagerImpl
 import sefirah.network.SocketFactoryImpl
-import sefirah.notification.NotificationCallback
-import sefirah.notification.NotificationHandler
 import sefirah.notification.NotificationService
 import javax.inject.Singleton
 
@@ -38,10 +37,7 @@ internal abstract class AppModule {
     abstract fun bindNetworkManager(impl: NetworkManagerImpl): NetworkManager
 
     @Binds
-    abstract fun bindPreferencesRepository(impl: PreferencesDatastore): PreferencesRepository
-
-    @Binds
-    abstract fun bindNotificationHandler(impl: NotificationService): NotificationHandler
+    abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
 
     @Binds
     abstract fun bindNotificationCallback(impl: NotificationService): NotificationCallback

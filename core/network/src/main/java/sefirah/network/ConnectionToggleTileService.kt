@@ -13,12 +13,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import sefirah.common.R
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.PairedDevice
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
 import javax.inject.Inject
-import sefirah.common.R as CommonR
 
 @RequiresApi(Build.VERSION_CODES.N)
 @AndroidEntryPoint
@@ -85,8 +85,8 @@ class ConnectionToggleTileService : TileService() {
                     TileData(
                         label = lastConnectedDevice?.deviceName ?: "",
                         tileState = Tile.STATE_ACTIVE,
-                        subtitle = getString(CommonR.string.status_connected),
-                        icon = Icon.createWithResource(this@ConnectionToggleTileService, sefirah.presentation.R.drawable.sync),
+                        subtitle = getString(R.string.status_connected),
+                        icon = Icon.createWithResource(this@ConnectionToggleTileService, R.drawable.ic_sync),
                     )
                 }
 
@@ -95,30 +95,30 @@ class ConnectionToggleTileService : TileService() {
                         TileData(
                             label = lastConnectedDevice!!.deviceName,
                             tileState = Tile.STATE_INACTIVE,
-                            subtitle = getString(CommonR.string.status_disconnected),
-                            icon = Icon.createWithResource(this@ConnectionToggleTileService, sefirah.presentation.R.drawable.sync_disabled),
+                            subtitle = getString(R.string.status_disconnected),
+                            icon = Icon.createWithResource(this@ConnectionToggleTileService, R.drawable.ic_sync_disabled),
                         )
                     } else {
                         TileData(
-                            label = getString(CommonR.string.no_device),
+                            label = getString(R.string.no_device),
                             tileState = Tile.STATE_UNAVAILABLE,
-                            icon = Icon.createWithResource(this@ConnectionToggleTileService, sefirah.presentation.R.drawable.sync_desktop),
+                            icon = Icon.createWithResource(this@ConnectionToggleTileService, R.drawable.ic_sync_desktop),
                         )
                     }
                 }
 
                 connectionState.isError -> {
                     TileData(
-                        label = getString(CommonR.string.error),
+                        label = getString(R.string.error),
                         tileState = Tile.STATE_UNAVAILABLE,
-                        icon = Icon.createWithResource(this@ConnectionToggleTileService, sefirah.presentation.R.drawable.sync_problem),
+                        icon = Icon.createWithResource(this@ConnectionToggleTileService, R.drawable.ic_sync_problem),
                     )
                 }
                 else -> {
                     TileData(
                         label = "Unknown",
                         tileState = Tile.STATE_UNAVAILABLE,
-                        icon = Icon.createWithResource(this@ConnectionToggleTileService, sefirah.presentation.R.drawable.sync_problem),
+                        icon = Icon.createWithResource(this@ConnectionToggleTileService, R.drawable.ic_sync_problem),
                     )
                 }
             }

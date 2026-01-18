@@ -18,8 +18,8 @@ import kotlinx.coroutines.launch
 import sefirah.data.repository.AppUpdateChecker
 import sefirah.data.repository.ReleaseRepository
 import sefirah.domain.model.PairedDevice
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
 import javax.inject.Inject
 
 @HiltViewModel

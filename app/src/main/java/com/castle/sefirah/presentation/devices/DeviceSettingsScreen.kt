@@ -66,7 +66,7 @@ import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
 import sefirah.common.util.openAppSettings
 import sefirah.domain.model.PairedDevice
-import sefirah.presentation.util.base64ToBitmap
+import sefirah.common.util.base64ToBitmap
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

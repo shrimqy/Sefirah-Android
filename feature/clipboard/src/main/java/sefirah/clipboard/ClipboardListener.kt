@@ -2,7 +2,6 @@ package sefirah.clipboard
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.content.Intent
 import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -10,22 +9,21 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import sefirah.clipboard.extensions.LanguageDetector
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
-import sefirah.domain.repository.PreferencesRepository
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.interfaces.PreferencesRepository
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class ClipboardListener : AccessibilityService() {
-    @Inject
-    lateinit var networkManager: NetworkManager
+    @Inject lateinit var networkManager: NetworkManager
 
     @Inject lateinit var deviceManager: DeviceManager
 
-    @Inject
-    lateinit var preferencesRepository: PreferencesRepository
+    @Inject lateinit var preferencesRepository: PreferencesRepository
 
     private lateinit var clipboardDetector: ClipboardDetection
+
     override fun onCreate() {
         super.onCreate()
         clipboardDetector = ClipboardDetection(LanguageDetector.getCopyForLocale(applicationContext))
@@ -90,10 +88,6 @@ class ClipboardListener : AccessibilityService() {
         } catch (e: Exception) {
             Log.e(TAG, "Accessibility Service Error", e)
         }
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return super.onStartCommand(intent, flags, startId)
     }
 
     private val lock = Any()

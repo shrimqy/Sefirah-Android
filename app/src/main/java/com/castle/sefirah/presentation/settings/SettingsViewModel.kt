@@ -28,8 +28,8 @@ import sefirah.common.util.smsPermissionGranted
 import sefirah.database.AppRepository
 import sefirah.database.model.NetworkEntity
 import sefirah.domain.model.LocalDevice
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.PreferencesRepository
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.PreferencesRepository
 import sefirah.network.NetworkDiscovery
 import javax.inject.Inject
 

@@ -4,9 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
+import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.model.PlaybackAction
 import sefirah.domain.model.PlaybackActionType
-import sefirah.domain.repository.NetworkManager
 import javax.inject.Inject
 
 @AndroidEntryPoint

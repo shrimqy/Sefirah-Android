@@ -26,7 +26,7 @@ import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DiscoveredDevice
 import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.PairedDevice
-import sefirah.domain.repository.DeviceManager
+import sefirah.domain.interfaces.DeviceManager
 import sefirah.network.util.ECDHHelper
 import java.io.File
 import javax.inject.Inject

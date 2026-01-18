@@ -1,4 +1,4 @@
-package sefirah.domain.repository
+package sefirah.domain.interfaces
 
 import io.ktor.network.sockets.BoundDatagramSocket
 import io.ktor.network.sockets.Socket

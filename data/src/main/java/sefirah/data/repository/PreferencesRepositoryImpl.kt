@@ -14,13 +14,13 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import sefirah.domain.model.DevicePreferences
-import sefirah.domain.repository.PreferencesRepository
+import sefirah.domain.interfaces.PreferencesRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PreferencesDatastore @Inject constructor(
-    private val context: Context
+class PreferencesRepositoryImpl @Inject constructor(
+    context: Context
 ) : PreferencesRepository {
 
     private val datastore = context.dataStore

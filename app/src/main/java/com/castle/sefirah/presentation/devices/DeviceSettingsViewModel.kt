@@ -24,9 +24,9 @@ import sefirah.common.util.smsPermissionGranted
 import sefirah.domain.model.AddressEntry
 import sefirah.domain.model.PairedDevice
 import sefirah.domain.model.DevicePreferences
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
-import sefirah.domain.repository.PreferencesRepository
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.interfaces.PreferencesRepository
 import javax.inject.Inject
 
 @HiltViewModel

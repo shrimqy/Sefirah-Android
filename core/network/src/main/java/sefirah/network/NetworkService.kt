@@ -42,15 +42,20 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import sefirah.clipboard.ClipboardHandler
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
 import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.smsPermissionGranted
-import sefirah.communication.sms.SmsHandler
 import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.database.AppRepository
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.PreferencesRepository
+import sefirah.domain.interfaces.SocketFactory
+import sefirah.projection.media.MediaHandler
+import sefirah.communication.sms.SmsHandler
+import sefirah.notification.NotificationService
+import sefirah.clipboard.ClipboardHandler
 import sefirah.domain.model.AddressEntry
 import sefirah.domain.model.AuthenticationMessage
 import sefirah.domain.model.ClipboardMessage
@@ -66,9 +71,6 @@ import sefirah.domain.model.PairMessage
 import sefirah.domain.model.PairedDevice
 import sefirah.domain.model.PendingDeviceApproval
 import sefirah.domain.model.SocketMessage
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.PreferencesRepository
-import sefirah.domain.repository.SocketFactory
 import sefirah.domain.util.MessageSerializer
 import sefirah.network.extensions.ActionHandler
 import sefirah.network.extensions.cancelPairingVerificationNotification
@@ -77,55 +79,39 @@ import sefirah.network.extensions.setNotification
 import sefirah.network.transfer.FileTransferService
 import sefirah.network.transfer.SftpServer
 import sefirah.network.util.ECDHHelper
-import sefirah.network.util.TrustManager
 import sefirah.network.util.getInstalledApps
-import sefirah.notification.NotificationHandler
-import sefirah.presentation.util.drawableToBase64Compressed
-import sefirah.projection.media.MediaHandler
+import sefirah.common.util.drawableToBase64Compressed
 import javax.inject.Inject
 import javax.net.ssl.SSLSocket
 import kotlin.properties.Delegates
 
 @AndroidEntryPoint
 class NetworkService : Service() {
-    @Inject
-    lateinit var socketFactory: SocketFactory
+    @Inject lateinit var socketFactory: SocketFactory
 
-    @Inject
-    lateinit var appRepository: AppRepository
+    @Inject lateinit var appRepository: AppRepository
 
-    @Inject
-    lateinit var notificationHandler: NotificationHandler
+    @Inject lateinit var notificationHandler: NotificationService
 
-    @Inject
-    lateinit var notificationCenter: NotificationCenter
+    @Inject lateinit var notificationCenter: NotificationCenter
 
-    @Inject
-    lateinit var clipboardHandler: ClipboardHandler
+    @Inject lateinit var clipboardHandler: ClipboardHandler
 
-    @Inject
-    lateinit var networkDiscovery: NetworkDiscovery
+    @Inject lateinit var networkDiscovery: NetworkDiscovery
 
-    @Inject
-    lateinit var mediaHandler: MediaHandler
+    @Inject lateinit var mediaHandler: MediaHandler
 
-    @Inject
-    lateinit var sftpServer: SftpServer
+    @Inject lateinit var sftpServer: SftpServer
 
-    @Inject
-    lateinit var preferencesRepository: PreferencesRepository
+    @Inject lateinit var preferencesRepository: PreferencesRepository
 
-    @Inject
-    lateinit var smsHandler: SmsHandler
+    @Inject lateinit var smsHandler: SmsHandler
 
-    @Inject
-    lateinit var actionHandler: ActionHandler
+    @Inject lateinit var actionHandler: ActionHandler
 
-    @Inject
-    lateinit var deviceManager: DeviceManager
+    @Inject lateinit var deviceManager: DeviceManager
 
-    @Inject
-    lateinit var customTrustManager: TrustManager
+    @Inject lateinit var fileTransferService: FileTransferService
 
     @Inject
     lateinit var fileTransferService: FileTransferService

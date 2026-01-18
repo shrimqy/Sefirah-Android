@@ -6,9 +6,9 @@ import io.ktor.client.request.get
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.flow.first
+import sefirah.domain.interfaces.PreferencesRepository
 import sefirah.domain.model.GitHubReleaseResponse
 import sefirah.domain.model.Release
-import sefirah.domain.repository.PreferencesRepository
 import sefirah.network.NetworkHelper
 import java.time.Instant
 import java.time.temporal.ChronoUnit

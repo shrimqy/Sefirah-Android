@@ -13,7 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import sefirah.domain.repository.SocketFactory
+import sefirah.domain.interfaces.SocketFactory
 import sefirah.network.util.NetworkHelper.localAddress
 import sefirah.network.util.TrustManager
 import java.security.SecureRandom

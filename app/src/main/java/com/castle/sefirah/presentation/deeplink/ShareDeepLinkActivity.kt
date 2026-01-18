@@ -13,8 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import sefirah.domain.model.ClipboardMessage
-import sefirah.domain.repository.DeviceManager
-import sefirah.domain.repository.NetworkManager
+import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.interfaces.NetworkManager
 import sefirah.network.NetworkService
 import javax.inject.Inject
 
