@@ -202,20 +202,10 @@ class NotificationService @Inject constructor(
             null
         }
 
-        val extras = notification.extras
-        // Check for progress-related extras
-        // verify if this is needed
-        val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
-        val maxProgress = extras.getInt(Notification.EXTRA_PROGRESS_MAX, -1)
-        val isIndeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
-
-        val hasProgress = (progress >= 1 || maxProgress >= 1) || isIndeterminate
-        // Check if the notification is ongoing, media-style, or belongs to the 'progress' category
         if ((notification.flags and Notification.FLAG_ONGOING_EVENT) != 0
             || (notification.flags and Notification.FLAG_FOREGROUND_SERVICE) != 0
-            || (notification.flags and NotificationCompat.FLAG_GROUP_SUMMARY) != 0
-            || notification.isMediaStyle()
-            || hasProgress) {
+            || (notification.flags and Notification.FLAG_LOCAL_ONLY) != 0
+            || (notification.flags and NotificationCompat.FLAG_GROUP_SUMMARY) != 0) {
             return
         }
 
@@ -342,13 +332,8 @@ class NotificationService @Inject constructor(
                 notificationType = notificationType
             )
 
-            if (notificationMessage.appName == "Spotify" && notificationMessage.timestamp == "1970-01-01 05:30:00") {
-                Log.d(TAG, "Duplicate notification, ignoring...")
-                return@launch
-            }
-
             try {
-//                Log.d("NotificationService", "${notificationMessage.appName} ${notificationMessage.title} ${notificationMessage.text}")
+                Log.d("NotificationService", "${notificationMessage.appName} ${notificationMessage.title} ${notificationMessage.text}")
                 targetDeviceIds.forEach { deviceId ->
                     networkManager.sendMessage(deviceId, notificationMessage)
                 }
@@ -364,10 +349,7 @@ class NotificationService @Inject constructor(
             else -> charSequence?.toString()
         }
     }
-    private fun Notification.isMediaStyle(): Boolean {
-        val mediaStyleClassName = "android.app.Notification\$MediaStyle"
-        return mediaStyleClassName == this.extras.getString(Notification.EXTRA_TEMPLATE)
-    }
+
     companion object {
         const val TAG = "NotificationService"
     }
