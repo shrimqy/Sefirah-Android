@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.first
 import sefirah.domain.model.ActionMessage
 import sefirah.domain.model.AddressEntry
 import sefirah.domain.model.AudioDevice
+import sefirah.domain.model.AudioStreamMessage
 import sefirah.domain.model.BaseRemoteDevice
 import sefirah.domain.model.ClipboardMessage
 import sefirah.domain.model.CommandMessage
@@ -41,23 +42,25 @@ suspend fun NetworkService.handleMessage(device: BaseRemoteDevice, message: Sock
             return
         }
 
-        // Only PairedDevice can receive these messages
-        when (message) {
-            is DeviceInfo -> handleDeviceInfo(message, device as PairedDevice)
-            is CommandMessage -> handleMisc(message, device as PairedDevice)
-            is NotificationMessage -> handleNotificationMessage(message)
-            is NotificationAction -> notificationHandler.performNotificationAction(message)
-            is ReplyAction -> notificationHandler.performReplyAction(message)
-            is PlaybackSession -> handleMediaInfo(device.deviceId, message)
-            is ClipboardMessage -> clipboardHandler.setClipboard(message)
-            is FileTransferMessage ->  fileTransferService.receiveFiles(device.deviceId, message)
-            is RingerMode -> handleRingerMode(message)
-            is DndStatus -> handleDndStatus(message)
-            is ThreadRequest -> smsHandler.handleThreadRequest(message)
-            is TextMessage -> smsHandler.sendTextMessage(message)
-            is AudioDevice -> mediaHandler.handleAudioDevice(device.deviceId, message)
-            is ActionMessage -> actionHandler.addAction(device.deviceId, message)
-            else -> {}
+        if (device is PairedDevice) {
+            when (message) {
+                is DeviceInfo -> handleDeviceInfo(message, device)
+                is CommandMessage -> handleMisc(message, device)
+                is NotificationMessage -> handleNotificationMessage(message)
+                is NotificationAction -> notificationHandler.performNotificationAction(message)
+                is ReplyAction -> notificationHandler.performReplyAction(message)
+                is PlaybackSession -> handleMediaInfo(device.deviceId, message)
+                is ClipboardMessage -> clipboardHandler.setClipboard(message)
+                is FileTransferMessage ->  fileTransferService.receiveFiles(device.deviceId, message)
+                is RingerMode -> handleRingerMode(message)
+                is DndStatus -> handleDndStatus(message)
+                is ThreadRequest -> smsHandler.handleThreadRequest(message)
+                is TextMessage -> smsHandler.sendTextMessage(message)
+                is AudioDevice -> mediaHandler.handleAudioDevice(device.deviceId, message)
+                is AudioStreamMessage -> setStreamVolume(device, message)
+                is ActionMessage -> actionHandler.addAction(device.deviceId, message)
+                else -> {}
+            }
         }
     } catch (e: Exception) {
         Log.e(TAG, "Error handling message for device ${device.deviceId}", e)
@@ -161,5 +164,23 @@ private fun NetworkService.handleNotificationMessage(message: NotificationMessag
         NotificationType.Removed -> notificationHandler.removeNotification(message.notificationKey)
         NotificationType.Invoke -> notificationHandler.openNotification(message.notificationKey)
         else -> {}
+    }
+}
+
+fun NetworkService.setStreamVolume(device: PairedDevice, message: AudioStreamMessage) {
+    try {
+        audioManager.setStreamVolume(message.streamType, message.level, 0)
+    } catch (e: Exception) {
+        Log.e(TAG, "Error setting audio level for stream ${message.streamType}", e)
+    } finally {
+        // Read back the actual volume
+        // since setStreamVolume can silently fail due to permissions, thank you OnePlus!
+        val actualVolume = audioManager.getStreamVolume(message.streamType)
+        
+        // If the volume doesn't match, send back the actual volume
+        if (actualVolume != message.level) {
+            val actualMessage = message.copy(level = actualVolume, maxLevel = audioManager.getStreamMaxVolume(message.streamType))
+            sendMessage(device.deviceId, actualMessage)
+        }
     }
 }

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.app.Service
 import android.app.WallpaperManager
-import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -57,7 +56,9 @@ import sefirah.communication.sms.SmsHandler
 import sefirah.notification.NotificationService
 import sefirah.clipboard.ClipboardHandler
 import sefirah.domain.model.AddressEntry
+import sefirah.domain.model.AudioStreamMessage
 import sefirah.domain.model.AuthenticationMessage
+import sefirah.domain.model.BatteryStatus
 import sefirah.domain.model.ClipboardMessage
 import sefirah.domain.model.CommandMessage
 import sefirah.domain.model.CommandType
@@ -65,11 +66,12 @@ import sefirah.domain.model.ConnectionDetails
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceConnection
 import sefirah.domain.model.DeviceInfo
-import sefirah.domain.model.DeviceStatus
 import sefirah.domain.model.DiscoveredDevice
+import sefirah.domain.model.DndStatus
 import sefirah.domain.model.PairMessage
 import sefirah.domain.model.PairedDevice
 import sefirah.domain.model.PendingDeviceApproval
+import sefirah.domain.model.RingerMode
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.util.MessageSerializer
 import sefirah.network.extensions.ActionHandler
@@ -113,12 +115,8 @@ class NetworkService : Service() {
 
     @Inject lateinit var fileTransferService: FileTransferService
 
-    @Inject
-    lateinit var fileTransferService: FileTransferService
-
-    val audioManager: AudioManager by lazy {
-        getSystemService(AUDIO_SERVICE) as AudioManager
-    }
+    val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
+    val notificationManager by lazy { getSystemService(NOTIFICATION_SERVICE) as NotificationManager }
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
@@ -146,7 +144,7 @@ class NetworkService : Service() {
 
     lateinit var notificationBuilder: NotificationCompat.Builder
 
-    private var deviceStatus: DeviceStatus? = null
+    private var lastBatteryStatus: BatteryStatus? = null
 
     private var tcpServerSocket: javax.net.ssl.SSLServerSocket? = null
     private var serverAcceptJob: Job? = null
@@ -696,7 +694,7 @@ class NetworkService : Service() {
 
     suspend fun finalizeConnection(device: PairedDevice, isNewDevice: Boolean) {
         sendDeviceInfo(device)
-        sendMessage(device.deviceId, getDeviceStatus())
+        sendDeviceStatus(device.deviceId)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
             && preferencesRepository.readRemoteStorageSettingsForDevice(device.deviceId).first()
@@ -763,16 +761,39 @@ class NetworkService : Service() {
         writeChannel.flush()
     }
 
-    private fun broadcastDeviceStatus() {
+    private fun broadcastBatteryStatus() {
         scope.launch {
-            val currentDeviceStatus = getDeviceStatus()
-            // Send status if any field has changed
-            if (currentDeviceStatus != deviceStatus) {
-                // Broadcast to all connected devices
-                broadcastMessage(currentDeviceStatus)
-                deviceStatus = currentDeviceStatus
+            val batteryStatus = getBatteryStatus()
+            if (batteryStatus != lastBatteryStatus) {
+                broadcastMessage(batteryStatus)
+                lastBatteryStatus = batteryStatus
             }
         }
+    }
+
+    private fun broadcastRingerMode() {
+       broadcastMessage(RingerMode(audioManager.ringerMode))
+    }
+
+    private fun broadcastDndStatus() {
+        val dndStatus = getDndStatus()
+        broadcastMessage(dndStatus)
+    }
+
+    private fun sendDeviceStatus(deviceId: String) {
+        val batteryStatus = getBatteryStatus()
+        val ringerMode = RingerMode(audioManager.ringerMode)
+        val dndStatus = getDndStatus()
+
+        sendMessage(deviceId, batteryStatus)
+        sendMessage(deviceId, ringerMode)
+        sendMessage(deviceId, dndStatus)
+
+        getAudioLevels().forEach { audioLevel ->
+            sendMessage(deviceId, audioLevel)
+        }
+
+        lastBatteryStatus = batteryStatus
     }
 
     private fun sendInstalledApps(device: PairedDevice) {
@@ -796,13 +817,17 @@ class NetworkService : Service() {
 
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            broadcastDeviceStatus()
+            broadcastBatteryStatus()
         }
     }
 
     private val interruptionFilterReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            broadcastDeviceStatus()
+            when (intent.action) {
+                NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED,
+                NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED -> broadcastDndStatus()
+                AudioManager.RINGER_MODE_CHANGED_ACTION -> broadcastRingerMode()
+            }
         }
     }
 
@@ -818,31 +843,31 @@ class NetworkService : Service() {
         }
     }
 
-    private fun getDeviceStatus(): DeviceStatus {
+    private fun getBatteryStatus(): BatteryStatus {
         val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        val batteryStatus = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val batteryLevel = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: 0
         val isCharging = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
+        return BatteryStatus(batteryLevel, isCharging)
+    }
 
-        val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        val bluetooth = bluetoothManager.adapter.isEnabled
 
+    private fun getDndStatus(): DndStatus {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-        // Get DND state
         val isDndEnabled = notificationManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+        return DndStatus(isDndEnabled)
+    }
 
-        // RINGER_MODE_SILENT = 0
-        // RINGER_MODE_VIBRATE = 1
-        // RINGER_MODE_NORMAL = 2
-        val ringerMode = audioManager.ringerMode
-
-        return DeviceStatus(
-            batteryStatus = batteryStatus,
-            bluetoothStatus = bluetooth,
-            chargingStatus = isCharging,
-            isDndEnabled = isDndEnabled,
-            ringerMode = ringerMode
+    private fun getAudioLevels(): List<AudioStreamMessage> {
+        val streamTypes = listOf(
+            AudioManager.STREAM_VOICE_CALL,
+            AudioManager.STREAM_RING,
+            AudioManager.STREAM_MUSIC,
+            AudioManager.STREAM_ALARM,
+            AudioManager.STREAM_NOTIFICATION,
         )
+        return streamTypes.map { streamType ->
+            AudioStreamMessage(streamType, audioManager.getStreamVolume(streamType), audioManager.getStreamMaxVolume(streamType))
+        }
     }
 
     suspend fun approveDeviceConnection(deviceId: String) {
