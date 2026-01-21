@@ -1,0 +1,4 @@
+• Fix issue where media sessions overriding each other
+• Fix media session buttons not working properly after sessions were updated
+• Use preferred address when connecting through QR code first
+• Send and handle audio streams
