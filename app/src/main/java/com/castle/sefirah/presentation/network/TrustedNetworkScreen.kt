@@ -37,7 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import sefirah.presentation.components.padding
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.castle.sefirah.navigation.Graph

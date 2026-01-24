@@ -33,9 +33,8 @@ composeCoil = "2.6.0"
 material3 = "1.5.0-alpha10"
 
 # Dependency Injection
-hilt = "2.53.1"
-hiltAndroidx = "1.2.0"
 hilt = "2.59"
+hiltAndroidx = "1.3.0"
 
 richtext = "0.20.0"
 

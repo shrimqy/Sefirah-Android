@@ -23,7 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -42,7 +42,6 @@ import sefirah.presentation.components.NavBar
 import sefirah.presentation.components.NavigationItem
 import sefirah.presentation.components.PullRefresh
 import sefirah.common.R as CommonR
-
 
 @Composable
 fun MainScreen(
