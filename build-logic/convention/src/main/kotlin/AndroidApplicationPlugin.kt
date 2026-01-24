@@ -11,15 +11,14 @@ class AndroidApplicationPlugin : Plugin<Project> {
         with(target) {
             with(pluginManager) {
                 apply("com.android.application")
-                apply("org.jetbrains.kotlin.android")
             }
-
-            applyHilt()
 
             extensions.configure<ApplicationExtension> {
                 configureKotlinAndroid(this)
                 defaultConfig.targetSdk = AndroidConfig.TARGET_SDK
             }
+
+            applyHilt()
         }
     }
 }

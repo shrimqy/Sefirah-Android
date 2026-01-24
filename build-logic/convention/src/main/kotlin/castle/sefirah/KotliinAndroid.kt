@@ -10,15 +10,13 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinBaseExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
-internal fun Project.configureKotlinAndroid(commonExtension: CommonExtension<*, *, *, *, *, *>) {
-    commonExtension.apply {
+internal fun Project.configureKotlinAndroid(extension: CommonExtension) {
+    extension.apply {
         compileSdk = AndroidConfig.COMPILE_SDK
 
-        defaultConfig {
-            minSdk = AndroidConfig.MIN_SDK
-        }
+        defaultConfig.minSdk = AndroidConfig.MIN_SDK
 
-        compileOptions {
+        compileOptions.apply {
             sourceCompatibility = AndroidConfig.JavaVersion
             targetCompatibility = AndroidConfig.JavaVersion
             isCoreLibraryDesugaringEnabled = true
@@ -60,7 +58,7 @@ private inline fun <reified T : KotlinBaseExtension> Project.configureKotlin() =
             // Enable experimental coroutines APIs, including Flow
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
             "-opt-in=kotlinx.coroutines.FlowPreview",
-            "-Xcontext-receivers"
+            "-Xcontext-parameters"
         )
     }
 }

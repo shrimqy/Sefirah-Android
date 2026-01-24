@@ -1,9 +1,9 @@
 [versions]
 # Gradle and Kotlin
-agp = "8.13.0"
-kotlin = "2.1.0"
-ksp = "2.1.0-1.0.29"
-jetbrainsKotlinJvm = "2.1.0"
+agp = "9.0.0"
+kotlin = "2.3.0"
+ksp = "2.3.4"
+jetbrainsKotlinJvm = "2.3.0"
 androidDesugarJdkLibs = "2.1.5"
 smsmms = "kdeconnect-1-21-0"
 
@@ -35,6 +35,7 @@ material3 = "1.5.0-alpha10"
 # Dependency Injection
 hilt = "2.53.1"
 hiltAndroidx = "1.2.0"
+hilt = "2.59"
 
 richtext = "0.20.0"
 
