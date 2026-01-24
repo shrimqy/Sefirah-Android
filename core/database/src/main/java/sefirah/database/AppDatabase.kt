@@ -26,7 +26,7 @@ interface AppDatabase {
         
         fun createRoom(context: Context): AppDatabase = Room
             .databaseBuilder(context, AppRoomDatabase::class.java, DATABASE_NAME)
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(false)
             .build()
     }
 }

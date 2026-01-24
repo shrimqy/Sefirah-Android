@@ -23,7 +23,7 @@ media = "1.7.0"
 media3 = "1.5.1"
 
 # Room
-room = "2.6.1"
+room = "2.8.4"
 
 # Compose
 composeBom = "2024.12.01"
