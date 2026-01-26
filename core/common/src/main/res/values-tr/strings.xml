@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name" translatable="false">Sefirah</string>
+    <string name="version">Sürüm</string>
+    <string name="windows_app">Windows uygulaması</string>
+    <string name="share_deep_link">Masaüstüne Paylaş</string>
+
+    <!-- Notifications Groups-->
+    <string name="group_file_transfer">Dosya Aktarımı</string>
+    <string name="group_network">Ağ</string>
+    <string name="group_media">Medya</string>
+
+    <!-- Channels -->
+    <string name="channel_transfer_progress">Aktarım İlerlemesi</string>
+    <string name="channel_transfer_complete">Aktarım Tamamlandı</string>
+    <string name="channel_device_connection">Cihaz Bağlantısı</string>
+    <string name="channel_media_playback">Masaüstü Medya Oynatımı</string>
+
+    <!-- Notification Content -->
+    <string name="notification_status_connecting">%s cihazına bağlanılıyor</string>
+    <string name="notification_status_disconnected">Bağlı değil</string>
+    <string name="notification_status_connected">%s cihazına bağlandı</string>
+    <string name="notification_disconnect_action">Bağlantıyı Kes</string>
+    <string name="notification_stop_action">Durdur</string>
+    <string name="notification_clipboard_action">Panoyu Gönder</string>
+    <string name="notification_media_playback">Masaüstü Medya Oynatımı</string>
+    <string name="notification_file_transfer">Dosya Aktarımı</string>
+    <string name="notification_file_transfer_error">Dosya Aktarım Hatası</string>
+    <string name="notification_file_transfer_progress">Devam eden dosya aktarımı</string>
+    <string name="notification_file_transfer_complete">Dosya aktarımı tamamlandı</string>
+    <string name="notification_device_connection">Cihaz Bağlantı Durumu</string>
+
+    <!-- Screen Names -->
+    <string name="home">Ana Sayfa</string>
+    <string name="devices">Cihazlar</string>
+    <string name="settings">Ayarlar</string>
+    <string name="device_details">Cihaz Ayrıntıları</string>
+    <string name="about">Hakkında</string>
+    <string name="permissions">İzinler</string>
+    <string name="network">Ağ</string>
+
+    <!-- Common UI Elements -->
+    <string name="cancel">İptal</string>
+    <string name="delete">Sil</string>
+    <string name="next">İleri</string>
+    <string name="finish">Bitir</string>
+    <string name="add">Ekle</string>
+    <string name="back_button">Geri</string>
+    <string name="connect_button">Bağlan</string>
+    <string name="grant">İzin Ver</string>
+    <string name="proceed">Devam Et</string>
+    <string name="done">Tamam</string>
+
+    <!-- Permissions -->
+    <string name="notifications">Bildirimler</string>
+    <string name="notification_permission_rationale">Bağlantı durumu güncellemeleri için</string>
+    <string name="location_permission">Konum İzni</string>
+    <string name="location_permission_rationale">Wi-Fi ağ keşfi için gereklidir</string>
+    <string name="media_access">Medya Erişimi</string>
+    <string name="media_access_rationale">Medya dosyalarına erişim için gereklidir</string>
+    <string name="background_battery_usage">Arka Planda Pil Kullanımı</string>
+    <string name="background_battery_usage_rationale">Pil optimizasyonlarını devre dışı bırakarak uygulamanın stabil bağlantılar kurmasına izin verin</string>
+    <string name="storage_access">Depolama Erişimi</string>
+    <string name="storage_access_rationale">Uzak cihazdaki Android depolama alanına erişim için gereklidir</string>
+    <string name="accessibility_service">Erişilebilirlik Hizmeti</string>
+    <string name="accessibility_service_rationale">Panoyu algılamak için gereklidir</string>
+    <string name="notification_access">Bildirim Erişimi</string>
+    <string name="notification_access_rationale">Bildirim senkronizasyonu için gereklidir</string>
+    <string name="accessibility_settings">Erişilebilirlik ayarları</string>
+    <string name="app_info">Uygulama bilgisi</string>
+    <string name="restricted_settings_instruction">Güvenlik kısıtlamaları nedeniyle şunları yapmanız gerekir: \n 1. \'%s\' hizmetini etkinleştirmeyi deneyin \n 2. Uyarıda \'tamam\'a dokunun ve geri gelin \n 3. Uygulama Bilgisi\'ne gidin \n 4. Taşma menüsünü (3 nokta) açın \n 5. \'Kısıtlanmış ayarlara izin ver\'e dokunun \n 6. Geri dönün ve \'%s\' hizmetini tekrar etkinleştirmeyi deneyin</string>
+
+    <!-- Device Management -->
+    <string name="status_connecting">Bağlanılıyor</string>
+    <string name="status_disconnected">Bağlantı kesildi</string>
+    <string name="status_connected">Bağlandı</string>
+    <string name="add_device">Cihaz Ekle</string>
+    <string name="no_device">Cihaz bulunamadı</string>
+    <string name="last_connected">Son bağlanma</string>
+    <string name="ip_addresses">IP adresleri</string>
+    <string name="no_ip">Yapılandırılmış adres yok</string>
+    <string name="add_custom_ip_button">Özel IP Adresi Ekle</string>
+    <string name="custom_device_list">Özel cihaz listesi</string>
+
+    <!-- Onboarding & Welcome -->
+    <string name="welcome">Hoş Geldiniz</string>
+    <string name="welcome_instructions">Başlamanıza yardımcı olalım, öncelikle Windows uygulamasını indirmek ve kurmak için github\'daki talimatları izleyin</string>
+    <string name="welcome_instructions_2">Bu işlem tamamlandıktan sonra, daha fazla bilgi için Android Uygulamasının GitHub sayfasını inceleyebilirsiniz:</string>
+    <string name="android_app_button">Android Uygulaması</string>
+    <string name="windows_app_button">Windows Uygulaması</string>
+
+    <!-- Preferences -->
+    <string name="clipboard_sync_preference">Panoyu masaüstü ile senkronize et</string>
+    <string name="clipboard_sync_subtitle">[Erişilebilirlik hizmeti izni gerektirir] Pano değişikliklerini algılar ve masaüstüne senkronize eder</string>
+    <string name="image_clipboard_preference">Alınan görüntüleri panoya ekle</string>
+    <string name="image_clipboard_subtitle">Alınan görüntü dosyalarını panonuza kopyalar</string>
+    <string name="notification_sync_preference">Bildirimleri senkronize et</string>
+    <string name="notification_sync_subtitle">Uygulamalardan gelen bildirimleri okur ve masaüstüne senkronize eder</string>
+    <string name="media_session_preference">Masaüstü medya oynatımını Medya Oturumu olarak göster</string>
+    <string name="media_session_subtitle">Medya oynatımı bildirim çubuğunda gösterilecektir</string>
+    <string name="auto_device_discovery_preference">Otomatik cihaz keşfi</string>
+    <string name="auto_device_discovery_subtitle">Tanıdık bir ağa bağlandığınızda eşleştirilmiş cihazları dinle</string>
+    <string name="storage_access_preference">Depolama erişimi</string>
+    <string name="storage_access_subtitle">Windows\'un Android depolama alanınıza erişmesine izin verir</string>
+    <string name="permissions_preference">Uygulama İzinleri</string>
+    <string name="network_preference">Ağ ayarları</string>
+    <string name="network_subtitle">Bağlantı tercihlerini yapılandırın</string>
+    <string name="storage_location_preference">Depolama konumu</string>
+
+    <!-- Dialogs -->
+    <string name="delete_dialog">Silmek istediğinize emin misiniz?</string>
+    <string name="connection_options">Bağlantı Seçenekleri</string>
+    <string name="connection_options_subtitle">Cihaza nasıl bağlanmak istersiniz:</string>
+    <string name="manual_connection">Manuel Bağlantı</string>
+    <string name="available_ip_addresses">Mevcut IP adresleri:</string>
+    <string name="custom_ip_placeholder">Veya özel IP girin</string>
+    <string name="custom_ip_text_label">Ana Bilgisayar Adı/IP Adresi</string>
+    <string name="ip_example">Örnek: 192.168.1.100</string>
+
+    <!-- Network -->
+    <string name="associated_networks">İlişkili Ağlar</string>
+    <string name="no_associated_network">İlişkili ağ yok</string>
+
+    <!-- Storage -->
+    <string name="choose_storage_location">Depolama Konumu Seçin</string>
+    <string name="storage_location_description">Uygulamanın alınan dosyaları depolayacağı bir klasör seçin. Varsayılan olarak İndirilenler klasörü kullanılacaktır.</string>
+    <string name="select_folder_button">Bir klasör seçin</string>
+    <string name="selected_folder_label">Seçilen klasör</string>
+
+    <!-- Hyperlinks -->
+    <string name="help">Yardım</string>
+    <string name="whats_new">Yenilikler</string>
+
+    <!-- Media Playback -->
+    <string name="no_media_playback">Aktif medya oynatımı yok</string>
+
+    <!-- Sync Screen -->
+    <string name="available_devices">Mevcut Cihazlar</string>
+    <string name="sync_screen_subtitle">Windows uygulamasını çalıştıran cihazlar burada görünecektir:</string>
+    <string name="key">Anahtar</string>
+    <string name="manual_connect">Manuel Bağlan</string>
+    <string name="auto_connect">Otomatik Bağlan</string>
+    <string name="restricted_settings_title">Kısıtlanmış ayarlar</string>
+    <string name="connection_error">Bağlantı başarısız: Cihaz eşleştirmeyi reddetti veya mevcut değil</string>
+    <string name="device_name_preference">Cihaz adı</string>
+    <string name="rename_device">Cihazı yeniden adlandır</string>
+    <string name="rename">Yeniden Adlandır</string>
+
+    <string name="message_reply_label">YANITLA</string>
+    <string name="mark_as_read_label">OKUNDU OLARAK İŞARETLE</string>
+    <string name="user_display_name">Siz</string>
+    <string name="set_default_sms_app_title">MMS Gönder</string>
+    <string name="set_group_message_as_mms_title">Grup MMS\'i gönder</string>
+    <string name="set_group_message_as_mms" translatable="false">set_group_message_as_mms</string>
+    <string name="set_long_text_as_mms_title">Uzun metni MMS olarak gönder</string>
+    <string name="set_long_text_as_mms" translatable="false">set_long_text_as_mms</string>
+    <string name="convert_to_mms_after_title">MMS\'e dönüştür</string>
+    <string name="convert_to_mms_after" translatable="false">convert_to_mms_after</string>
+    <string name="convert_to_mms_after_default" translatable="false">3</string>
+    <string name="messages_permission">Mesajlar izni</string>
+    <string name="messages_permission_rationale">Mesaj göndermek ve okumak için</string>
+    <string name="message_sync_preference">Mesajları senkronize et</string>
+    <string name="message_sync_subtitle">Masaüstünden mesaj okumayı ve yazmayı sağlar</string>
+    <string-array name="convert_to_mms_after_entries">
+        <item>Bir mesajdan sonra</item>
+        <item>İki mesajdan sonra</item>
+        <item>Üç mesajdan sonra</item>
+        <item>Dört mesajdan sonra</item>
+        <item>Beş mesajdan sonra</item>
+    </string-array>
+    <string-array name="convert_to_mms_after_values" translatable="false">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+
+    <!-- Toast Messages -->
+    <string name="toast_network">Bilgisayarınızla aynı ağa bağlı olduğunuzdan emin olun</string>
+    <string name="update_check_notification_update_available">Yeni sürüm mevcut!</string>
+    <string name="update_check_confirm">İndir</string>
+    <string name="action_not_now">Şimdi değil</string>
+    <string name="update_check_open">Github\'da aç</string>
+    <string name="error">Hata</string>
+    <string name="connection_toggle">Bağlantı anahtarı</string>
+    <string name="action_cancel">İptal</string>
+    <string name="auto_discovery">Otomatik keşif</string>
+    <string name="always_on">Her zaman açık</string>
+    <string name="disabled">Devre dışı</string>
+    <string name="device_discovery">Cihaz keşfi</string>
+
+</resources>
