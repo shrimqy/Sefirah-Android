@@ -177,6 +177,7 @@ fun DeviceSettingsScreen(
                     subtitle = stringResource(R.string.clipboard_sync_subtitle),
                     filledIcon = ImageVector.vectorResource(R.drawable.ic_content_copy_fill),
                     outlinedIcon = ImageVector.vectorResource(R.drawable.ic_content_copy),
+                    granted = permissionStates.accessibilityGranted,
                     checked = preferences.clipboardSync && permissionStates.accessibilityGranted,
                     permission = null,
                     onRequest = {
@@ -211,6 +212,7 @@ fun DeviceSettingsScreen(
                     subtitle = stringResource(R.string.notification_sync_subtitle),
                     filledIcon = ImageVector.vectorResource(R.drawable.ic_notifications_fill),
                     outlinedIcon = ImageVector.vectorResource(R.drawable.ic_notifications),
+                    granted = permissionStates.notificationListenerGranted,
                     checked = preferences.notificationSync && permissionStates.notificationListenerGranted,
                     permission = null,
                     onRequest = {
@@ -231,6 +233,7 @@ fun DeviceSettingsScreen(
                     subtitle = stringResource(R.string.message_sync_subtitle),
                     filledIcon = ImageVector.vectorResource(R.drawable.ic_chat_fill),
                     outlinedIcon = ImageVector.vectorResource(R.drawable.ic_chat),
+                    granted = permissionStates.smsPermissionGranted,
                     checked = preferences.messageSync && permissionStates.smsPermissionGranted,
                     permission = Manifest.permission_group.SMS,
                     onRequest = { 
@@ -251,6 +254,7 @@ fun DeviceSettingsScreen(
                     subtitle = stringResource(R.string.media_session_subtitle),
                     filledIcon = ImageVector.vectorResource(R.drawable.ic_play_circle_fill),
                     outlinedIcon = ImageVector.vectorResource(R.drawable.ic_play_circle),
+                    granted = permissionStates.notificationGranted,
                     checked = preferences.mediaSession && permissionStates.notificationGranted,
                     permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         Manifest.permission.POST_NOTIFICATIONS
@@ -274,6 +278,7 @@ fun DeviceSettingsScreen(
                         subtitle = stringResource(R.string.storage_access_subtitle),
                         filledIcon = ImageVector.vectorResource(R.drawable.ic_folder_fill),
                         outlinedIcon = ImageVector.vectorResource(R.drawable.ic_folder),
+                        granted = permissionStates.storageGranted,
                         checked = preferences.remoteStorage && permissionStates.storageGranted,
                         permission = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
                             Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -422,6 +427,7 @@ fun SwitchPermissionPrefWidget(
     subtitle: String,
     filledIcon: ImageVector,
     outlinedIcon: ImageVector,
+    granted: Boolean = true,
     checked: Boolean,
     permission: String?,
     onRequest: () -> Unit,
@@ -434,8 +440,7 @@ fun SwitchPermissionPrefWidget(
     val scope = rememberCoroutineScope()
 
     val hasRequestedBefore = permission?.let {
-        viewModel.hasRequestedPermission(it)
-            .collectAsState(initial = false).value
+        viewModel.hasRequestedPermission(it).collectAsState(initial = false).value
     } ?: false
 
     var canShowRationale by remember { mutableStateOf(false) }
@@ -454,7 +459,7 @@ fun SwitchPermissionPrefWidget(
         }
     }
 
-    val showSettings = permission != null && !checked && hasRequestedBefore && !canShowRationale
+    val openSettings = permission != null && !granted && !checked && hasRequestedBefore && !canShowRationale
 
     val icon = if (checked) filledIcon else outlinedIcon
 
@@ -466,7 +471,7 @@ fun SwitchPermissionPrefWidget(
         onCheckedChanged = { isChecked ->
             if (isChecked) {
                 if (permission != null && !checked) {
-                    if (showSettings) {
+                    if (openSettings) {
                         openAppSettings(context)
                     } else {
                         permission.let { viewModel.savePermissionRequested(it) }
