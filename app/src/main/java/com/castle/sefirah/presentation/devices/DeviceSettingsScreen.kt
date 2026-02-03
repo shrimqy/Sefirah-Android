@@ -252,8 +252,8 @@ fun DeviceSettingsScreen(
                 SwitchPermissionPrefWidget(
                     title = stringResource(R.string.media_session_preference),
                     subtitle = stringResource(R.string.media_session_subtitle),
-                    filledIcon = ImageVector.vectorResource(R.drawable.ic_play_circle_fill),
-                    outlinedIcon = ImageVector.vectorResource(R.drawable.ic_play_circle),
+                    filledIcon = ImageVector.vectorResource(R.drawable.ic_computer_sound_fill),
+                    outlinedIcon = ImageVector.vectorResource(R.drawable.ic_computer_sound),
                     granted = permissionStates.notificationGranted,
                     checked = preferences.mediaSession && permissionStates.notificationGranted,
                     permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -266,6 +266,27 @@ fun DeviceSettingsScreen(
                     },
                     onCheckedChanged = { checked ->
                         viewModel.saveMediaSessionSettings(checked)
+                    },
+                    viewModel = viewModel
+                )
+            }
+
+            item {
+                SwitchPermissionPrefWidget(
+                    title = stringResource(R.string.media_player_control_preference),
+                    subtitle = stringResource(R.string.media_player_control_subtitle),
+                    filledIcon = ImageVector.vectorResource(R.drawable.ic_play_circle_fill),
+                    outlinedIcon = ImageVector.vectorResource(R.drawable.ic_play_circle),
+                    granted = permissionStates.notificationListenerGranted,
+                    checked = preferences.mediaPlayerControl && permissionStates.notificationListenerGranted,
+                    permission = null,
+                    onRequest = {
+                        if (!isNotificationListenerEnabled(context)) {
+                            context.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+                        }
+                    },
+                    onCheckedChanged = { checked ->
+                        viewModel.saveMediaPlayerControlSettings(checked)
                     },
                     viewModel = viewModel
                 )

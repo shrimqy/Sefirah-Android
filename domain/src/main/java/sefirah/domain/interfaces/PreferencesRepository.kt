@@ -43,7 +43,10 @@ interface PreferencesRepository {
     
     suspend fun saveMediaSessionSettingsForDevice(deviceId: String, showMediaSession: Boolean)
     fun readMediaSessionSettingsForDevice(deviceId: String): Flow<Boolean>
-    
+
+    suspend fun saveMediaPlayerControlSettingsForDevice(deviceId: String, enabled: Boolean)
+    fun readMediaPlayerControlSettingsForDevice(deviceId: String): Flow<Boolean>
+
     suspend fun saveRemoteStorageSettingsForDevice(deviceId: String, enabled: Boolean)
     fun readRemoteStorageSettingsForDevice(deviceId: String): Flow<Boolean>
 }

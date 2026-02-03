@@ -6,5 +6,6 @@ data class DevicePreferences(
     val notificationSync: Boolean = false,
     val imageClipboard: Boolean = false,
     val mediaSession: Boolean = false,
+    val mediaPlayerControl: Boolean = false,
     val remoteStorage: Boolean = false,
 )

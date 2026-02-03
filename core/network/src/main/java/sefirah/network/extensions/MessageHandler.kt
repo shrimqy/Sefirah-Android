@@ -55,6 +55,7 @@ suspend fun NetworkService.handleMessage(device: BaseRemoteDevice, message: Sock
                 is NotificationAction -> notificationHandler.performNotificationAction(message)
                 is NotificationReply -> notificationHandler.performReplyAction(message)
                 is PlaybackInfo -> handleMediaInfo(device.deviceId, message)
+                is MediaAction -> handleMediaAction(device.deviceId, message)
                 is ClipboardInfo -> clipboardHandler.setClipboard(message)
                 is FileTransferInfo ->  fileTransferService.receiveFiles(device.deviceId, message)
                 is RingerModeState -> handleRingerMode(message)
@@ -130,11 +131,14 @@ suspend fun NetworkService.handleMediaInfo(deviceId: String, playbackSession: Pl
     }
 }
 
-suspend fun NetworkService.handleMisc(commandMessage: CommandMessage, device: PairedDevice) {
-    when (commandMessage.commandType) {
-        CommandType.Disconnect -> disconnectDevice(device, true)
-        CommandType.ClearNotifications -> notificationHandler.removeAllNotification()
-        CommandType.RequestAppList -> handleAppListRequest(device)
+suspend fun NetworkService.handleMediaAction(deviceId: String, action: MediaAction) {
+    if (!preferencesRepository.readMediaPlayerControlSettingsForDevice(deviceId).first()) return
+
+    if (playbackService.getActivePackageNames().contains(action.source)) {
+        playbackService.handlePlaybackAction(action)
+        Log.d(TAG, "Handled MediaAction for Android session: ${action.source}")
+    } else {
+        Log.d(TAG, "MediaAction source ${action.source} not found in Android sessions, ignoring")
     }
 }
 

@@ -151,6 +151,16 @@ class PreferencesRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun saveMediaPlayerControlSettingsForDevice(deviceId: String, enabled: Boolean) {
+        deviceMediaPlayerControlKey(deviceId).update(enabled)
+    }
+
+    override fun readMediaPlayerControlSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceMediaPlayerControlKey(deviceId)] != false
+        }
+    }
+
     override suspend fun saveRemoteStorageSettingsForDevice(deviceId: String, enabled: Boolean) {
         deviceRemoteStorageKey(deviceId).update(enabled)
     }
@@ -177,6 +187,7 @@ class PreferencesRepositoryImpl @Inject constructor(
                 notificationSync = preferences[deviceNotificationSyncKey(deviceId)] != false,
                 imageClipboard = preferences[deviceImageClipboardKey(deviceId)] != false,
                 mediaSession = preferences[deviceMediaSessionKey(deviceId)] != false,
+                mediaPlayerControl = preferences[deviceMediaPlayerControlKey(deviceId)] != false,
                 remoteStorage = preferences[deviceRemoteStorageKey(deviceId)] != false
             )
         }
@@ -199,6 +210,7 @@ class PreferencesRepositoryImpl @Inject constructor(
         fun deviceNotificationSyncKey(deviceId: String) = booleanPreferencesKey("notificationSync_$deviceId")
         fun deviceImageClipboardKey(deviceId: String) = booleanPreferencesKey("imageClipboard_$deviceId")
         fun deviceMediaSessionKey(deviceId: String) = booleanPreferencesKey("mediaSession_$deviceId")
+        fun deviceMediaPlayerControlKey(deviceId: String) = booleanPreferencesKey("mediaPlayerControl_$deviceId")
         fun deviceRemoteStorageKey(deviceId: String) = booleanPreferencesKey("remoteStorage_$deviceId")
     }
 }

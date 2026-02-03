@@ -1,6 +1,8 @@
 package com.castle.sefirah.di
 
 import android.content.Context
+import android.service.notification.NotificationListenerService
+import android.service.notification.StatusBarNotification
 import com.komu.sekia.di.AppCoroutineScope
 import dagger.Binds
 import dagger.Module
@@ -21,6 +23,7 @@ import sefirah.data.repository.PreferencesRepositoryImpl
 import sefirah.network.NetworkManagerImpl
 import sefirah.network.SocketFactoryImpl
 import sefirah.notification.NotificationService
+import sefirah.projection.media.PlaybackService
 import javax.inject.Singleton
 
 @Module
@@ -39,9 +42,6 @@ internal abstract class AppModule {
     @Binds
     abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
 
-    @Binds
-    abstract fun bindNotificationCallback(impl: NotificationService): NotificationCallback
-
     companion object {
         @Provides
         fun provideAppContext(@ApplicationContext context: Context) = context
@@ -52,6 +52,33 @@ internal abstract class AppModule {
             return object : AppCoroutineScope {
                 override val coroutineContext =
                     SupervisorJob() + Dispatchers.Main.immediate + CoroutineName("App")
+            }
+        }
+
+        @Provides
+        @Singleton
+        fun provideNotificationCallback(
+            notificationService: NotificationService,
+            playbackService: PlaybackService
+        ): NotificationCallback = object : NotificationCallback {
+            override fun onNotificationPosted(notification: StatusBarNotification) {
+                notificationService.onNotificationPosted(notification)
+                playbackService.onNotificationPosted(notification)
+            }
+
+            override fun onNotificationRemoved(notification: StatusBarNotification) {
+                notificationService.onNotificationRemoved(notification)
+                playbackService.onNotificationRemoved(notification)
+            }
+
+            override fun onListenerConnected(service: NotificationListenerService) {
+                notificationService.onListenerConnected(service)
+                playbackService.onListenerConnected(service)
+            }
+
+            override fun onListenerDisconnected() {
+                notificationService.onListenerDisconnected()
+                playbackService.onListenerDisconnected()
             }
         }
     }

@@ -173,6 +173,12 @@ class DeviceSettingsViewModel @Inject constructor(
         }
     }
 
+    fun saveMediaPlayerControlSettings(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveMediaPlayerControlSettingsForDevice(deviceId, enabled)
+        }
+    }
+
     fun saveRemoteStorageSettings(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.saveRemoteStorageSettingsForDevice(deviceId, enabled)

@@ -177,5 +177,7 @@
     <string name="connection_toggle">Connection toggle</string>
     <string name="trust_all_networks">Trust all networks</string>
     <string name="device_settings">Device settings</string>
+    <string name="media_player_control_subtitle">Allow control of your phone\'s media players from the desktop</string>
+    <string name="media_player_control_preference">Media player control</string>
 
 </resources>
