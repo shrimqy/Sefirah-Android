@@ -23,12 +23,12 @@ import sefirah.common.R
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
 import sefirah.domain.interfaces.NetworkManager
-import sefirah.domain.model.AudioDevice
-import sefirah.domain.model.AudioMessageType
-import sefirah.domain.model.PlaybackAction
-import sefirah.domain.model.PlaybackActionType
-import sefirah.domain.model.PlaybackSession
-import sefirah.domain.model.SessionType
+import sefirah.domain.model.AudioDeviceInfo
+import sefirah.domain.model.AudioInfoType
+import sefirah.domain.model.MediaAction
+import sefirah.domain.model.MediaActionType
+import sefirah.domain.model.PlaybackInfo
+import sefirah.domain.model.PlaybackInfoType
 import sefirah.common.util.base64ToBitmap
 import sefirah.projection.media.MediaActionReceiver.Companion.ACTION_NEXT
 import sefirah.projection.media.MediaActionReceiver.Companion.ACTION_PLAY
@@ -39,7 +39,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MediaHandler @Inject constructor(
+class RemotePlaybackHandler @Inject constructor(
     private val context: Context,
     private val networkManager: NetworkManager,
     private val notificationCenter: NotificationCenter
@@ -48,22 +48,22 @@ class MediaHandler @Inject constructor(
     
     private var mediaSession: MediaSessionCompat? = null
 
-    private val _activeSessionsByDevice = MutableStateFlow<Map<String, List<PlaybackSession>>>(emptyMap())
-    val activeSessionsByDevice: StateFlow<Map<String, List<PlaybackSession>>> = _activeSessionsByDevice.asStateFlow()
+    private val _activeSessionsByDevice = MutableStateFlow<Map<String, List<PlaybackInfo>>>(emptyMap())
+    val activeSessionsByDevice: StateFlow<Map<String, List<PlaybackInfo>>> = _activeSessionsByDevice.asStateFlow()
     
-    private val _audioDevicesByDevice = MutableStateFlow<Map<String, List<AudioDevice>>>(emptyMap())
-    val audioDevicesByDevice: StateFlow<Map<String, List<AudioDevice>>> = _audioDevicesByDevice.asStateFlow()
+    private val _audioDevicesByDevice = MutableStateFlow<Map<String, List<AudioDeviceInfo>>>(emptyMap())
+    val audioDevicesByDevice: StateFlow<Map<String, List<AudioDeviceInfo>>> = _audioDevicesByDevice.asStateFlow()
     
     private var lastPositionUpdateTimeMap = mutableMapOf<String, Long>()
 
-    fun handleAudioDevice(remoteDeviceId: String, device: AudioDevice) {
-        when (device.audioDeviceType) {
-            AudioMessageType.New, AudioMessageType.Active -> addOrUpdateAudioDevice(remoteDeviceId, device)
-            AudioMessageType.Removed -> removeAudioDevice(remoteDeviceId, device)
+    fun handleAudioDevice(remoteDeviceId: String, device: AudioDeviceInfo) {
+        when (device.infoType) {
+            AudioInfoType.New, AudioInfoType.Active -> addOrUpdateAudioDevice(remoteDeviceId, device)
+            AudioInfoType.Removed -> removeAudioDevice(remoteDeviceId, device)
         }
     }
 
-    private fun addOrUpdateAudioDevice(remoteDeviceId: String, device: AudioDevice) {
+    private fun addOrUpdateAudioDevice(remoteDeviceId: String, device: AudioDeviceInfo) {
         _audioDevicesByDevice.update { currentMap ->
             val currentDevices = currentMap.getOrDefault(remoteDeviceId, emptyList())
             val updatedDevices = if (currentDevices.any { it.deviceId == device.deviceId }) {
@@ -75,7 +75,7 @@ class MediaHandler @Inject constructor(
         }
     }
     
-    private fun removeAudioDevice(remoteDeviceId: String, device: AudioDevice) {
+    private fun removeAudioDevice(remoteDeviceId: String, device: AudioDeviceInfo) {
         _audioDevicesByDevice.update { currentMap ->
             val currentDevices = currentMap.getOrDefault(remoteDeviceId, emptyList())
             val updatedDevices = currentDevices.filter { it.deviceId != device.deviceId }
@@ -87,22 +87,22 @@ class MediaHandler @Inject constructor(
         }
     }
 
-    fun handlePlaybackSessionUpdates(deviceId: String, playbackSession: PlaybackSession) {
-        when (playbackSession.sessionType) {
-            SessionType.PlaybackInfo -> addSession(deviceId, playbackSession)
-            SessionType.RemovedSession -> removeSession(deviceId, playbackSession)
-            SessionType.TimelineUpdate -> updateTimeline(deviceId, playbackSession)
-            SessionType.PlaybackUpdate -> updatePlaybackInfo(deviceId, playbackSession)
+    fun handlePlaybackSessionUpdates(deviceId: String, playbackSession: PlaybackInfo) {
+        when (playbackSession.infoType) {
+            PlaybackInfoType.PlaybackInfo -> addSession(deviceId, playbackSession)
+            PlaybackInfoType.RemovedSession -> removeSession(deviceId, playbackSession)
+            PlaybackInfoType.TimelineUpdate -> updateTimeline(deviceId, playbackSession)
+            PlaybackInfoType.PlaybackUpdate -> updatePlaybackInfo(deviceId, playbackSession)
         }
     }
 
-    private fun updateTimeline(deviceId: String, playbackSession: PlaybackSession) {
+    private fun updateTimeline(deviceId: String, playbackSession: PlaybackInfo) {
         _activeSessionsByDevice.update { currentMap ->
             val currentSessions = currentMap.getOrDefault(deviceId, emptyList())
             val updatedSessions = currentSessions.map { session ->
                 if (session.source == playbackSession.source) {
                     val updatedSession = session.copy(position = playbackSession.position)
-                    lastPositionUpdateTimeMap[session.source!!] = System.currentTimeMillis()
+                    lastPositionUpdateTimeMap[session.source] = System.currentTimeMillis()
                     showMediaSession(deviceId, updatedSession)
                     updatedSession
                 } else {
@@ -114,14 +114,14 @@ class MediaHandler @Inject constructor(
     }
 
 
-    private fun updatePlaybackInfo(deviceId: String, playbackSession: PlaybackSession) {
+    private fun updatePlaybackInfo(deviceId: String, playbackSession: PlaybackInfo) {
         _activeSessionsByDevice.update { currentMap ->
             val currentSessions = currentMap.getOrDefault(deviceId, emptyList())
             val updatedSessions = currentSessions.map { session ->
                 if (session.source == playbackSession.source) {
                     val updatedSession = session.copy(
                         isPlaying = playbackSession.isPlaying,
-                        isShuffle = playbackSession.isShuffle,
+                        isShuffleActive = playbackSession.isShuffleActive,
                         playbackRate = playbackSession.playbackRate)
                     showMediaSession(deviceId, updatedSession)
                     updatedSession
@@ -133,7 +133,7 @@ class MediaHandler @Inject constructor(
         }
     }
 
-    private fun addSession(deviceId: String, session: PlaybackSession) {
+    private fun addSession(deviceId: String, session: PlaybackInfo) {
         _activeSessionsByDevice.update { currentMap ->
             val currentSessions = currentMap.getOrDefault(deviceId, emptyList())
             val updatedSessions = if (currentSessions.any { it.source == session.source }) {
@@ -146,7 +146,7 @@ class MediaHandler @Inject constructor(
         showMediaSession(deviceId, session)
     }
 
-    private fun removeSession(deviceId: String, session: PlaybackSession) {
+    private fun removeSession(deviceId: String, session: PlaybackInfo) {
         _activeSessionsByDevice.update { currentMap ->
             val currentSessions = currentMap.getOrDefault(deviceId, emptyList())
             val updatedSessions = currentSessions.filter { it.source != session.source }
@@ -169,12 +169,14 @@ class MediaHandler @Inject constructor(
     private val mainPendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
-    private fun showMediaSession(deviceId: String, session: PlaybackSession) {
+    private fun showMediaSession(deviceId: String, session: PlaybackInfo) {
         scope.launch(Dispatchers.Main) {
             val metadata = MediaMetadataCompat.Builder()
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, session.trackTitle)
                     .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, session.artist)
-                    .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, session.maxSeekTime.toLong())
+                    .putLong(MediaMetadataCompat.METADATA_KEY_DURATION,
+                        session.maxSeekTime?.toLong() ?: 0
+                    )
                     .putBitmap(
                         MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
                         session.thumbnail?.let { base64ToBitmap(it) }
@@ -198,23 +200,23 @@ class MediaHandler @Inject constructor(
 
             val mediaSessionCallback : MediaSessionCompat.Callback = object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
-                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Play, session.source))
+                    handleMediaAction(deviceId, MediaAction(MediaActionType.Play, session.source))
                 }
 
                 override fun onPause() {
-                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Pause, session.source))
+                    handleMediaAction(deviceId, MediaAction(MediaActionType.Pause, session.source))
                 }
 
                 override fun onSkipToNext() {
-                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Next, session.source))
+                    handleMediaAction(deviceId, MediaAction(MediaActionType.Next, session.source))
                 }
 
                 override fun onSkipToPrevious() {
-                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Previous, session.source))
+                    handleMediaAction(deviceId, MediaAction(MediaActionType.Previous, session.source))
                 }
 
                 override fun onSeekTo(pos: Long) {
-                    handleMediaAction(deviceId, PlaybackAction(PlaybackActionType.Seek, session.source, pos.toDouble()))
+                    handleMediaAction(deviceId, MediaAction(MediaActionType.Seek, session.source, pos.toDouble()))
                 }
             }
 
@@ -252,9 +254,9 @@ class MediaHandler @Inject constructor(
             val mediaStyle = NotificationCompat.MediaStyle().setShowActionsInCompactView(0, 1, 2)
 
             // Get or create MediaSession
-            val mediaSession = this@MediaHandler.mediaSession ?: try {
+            val mediaSession = this@RemotePlaybackHandler.mediaSession ?: try {
                 MediaSessionCompat(context, MEDIA_SESSION_TAG).also {
-                    this@MediaHandler.mediaSession = it
+                    this@RemotePlaybackHandler.mediaSession = it
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to create MediaSession", e)
@@ -277,7 +279,7 @@ class MediaHandler @Inject constructor(
                     currentVolume = volume
                     val normalizedVolume = volume.toFloat() / maxVolume
                     if (currentAudioDevice != null) {
-                        val action = PlaybackAction(PlaybackActionType.VolumeUpdate, currentAudioDevice.deviceId, normalizedVolume.toDouble())
+                        val action = MediaAction(MediaActionType.VolumeUpdate, currentAudioDevice.deviceId, normalizedVolume.toDouble())
                         handleMediaAction(deviceId, action)
                     }
                 }
@@ -310,8 +312,8 @@ class MediaHandler @Inject constructor(
         }
     }
 
-    fun handleMediaAction(deviceId: String, action: PlaybackAction) {
-        Log.d(TAG, "Action received: ${action.playbackActionType}${action.source} device: $deviceId")
+    fun handleMediaAction(deviceId: String, action: MediaAction) {
+        Log.d(TAG, "Action received: ${action.actionType}${action.source} device: $deviceId")
         networkManager.sendMessage(deviceId, action)
     }
 
@@ -321,7 +323,7 @@ class MediaHandler @Inject constructor(
 
         // Remove position updates for sessions from this device
         _activeSessionsByDevice.value[deviceId]?.forEach { session ->
-            session.source?.let { lastPositionUpdateTimeMap.remove(it) }
+            lastPositionUpdateTimeMap.remove(session.source)
         }
         
         // Release media session if no sessions exist for any device
@@ -350,7 +352,7 @@ class MediaHandler @Inject constructor(
         return (volume?.times(maxVolume) ?: maxVolume).toInt()
     }
 
-    private fun PlaybackSession.getCurrentPosition(): Double {
+    private fun PlaybackInfo.getCurrentPosition(): Double {
         val lastUpdateTime = lastPositionUpdateTimeMap[source] ?: System.currentTimeMillis()
         return if (isPlaying) {
             val elapsedTime = System.currentTimeMillis() - lastUpdateTime

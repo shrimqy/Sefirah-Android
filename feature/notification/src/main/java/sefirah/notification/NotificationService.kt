@@ -22,11 +22,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import sefirah.domain.model.Message
+import sefirah.domain.model.NotificationTextMessage
 import sefirah.domain.model.NotificationAction
-import sefirah.domain.model.NotificationMessage
-import sefirah.domain.model.NotificationType
-import sefirah.domain.model.ReplyAction
+import sefirah.domain.model.NotificationInfo
+import sefirah.domain.model.NotificationInfoType
+import sefirah.domain.model.NotificationReply
 import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.interfaces.NotificationCallback
@@ -88,7 +88,7 @@ class NotificationService @Inject constructor(
                 } else {
                     Log.d(TAG, "Active notifications found: ${activeNotifications.size}")
                     activeNotifications.forEach { sbn ->
-                        sendNotification(sbn, NotificationType.Active, targetDeviceIds)
+                        sendNotification(sbn, NotificationInfoType.Active, targetDeviceIds)
                     }
                 }
             }
@@ -105,15 +105,15 @@ class NotificationService @Inject constructor(
 
 
     override fun onNotificationPosted(notification: StatusBarNotification) {
-        sendNotification(notification, NotificationType.New, deviceIds.value)
+        sendNotification(notification, NotificationInfoType.New, deviceIds.value)
     }
 
     override fun onNotificationRemoved(notification: StatusBarNotification) {
         // to remove the notification on the desktop
-        val removeNotificationMessage = NotificationMessage(
+        val removeNotificationMessage = NotificationInfo(
             appPackage = notification.packageName,
             notificationKey = notification.key,
-            notificationType = NotificationType.Removed,
+            infoType = NotificationInfoType.Removed,
             tag = notification.tag,
         )
         deviceIds.value.forEach { deviceId ->
@@ -161,7 +161,7 @@ class NotificationService @Inject constructor(
         }
     }
 
-    fun performReplyAction(action: ReplyAction) {
+    fun performReplyAction(action: NotificationReply) {
         // Get notification and its first reply action (usually messaging apps only have one)
         val notification = listener.activeNotifications
             .find { it.key == action.notificationKey }
@@ -186,7 +186,7 @@ class NotificationService @Inject constructor(
         }
     }
 
-    private fun sendNotification(sbn: StatusBarNotification, notificationType: NotificationType, targetDeviceIds: Set<String>) {
+    private fun sendNotification(sbn: StatusBarNotification, notificationInfoType: NotificationInfoType, targetDeviceIds: Set<String>) {
         if (targetDeviceIds.isEmpty()) return
         val notification = sbn.notification
         val packageName = sbn.packageName
@@ -199,13 +199,14 @@ class NotificationService @Inject constructor(
             packageManager.getApplicationLabel(applicationInfo).toString()
         } catch (e: PackageManager.NameNotFoundException) {
             Log.e(TAG, "Couldn't resolve name $packageName", e)
-            null
+            return
         }
 
         if ((notification.flags and Notification.FLAG_ONGOING_EVENT) != 0
             || (notification.flags and Notification.FLAG_FOREGROUND_SERVICE) != 0
             || (notification.flags and Notification.FLAG_LOCAL_ONLY) != 0
-            || (notification.flags and NotificationCompat.FLAG_GROUP_SUMMARY) != 0) {
+            || (notification.flags and NotificationCompat.FLAG_GROUP_SUMMARY) != 0
+            || notification.isMediaStyle()) {
             return
         }
 
@@ -268,6 +269,8 @@ class NotificationService @Inject constructor(
             val title = getSpannableText(notification.extras.getCharSequence(Notification.EXTRA_TITLE))
                 ?: getSpannableText(notification.extras.getCharSequence(Notification.EXTRA_TITLE_BIG))
 
+            if (title.isNullOrEmpty()) return@launch
+
             val text = getSpannableText(notification.extras.getCharSequence(Notification.EXTRA_TEXT))
                 ?: getSpannableText(notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT))
                 ?: getSpannableText(notification.extras.getCharSequence(Notification.EXTRA_SUB_TEXT))
@@ -279,7 +282,7 @@ class NotificationService @Inject constructor(
                     val messageText = bundle?.getCharSequence("text")?.toString()
 
                     if (sender != null && messageText != null) {
-                        Message(sender = sender, text = messageText)
+                        NotificationTextMessage(sender = sender, text = messageText)
                     } else {
                         null
                     }
@@ -295,47 +298,43 @@ class NotificationService @Inject constructor(
             val formattedTimestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", getDefault()).format(
                 Date(timestamp)
             )
-
+            
             val actions = notification.actions?.mapIndexedNotNull { index, action ->
-                val actionLabel = action.title.toString()
-                // Store replyResultKey for the first remote input, if available
-                val isReplyAction = action.remoteInputs?.firstOrNull()?.resultKey
+                // skip reply actions
+                if (!action.remoteInputs?.firstOrNull()?.resultKey.isNullOrEmpty()) return@mapIndexedNotNull null
 
                 NotificationAction(
                     notificationKey = sbn.key,
-                    label = actionLabel,
-                    actionIndex = index,
-                    isReplyAction = !isReplyAction.isNullOrEmpty()
+                    label = action.title.toString(),
+                    actionIndex = index
                 )
             } ?: emptyList()
 
-            val replyResultKey = notification.actions
-                ?.firstNotNullOfOrNull { action ->
-                    action.remoteInputs?.firstOrNull()?.resultKey
-                }
+            val replyResultKey = notification.actions?.firstNotNullOfOrNull { action ->
+                action.remoteInputs?.firstOrNull()?.resultKey
+            }
 
-            val notificationMessage = NotificationMessage(
+            val notificationInfo = NotificationInfo(
                 notificationKey = notificationKey,
+                infoType = notificationInfoType,
+                timestamp = formattedTimestamp,
                 appPackage = sbn.packageName,
                 appName = appName,
                 title = title,
                 text = text,
                 messages = messages,
-                actions = actions,
+                groupKey = sbn.groupKey,
+                tag = sbn.tag,
                 replyResultKey = replyResultKey,
-                timestamp = formattedTimestamp,
                 appIcon = appIcon,
                 largeIcon = largeIcon,
-                bigPicture = picture,
-                tag = sbn.key,
-                groupKey = sbn.groupKey,
-                notificationType = notificationType
+                actions = actions
             )
 
             try {
-                Log.d("NotificationService", "${notificationMessage.appName} ${notificationMessage.title} ${notificationMessage.text}")
+                Log.d("NotificationService", "${notificationInfo.appName} ${notificationInfo.title} ${notificationInfo.text}")
                 targetDeviceIds.forEach { deviceId ->
-                    networkManager.sendMessage(deviceId, notificationMessage)
+                    networkManager.sendMessage(deviceId, notificationInfo)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send notification message", e)
@@ -348,6 +347,10 @@ class NotificationService @Inject constructor(
             is SpannableString -> charSequence.toString()
             else -> charSequence?.toString()
         }
+    }
+
+    private fun Notification.isMediaStyle(): Boolean {
+        return $$"android.app.Notification$MediaStyle" == this.extras.getString(Notification.EXTRA_TEMPLATE)
     }
 
     companion object {

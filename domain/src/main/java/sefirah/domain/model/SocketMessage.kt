@@ -13,8 +13,24 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 sealed class SocketMessage
 
 @Serializable
-@SerialName("0")
-data class AuthenticationMessage(
+@SerialName("ConnectionAck")
+object ConnectionAck : SocketMessage()
+
+@Serializable
+@SerialName("Disconnect")
+object Disconnect : SocketMessage()
+
+@Serializable
+@SerialName("ClearNotifications")
+object ClearNotifications : SocketMessage()
+
+@Serializable
+@SerialName("RequestApplicationList")
+object RequestApplicationList : SocketMessage()
+
+@Serializable
+@SerialName("Authentication")
+data class Authentication(
     val deviceId: String,
     val deviceName: String,
     val publicKey: String,
@@ -24,22 +40,22 @@ data class AuthenticationMessage(
 ) : SocketMessage()
 
 @Serializable
-@SerialName("1")
+@SerialName("PairMessage")
 data class PairMessage(
     val pair: Boolean,
 ) : SocketMessage()
 
 @Serializable
-@SerialName("2")
+@SerialName("UdpBroadcast")
 data class UdpBroadcast(
+    val port: Int,
     val deviceId: String,
     val deviceName: String,
-    val port: Int,
     val publicKey: String,
 ) : SocketMessage()
 
 @Serializable
-@SerialName("3")
+@SerialName("DeviceInfo")
 @Parcelize
 data class DeviceInfo(
     val deviceName: String,
@@ -48,60 +64,62 @@ data class DeviceInfo(
 ) : SocketMessage(), Parcelable
 
 @Serializable
-@SerialName("4")
-data class BatteryStatus(
+@SerialName("BatteryState")
+data class BatteryState(
     val batteryLevel: Int,
     val isCharging: Boolean
 ) : SocketMessage()
 
 @Serializable
-@SerialName("5")
-data class RingerMode(
+@SerialName("RingerModeState")
+data class RingerModeState(
     val mode: Int
 ) : SocketMessage()
 
 @Serializable
-@SerialName("6")
-data class DndStatus(
+@SerialName("DndState")
+data class DndState(
     val isEnabled: Boolean
 ) : SocketMessage()
 
 @Serializable
-@SerialName("7")
-data class AudioStreamMessage(
+@SerialName("AudioStreamState")
+data class AudioStreamState(
     val streamType: Int,
     val level: Int,
-    val maxLevel: Int
 ) : SocketMessage()
 
 @Serializable
-@SerialName("8")
+@SerialName("AudioDeviceInfo")
 @Parcelize
-data class AudioDevice(
-    val audioDeviceType: AudioMessageType,
+data class AudioDeviceInfo(
+    val infoType: AudioInfoType,
     val deviceId: String,
-    var isSelected: Boolean,
     val deviceName: String,
     var volume: Float,
     var isMuted: Boolean,
+    var isSelected: Boolean,
 ) : SocketMessage(), Parcelable
 
 @Serializable
-@SerialName("9")
-data class CommandMessage(
-    val commandType: CommandType
+@SerialName("ConversationInfo")
+data class ConversationInfo(
+    val infoType: ConversationInfoType,
+    val threadId: Long,
+    val recipients: List<String> = emptyList(),
+    val messages: List<TextMessage> = emptyList()
 ) : SocketMessage()
 
 @Serializable
-@SerialName("10")
+@SerialName("TextMessage")
 data class TextMessage(
+    val uniqueId: Long = 0,
     val addresses: List<String>,
+    val threadId: Long,
     val body: String,
     val timestamp: Long = 0,
     val messageType: Int = 0,
     val read: Boolean = false,
-    val threadId: Long? = null,
-    val uniqueId: Long = 0,
     val subscriptionId: Int = 0,
     val attachments: List<SmsAttachment>? = null,
     val isTextMessage: Boolean = false,
@@ -109,16 +127,14 @@ data class TextMessage(
 ) : SocketMessage()
 
 @Serializable
-@SerialName("11")
-data class TextConversation(
-    val conversationType: ConversationType,
-    val threadId: Long,
-    val recipients: List<String> = emptyList(),
-    val messages: List<TextMessage> = emptyList()
-) : SocketMessage()
+data class SmsAttachment(
+    val id: String,
+    val mimeType: String,
+    val base64EncodedFile: String? = null
+)
 
 @Serializable
-@SerialName("12")
+@SerialName("ThreadRequest")
 data class ThreadRequest(
     val threadId: Long,
     val rangeStartTimestamp: Long = -1,
@@ -126,49 +142,53 @@ data class ThreadRequest(
 ) : SocketMessage()
 
 @Serializable
-@SerialName("13")
-data class ContactMessage(
+@SerialName("ContactInfo")
+data class ContactInfo(
     val id: String,
     val lookupKey: String,
-    val number: String,
     val displayName: String,
-    val photoBase64: String?,
+    val number: String,
+    val photoBase64: String? = null,
 ) : SocketMessage()
 
 @Serializable
-@SerialName("14")
-data class NotificationMessage(
+@SerialName("NotificationInfo")
+data class NotificationInfo(
     val notificationKey: String,
-    val notificationType: NotificationType,
+    val infoType: NotificationInfoType,
     val timestamp: String? = null,
     val appPackage: String? = null,
     val appName: String? = null,
     val title: String? = null,
     val text: String? = null,
-    val messages: List<Message> = emptyList(),
+    val messages: List<NotificationTextMessage> = emptyList(),
     val groupKey: String? = null,
     val tag: String? = null,
+    val actions: List<NotificationAction> = emptyList(),
+    val replyResultKey: String? = null,
     val appIcon: String? = null,
     val largeIcon: String? = null,
-    val bigPicture: String? = null,
-    val replyResultKey: String? = null,
-    val actions: List<NotificationAction> = emptyList(),
 ) : SocketMessage()
 
 @Serializable
-@SerialName("15")
+data class NotificationTextMessage(
+    val sender: String,
+    val text: String
+)
+
+@Serializable
+@SerialName("NotificationAction")
 @Parcelize
 data class NotificationAction(
-    val notificationKey: String,
+    val notificationKey: String? = null,
     val label: String? = null,
-    val actionIndex: Int,
-    val isReplyAction: Boolean
+    val actionIndex: Int
 ) : SocketMessage(), Parcelable
 
 @Serializable
-@SerialName("16")
+@SerialName("NotificationReply")
 @Parcelize
-data class ReplyAction(
+data class NotificationReply(
     val notificationKey: String,
     val replyResultKey: String,
     val replyText: String
@@ -176,16 +196,16 @@ data class ReplyAction(
 
 @Serializable
 @Parcelize
-@SerialName("17")
-data class FileTransferMessage(
-    val serverInfo: ServerInfo,
+@SerialName("FileTransferInfo")
+data class FileTransferInfo(
     val files: List<FileMetadata>,
+    val serverInfo: ServerInfo,
     val isClipboard: Boolean = false
 ) : Parcelable, SocketMessage()
 
 @Serializable
-@SerialName("18")
-data class SftpServerInfo (
+@SerialName("SftpServerInfo")
+data class SftpServerInfo(
     val username: String,
     val password: String,
     val ipAddress: String,
@@ -193,56 +213,65 @@ data class SftpServerInfo (
 ) : SocketMessage()
 
 @Serializable
-@SerialName("19")
-data class ClipboardMessage(
+@SerialName("ClipboardInfo")
+data class ClipboardInfo(
     val clipboardType: String,
     val content: String,
 ) : SocketMessage()
 
 @Serializable
-@SerialName("20")
+@SerialName("PlaybackInfo")
 @Parcelize
-data class PlaybackSession(
-    var sessionType: SessionType,
-    val source: String? = null,
+data class PlaybackInfo(
+    var infoType: PlaybackInfoType,
+    val source: String,
     val trackTitle: String? = null,
     val artist: String? = null,
     var isPlaying: Boolean = false,
+    val isShuffleActive: Boolean? = null,
+    val repeatMode: Int? = null,
     var playbackRate: Double? = 0.0,
-    var isShuffle: Boolean = false,
     var position: Double = 0.0,
     val maxSeekTime: Double = 0.0,
     val minSeekTime: Double? = null,
     val thumbnail: String? = null,
-    val appIcon: String? = null,
+    val appName: String? = null,
+    val volume: Int = 0,
+    val canPlay: Boolean? = null,
+    val canPause: Boolean? = null,
+    val canGoNext: Boolean? = null,
+    val canGoPrevious: Boolean? = null,
+    val canSeek: Boolean? = null,
 ) : SocketMessage(), Parcelable
 
 @Serializable
-@SerialName("21")
-data class PlaybackAction(
-    val playbackActionType: PlaybackActionType,
-    val source: String? = null,
+@SerialName("MediaAction")
+data class MediaAction(
+    val actionType: MediaActionType,
+    val source: String,
     val value: Double? = null
 ) : SocketMessage()
 
 @Serializable
-@SerialName("22")
+@SerialName("ApplicationList")
 data class ApplicationList(
     val appList: List<ApplicationInfo>
 ) : SocketMessage()
 
 @Serializable
-@SerialName("23")
-data class ActionMessage(
-    val actionId: String,
-    val actionName: String,
+@SerialName("ApplicationInfo")
+data class ApplicationInfo(
+    val packageName: String,
+    val appName: String,
+    val appIcon: String? = null
 ) : SocketMessage()
 
 @Serializable
-data class Message(
-    val sender: String,
-    val text: String
-)
+@SerialName("ActionInfo")
+data class ActionInfo(
+    val actionId: String,
+    val actionName: String,
+) : SocketMessage()
 
 @Parcelize
 @Serializable
@@ -258,20 +287,6 @@ data class FileMetadata(
     val mimeType: String,
     val fileSize: Long,
 ) : Parcelable
-
-@Serializable
-data class ApplicationInfo(
-    val packageName: String,
-    val appName: String,
-    val appIcon: String?
-) : SocketMessage()
-
-@Serializable
-data class SmsAttachment(
-    val mimeType: String,
-    val base64EncodedFile: String? = null,
-    val fileName: String
-)
 
 @Parcelize
 @Serializable

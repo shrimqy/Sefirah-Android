@@ -1,27 +1,27 @@
 package sefirah.domain.model
 
-enum class NotificationType {
+enum class NotificationInfoType {
     Active,
     New,
     Removed,
     Invoke
 }
 
-enum class ConversationType {
+enum class ConversationInfoType {
     Active,
     ActiveUpdated,
     New,
     Removed,
 }
 
-enum class SessionType {
+enum class PlaybackInfoType {
     PlaybackInfo,
     PlaybackUpdate,
     TimelineUpdate,
     RemovedSession
 }
 
-enum class PlaybackActionType {
+enum class MediaActionType {
     Play,
     Pause,
     Next,
@@ -35,13 +35,7 @@ enum class PlaybackActionType {
     ToggleMute
 }
 
-enum class CommandType {
-    Disconnect,
-    ClearNotifications,
-    RequestAppList
-}
-
-enum class AudioMessageType {
+enum class AudioInfoType {
     New,
     Removed,
     Active

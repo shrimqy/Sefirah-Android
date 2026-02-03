@@ -8,7 +8,7 @@ import android.util.Base64
 import android.util.Log
 import sefirah.common.util.createTempFile
 import sefirah.common.util.getFileProviderUri
-import sefirah.domain.model.ClipboardMessage
+import sefirah.domain.model.ClipboardInfo
 import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,7 +19,7 @@ class ClipboardHandler @Inject constructor(
 ) {
     private val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     
-    fun setClipboard(clipboard: ClipboardMessage) {
+    fun setClipboard(clipboard: ClipboardInfo) {
         try {
             val clip: ClipData = when {
                 clipboard.clipboardType == "text/plain" -> ClipData.newPlainText("Received clipboard", clipboard.content)

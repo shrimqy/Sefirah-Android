@@ -7,12 +7,12 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import sefirah.domain.model.ClipboardMessage
 import sefirah.domain.model.ConnectionDetails
 import sefirah.domain.model.PairedDevice
 import sefirah.domain.model.PendingDeviceApproval
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.model.ClipboardInfo
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -61,7 +61,7 @@ class NetworkManagerImpl @Inject constructor(
         networkService?.sendMessage(deviceId, message)
     }
 
-    override fun sendClipboardMessage(message: ClipboardMessage) {
+    override fun sendClipboardMessage(message: ClipboardInfo) {
         networkService?.sendClipboardMessage(message)
     }
 

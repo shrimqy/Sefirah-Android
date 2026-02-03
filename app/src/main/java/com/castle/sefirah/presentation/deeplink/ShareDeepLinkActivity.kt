@@ -12,9 +12,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import sefirah.domain.model.ClipboardMessage
 import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.model.ClipboardInfo
 import sefirah.network.NetworkService
 import javax.inject.Inject
 
@@ -72,7 +72,7 @@ class ShareDeepLinkActivity : ComponentActivity() {
         Log.d(TAG, "Handling text share: $text")
         if (!text.isNullOrEmpty()) {
             CoroutineScope(Dispatchers.IO).launch {
-                networkManager.sendClipboardMessage(ClipboardMessage("text/plain", text))
+                networkManager.sendClipboardMessage(ClipboardInfo("text/plain", text))
             }
         } else {
             finishAffinity()

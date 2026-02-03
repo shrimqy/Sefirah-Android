@@ -80,9 +80,9 @@ class NetworkDiscovery @Inject constructor(
         this.tcpServerPort = tcpServerPort
         val localDevice = deviceManager.localDevice
         udpBroadcast = UdpBroadcast(
+            tcpServerPort,
             localDevice.deviceId,
             localDevice.deviceName,
-            tcpServerPort,
             localDevice.publicKey,
         )
         udpBroadcastMessage = MessageSerializer.serialize(udpBroadcast) ?: throw Exception("Failed to serialize UDP broadcast")

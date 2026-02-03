@@ -16,7 +16,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sefirah.domain.interfaces.NetworkManager
-import sefirah.domain.model.ClipboardMessage
+import sefirah.domain.model.ClipboardInfo
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -51,7 +51,7 @@ class ClipboardChangeActivity : FragmentActivity() {
 
     private fun sendClip(data: String?) {
         if (data != null) {
-            networkManager.sendClipboardMessage(ClipboardMessage("text/plain", data))
+            networkManager.sendClipboardMessage(ClipboardInfo("text/plain", data))
         }
     }
 

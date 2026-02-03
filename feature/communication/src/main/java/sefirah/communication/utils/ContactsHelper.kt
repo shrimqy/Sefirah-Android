@@ -12,7 +12,7 @@ import android.util.Log
 import androidx.core.net.toUri
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.StringUtils
-import sefirah.domain.model.ContactMessage
+import sefirah.domain.model.ContactInfo
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import kotlin.text.Charsets.UTF_8
@@ -24,7 +24,7 @@ class ContactsHelper {
      * @param phoneNumber Phone number to look up contact information for
      * @return Contact object containing name, phone number and base64 encoded photo
      */
-    fun getContactInfo(context: Context, phoneNumber: String): ContactMessage? {
+    fun getContactInfo(context: Context, phoneNumber: String): ContactInfo? {
         // Check if the number is valid
         val isValidNumber = try {
             PhoneNumberUtils.isGlobalPhoneNumber(phoneNumber)
@@ -48,13 +48,7 @@ class ContactsHelper {
                     val number = cursor.getString(COLUMN_NUMBER)    
                     val displayName = cursor.getString(COLUMN_DISPLAY_NAME)  
                     val photoBase64 = photoId64Encoded(context, cursor.getString(COLUMN_PHOTO_URI))
-                    return ContactMessage(
-                        id = id,
-                        lookupKey = lookupKey,
-                        number = number,
-                        displayName = displayName,
-                        photoBase64 = photoBase64
-                    )
+                    return ContactInfo(id, lookupKey, displayName, number, photoBase64)
                 }
             }
         } catch (ignored: Exception) {
@@ -90,8 +84,8 @@ class ContactsHelper {
      * @param context android.content.Context running the request
      * @return List of ContactMessage objects with complete contact information
      */
-    fun getAllContacts(context: Context): List<ContactMessage> {
-        val toReturn: ArrayList<ContactMessage> = ArrayList()
+    fun getAllContacts(context: Context): List<ContactInfo> {
+        val toReturn: ArrayList<ContactInfo> = ArrayList()
 
         // Query the Phone content URI to get all phone numbers with contact info
         val contactsUri = Phone.CONTENT_URI 
@@ -113,7 +107,7 @@ class ContactsHelper {
 
                             val photoBase64 = photoId64Encoded(context, photoUri)
 
-                            val contactMessage = ContactMessage(
+                            val contactMessage = ContactInfo(
                                 id = id,
                                 lookupKey = lookupKey,
                                 number = number,

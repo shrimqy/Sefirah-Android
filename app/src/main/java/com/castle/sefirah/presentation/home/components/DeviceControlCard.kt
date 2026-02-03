@@ -39,21 +39,21 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.vectorResource
-import sefirah.domain.model.ActionMessage
 import sefirah.presentation.components.Button
 import sefirah.presentation.components.TextButton
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.PaddingValues
 import sefirah.common.R
+import sefirah.domain.model.ActionInfo
 
 @Composable
 fun DeviceControlCard(
-    actions: List<ActionMessage>,
-    onActionClick: (ActionMessage) -> Unit,
+    actions: List<ActionInfo>,
+    onActionClick: (ActionInfo) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showDialog by remember { mutableStateOf(false) }
-    var selectedAction by remember { mutableStateOf<ActionMessage?>(null) }
+    var selectedAction by remember { mutableStateOf<ActionInfo?>(null) }
     var expanded by remember { mutableStateOf(false) }
 
     if (showDialog && selectedAction != null) {

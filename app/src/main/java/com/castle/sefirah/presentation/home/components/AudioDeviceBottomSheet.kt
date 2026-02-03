@@ -19,15 +19,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import sefirah.domain.model.AudioDevice
-import sefirah.domain.model.AudioMessageType
+import sefirah.domain.model.AudioDeviceInfo
+import sefirah.domain.model.AudioInfoType
 
 @Composable
 fun AudioDeviceBottomSheet(
-    audioDevices: List<AudioDevice>,
-    onVolumeChange: (AudioDevice, Float) -> Unit,
-    onDefaultDeviceSelected: (AudioDevice) -> Unit,
-    onToggleMute: (AudioDevice) -> Unit
+    audioDevices: List<AudioDeviceInfo>,
+    onVolumeChange: (AudioDeviceInfo, Float) -> Unit,
+    onDefaultDeviceSelected: (AudioDeviceInfo) -> Unit,
+    onToggleMute: (AudioDeviceInfo) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -51,10 +51,10 @@ fun AudioDeviceBottomSheet(
 
 @Composable
 fun SelectedAudioDevice(
-    device: AudioDevice,
+    device: AudioDeviceInfo,
     onClick: () -> Unit,
-    toggleMute: (AudioDevice) -> Unit,
-    onVolumeChange: (AudioDevice, Float) -> Unit,
+    toggleMute: (AudioDeviceInfo) -> Unit,
+    onVolumeChange: (AudioDeviceInfo, Float) -> Unit,
 ) {
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -96,10 +96,10 @@ fun SelectedAudioDevice(
 
 @Composable
 fun AudioDeviceItem(
-    device: AudioDevice,
-    onVolumeChange: (AudioDevice, Float) -> Unit,
-    onDeviceSelected: (AudioDevice) -> Unit,
-    onToggleMute: (AudioDevice) -> Unit,
+    device: AudioDeviceInfo,
+    onVolumeChange: (AudioDeviceInfo, Float) -> Unit,
+    onDeviceSelected: (AudioDeviceInfo) -> Unit,
+    onToggleMute: (AudioDeviceInfo) -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -159,24 +159,24 @@ fun AudioDeviceItem(
 fun AudioDeviceBottomSheetPreview() {
     MaterialTheme {
         val sampleDevices = listOf(
-            AudioDevice(
-                audioDeviceType = AudioMessageType.Active,
+            AudioDeviceInfo(
+                infoType = AudioInfoType.Active,
                 deviceId = "1",
                 isSelected = true,
                 deviceName = "Living Room Speaker",
                 volume = 0.7f,
                 isMuted = false
             ),
-            AudioDevice(
-                audioDeviceType = AudioMessageType.Active,
+            AudioDeviceInfo(
+                infoType = AudioInfoType.Active,
                 deviceId = "2",
                 isSelected = false,
                 deviceName = "Kitchen Speaker",
                 volume = 0.5f,
                 isMuted = true,
             ),
-            AudioDevice(
-                audioDeviceType = AudioMessageType.Active,
+            AudioDeviceInfo(
+                infoType = AudioInfoType.Active,
                 deviceId = "3",
                 isSelected = false,
                 deviceName = "Bedroom Speaker",

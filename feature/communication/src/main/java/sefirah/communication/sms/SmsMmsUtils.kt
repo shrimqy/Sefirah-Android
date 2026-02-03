@@ -508,9 +508,9 @@ object SmsMmsUtils {
             subscriptionId = this.subscriptionID,
             attachments = this.attachments?.map { 
                 SmsAttachment(
+                    id = it.uniqueIdentifier,
                     mimeType = it.mimeType,
-                    base64EncodedFile = it.base64EncodedFile,
-                    fileName = it.uniqueIdentifier
+                    base64EncodedFile = it.base64EncodedFile
                 )
             },
             isTextMessage = (this.event and SMSHelper.Message.EVENT_TEXT_MESSAGE) != 0,
@@ -523,7 +523,7 @@ object SmsMmsUtils {
             SMSHelper.Attachment(
                 base64EncodedFile = it.base64EncodedFile,
                 mimeType = it.mimeType,
-                uniqueIdentifier = it.fileName,
+                uniqueIdentifier = it.id,
                 partID = -1
             )
         }

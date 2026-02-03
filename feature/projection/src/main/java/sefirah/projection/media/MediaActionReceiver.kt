@@ -5,8 +5,8 @@ import android.content.Context
 import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
 import sefirah.domain.interfaces.NetworkManager
-import sefirah.domain.model.PlaybackAction
-import sefirah.domain.model.PlaybackActionType
+import sefirah.domain.model.MediaAction
+import sefirah.domain.model.MediaActionType
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -18,18 +18,15 @@ class MediaActionReceiver : BroadcastReceiver() {
         val deviceId = intent.getStringExtra(EXTRA_DEVICE_ID) ?: return
         val action = intent.action ?: return
         
-        val actionType = when (action) {
-            ACTION_PLAY -> PlaybackActionType.Play
-            ACTION_PAUSE -> PlaybackActionType.Pause
-            ACTION_NEXT -> PlaybackActionType.Next
-            ACTION_PREVIOUS -> PlaybackActionType.Previous
+        val mediaActionType = when (action) {
+            ACTION_PLAY -> MediaActionType.Play
+            ACTION_PAUSE -> MediaActionType.Pause
+            ACTION_NEXT -> MediaActionType.Next
+            ACTION_PREVIOUS -> MediaActionType.Previous
             else -> return
         }
 
-        val session = PlaybackAction(
-            source = source,
-            playbackActionType = actionType
-        )
+        val session = MediaAction(mediaActionType, source)
 
         networkManager.sendMessage(deviceId, session)
     }

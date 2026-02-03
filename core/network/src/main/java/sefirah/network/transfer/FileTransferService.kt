@@ -9,7 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import sefirah.domain.model.FileTransferMessage
+import sefirah.domain.model.FileTransferInfo
 import sefirah.clipboard.ClipboardHandler
 import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.model.ServerInfo
@@ -63,7 +63,7 @@ class FileTransferService @Inject constructor(
                     notifications = notifications
                 )
 
-                networkManager.sendMessage(deviceId, FileTransferMessage(serverInfo, filesMetadata))
+                networkManager.sendMessage(deviceId, FileTransferInfo(files = filesMetadata, serverInfo = serverInfo))
                 handler.send()
             } catch (e: CancellationException) {
                 Log.d(TAG, "Transfer $transferId cancelled")
@@ -77,7 +77,7 @@ class FileTransferService @Inject constructor(
         activeTransfers[transferId] = job
     }
 
-    fun receiveFiles(deviceId: String, transfer: FileTransferMessage) {
+    fun receiveFiles(deviceId: String, transfer: FileTransferInfo) {
         val transferId = UUID.randomUUID().toString()
 
         val job = scope.launch {

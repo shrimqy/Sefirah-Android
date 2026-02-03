@@ -46,20 +46,20 @@ import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sefirah.common.R
-import sefirah.domain.model.PlaybackSession
 import sefirah.presentation.components.WavySlider
 import sefirah.common.util.base64ToBitmap
+import sefirah.domain.model.PlaybackInfo
 import java.util.Locale
 import kotlin.math.abs
 
 
 @Composable
 fun MediaCard(
-    sessions: List<PlaybackSession>,
-    onPlayPauseClick: (PlaybackSession) -> Unit,
-    onSkipNextClick: (PlaybackSession) -> Unit,
-    onSkipPreviousClick: (PlaybackSession) -> Unit,
-    onSeekChange: (PlaybackSession, Double) -> Unit
+    sessions: List<PlaybackInfo>,
+    onPlayPauseClick: (PlaybackInfo) -> Unit,
+    onSkipNextClick: (PlaybackInfo) -> Unit,
+    onSkipPreviousClick: (PlaybackInfo) -> Unit,
+    onSeekChange: (PlaybackInfo, Double) -> Unit
 ) {
     if (sessions.isEmpty()) return
 
@@ -111,7 +111,7 @@ fun MediaCard(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PlaybackSession(
-    session: PlaybackSession,
+    session: PlaybackInfo,
     onPlayPauseClick: () -> Unit,
     onSkipNextClick: () -> Unit,
     onSkipPreviousClick: () -> Unit,
@@ -150,15 +150,13 @@ fun PlaybackSession(
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     // App name
-                    session.source?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    Text(
+                        text = session.source,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
                     // Title and artist info
                     Text(

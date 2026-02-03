@@ -23,8 +23,8 @@ import sefirah.communication.sms.SmsMmsUtils.toTextMessage
 import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.interfaces.PreferencesRepository
-import sefirah.domain.model.ConversationType
-import sefirah.domain.model.TextConversation
+import sefirah.domain.model.ConversationInfoType
+import sefirah.domain.model.ConversationInfo
 import sefirah.domain.model.TextMessage
 import sefirah.domain.model.ThreadRequest
 import java.util.concurrent.locks.Lock
@@ -167,8 +167,8 @@ class SmsHandler @Inject constructor(
 
             val isNew = !existingThreadIds.contains(threadId)
 
-            val conversation = TextConversation(
-                conversationType = if (isNew) ConversationType.New else ConversationType.ActiveUpdated,
+            val conversation = ConversationInfo(
+                infoType = if (isNew) ConversationInfoType.New else ConversationInfoType.ActiveUpdated,
                 threadId = threadId,
                 messages = textMessages
             )
@@ -195,9 +195,9 @@ class SmsHandler @Inject constructor(
             
             val textMessage = conversationInfo.message.toTextMessage()
 
-            // Create a TextConversation with just this one message
-            val conversation = TextConversation(
-                conversationType = ConversationType.Active,
+            // Create a ConversationInfo with just this one message
+            val conversation = ConversationInfo(
+                infoType = ConversationInfoType.Active,
                 threadId = threadId,
                 recipients = conversationInfo.recipients,
                 messages = listOf(textMessage)
@@ -229,9 +229,8 @@ class SmsHandler @Inject constructor(
         // Convert all messages to TextMessage objects
         val textMessages = messages.map { it.toTextMessage() }
 
-        // Create a TextConversation containing all messages from this thread
-        val conversation = TextConversation(
-            conversationType = ConversationType.Active,
+        val conversation = ConversationInfo(
+            infoType = ConversationInfoType.Active,
             threadId = request.threadId,
             messages = textMessages
         )
@@ -240,7 +239,7 @@ class SmsHandler @Inject constructor(
         sendToDesktop(conversation, deviceIds.value)
     }
 
-    private fun sendToDesktop(conversation: TextConversation, targetDeviceIds: Set<String> = deviceIds.value) {
+    private fun sendToDesktop(conversation: ConversationInfo, targetDeviceIds: Set<String> = deviceIds.value) {
         targetDeviceIds.forEach { deviceId ->
             networkManager.sendMessage(deviceId, conversation)
         }
@@ -287,8 +286,8 @@ class SmsHandler @Inject constructor(
      * Notify that a thread was deleted
      */
     private fun notifyThreadDeleted(threadId: Long) {
-        val deleteNotification = TextConversation(
-            conversationType = ConversationType.Removed,
+        val deleteNotification = ConversationInfo(
+            infoType = ConversationInfoType.Removed,
             threadId = threadId,
         )
         sendToDesktop(deleteNotification, deviceIds.value)

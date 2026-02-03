@@ -5,18 +5,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import sefirah.domain.model.ActionMessage
+import sefirah.domain.model.ActionInfo
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ActionHandler @Inject constructor() {
-    private val _actionsByDevice = MutableStateFlow<Map<String, List<ActionMessage>>>(emptyMap())
-    val actionsByDevice: StateFlow<Map<String, List<ActionMessage>>> = _actionsByDevice.asStateFlow()
+    private val _actionsByDevice = MutableStateFlow<Map<String, List<ActionInfo>>>(emptyMap())
+    val actionsByDevice: StateFlow<Map<String, List<ActionInfo>>> = _actionsByDevice.asStateFlow()
 
     private val mutex = Mutex()
 
-    suspend fun addAction(deviceId: String, action: ActionMessage) {
+    suspend fun addAction(deviceId: String, action: ActionInfo) {
         mutex.withLock {
             val currentMap = _actionsByDevice.value.toMutableMap()
             val deviceActions = currentMap.getOrDefault(deviceId, emptyList()).toMutableList()
