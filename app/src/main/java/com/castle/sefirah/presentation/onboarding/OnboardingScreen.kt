@@ -19,9 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -49,9 +47,6 @@ fun OnboardingScreen(
 
     val viewModel : SettingsViewModel = hiltViewModel()
 
-    val permissionStates by viewModel.permissionStates.collectAsState()
-
-
     val pagerState = rememberPagerState(initialPage = 0) {
         steps.size
     }
@@ -77,15 +72,6 @@ fun OnboardingScreen(
         }
     }
 
-    val buttonEnabled = remember {
-        derivedStateOf {
-            when(pagerState.currentPage) {
-                steps.size - 1 -> permissionStates.notificationGranted
-                else -> true
-            }
-        }
-    }
-
     Scaffold(
         topBar = {
             Spacer(modifier = Modifier.padding(28.dp))
@@ -107,7 +93,6 @@ fun OnboardingScreen(
                 Row(verticalAlignment = Alignment.CenterVertically){
                     if (buttonState.value.isNotEmpty()) {
                         TextButton(
-                            enabled = buttonEnabled.value,
                             onClick = {
                                 scope.launch {
                                     if (pagerState.currentPage == steps.size - 1) {
