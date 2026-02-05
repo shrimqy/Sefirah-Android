@@ -59,8 +59,7 @@
   <string name="notifications">通知</string>
   <string name="notification_permission_rationale">接続状態の更新で必要です</string>
   <string name="location_permission">位置情報のアクセス</string>
-  <string name="location_permission_rationale">Wi-Fi ネットワークの検出で必要です</string>
-  <string name="media_access_rationale">メディアファイルにアクセスするために必要です</string>
+    <string name="media_access_rationale">メディアファイルにアクセスするために必要です</string>
   <string name="background_battery_usage">バッテリーの最適化を無効化</string>
   <string name="background_battery_usage_rationale">バッテリーの最適化を無効化してアプリが安定した接続を維持します</string>
   <string name="storage_access">ストレージのアクセス</string>
@@ -93,8 +92,7 @@
   <string name="image_clipboard_subtitle">受信した画像ファイルをクリップボードにコピーします</string>
   <string name="notification_sync_preference">通知を同期</string>
   <string name="notification_sync_subtitle">アプリからの通知を読み取ってデスクトップに同期します</string>
-  <string name="media_session_preference">デスクトップメディアの再生をメディアセッションで表示</string>
-  <string name="media_session_subtitle">メディアの再生を通知に表示します</string>
+    <string name="media_session_subtitle">メディアの再生を通知に表示します</string>
   <string name="storage_access_preference">ストレージのアクセス</string>
   <string name="storage_access_subtitle">Windows で Android のストレージにアクセスできるようにします</string>
     <string name="network_preference">ネットワーク設定</string>

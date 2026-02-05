@@ -66,7 +66,6 @@
     <!-- Permissions -->
     <string name="notification_permission_rationale">For connection status updates</string>
     <string name="location_permission">Location Permission</string>
-    <string name="location_permission_rationale">Required for WiFi network discovery</string>
     <string name="media_access_rationale">Required for accessing the media files</string>
     <string name="background_battery_usage">Background Battery Usage</string>
     <string name="background_battery_usage_rationale">Allow the app to maintain stable connections by disabling battery optimizations</string>
@@ -103,7 +102,6 @@
     <string name="image_clipboard_subtitle">Copies the receiving image files to your clipboard</string>
     <string name="notification_sync_preference">Sync notifications</string>
     <string name="notification_sync_subtitle">Reads notifications from apps and syncs them to desktop</string>
-    <string name="media_session_preference">Show Desktop media playback as Media Session</string>
     <string name="media_session_subtitle">Media playback will be shown in the notification bar</string>
     <string name="storage_access_preference">Storage access</string>
     <string name="storage_access_subtitle">Allows Windows to access your Android storage</string>

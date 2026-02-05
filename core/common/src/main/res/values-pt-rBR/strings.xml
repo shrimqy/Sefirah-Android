@@ -65,7 +65,6 @@
     <string name="notifications">Notificações</string>
     <string name="notification_permission_rationale">Para notificar o estado da conexão</string>
     <string name="location_permission">Localização</string>
-    <string name="location_permission_rationale">Para descobertas de Redes Wi-Fi</string>
     <string name="media_access_rationale">Necessário para acessar arquivos de mídia</string>
     <string name="background_battery_usage">Uso em segundo plano</string>
     <string name="background_battery_usage_rationale">Para manter as conexões ativas e estáveis</string>
@@ -102,7 +101,6 @@
     <string name="image_clipboard_subtitle">Adiciona imagens recebidas à área de transferência.</string>
     <string name="notification_sync_preference">Sincronizar notificações</string>
     <string name="notification_sync_subtitle">Envia notificações de apps ao computador</string>
-    <string name="media_session_preference">Reprodução de mídia</string>
     <string name="media_session_subtitle">Exibe na área de notificações o que estiver tocando no computador</string>
     <string name="storage_access_preference">Acesso ao armazenamento</string>
     <string name="storage_access_subtitle">Permite que o Windows acesse o armazenamento do seu Android</string>

@@ -53,7 +53,6 @@
     <string name="notifications">通知权限</string>
     <string name="notification_permission_rationale">用于推送连接状态</string>
     <string name="location_permission">位置权限</string>
-    <string name="location_permission_rationale">用于WiFi局域网扫描</string>
     <string name="media_access_rationale">用于访问媒体文件</string>
     <string name="background_battery_usage">后台运行权限</string>
     <string name="background_battery_usage_rationale">通过关闭“电池优化”实现保持稳定连接</string>
@@ -84,7 +83,6 @@
     <string name="image_clipboard_subtitle">将接收的图片将被复制至剪贴板</string>
     <string name="notification_sync_preference">同步通知</string>
     <string name="notification_sync_subtitle">读取通知并同步至桌面端</string>
-    <string name="media_session_preference">将桌面端媒体空间作为媒体会话显示在本机</string>
     <string name="media_session_subtitle">将在通知栏显示媒体控件</string>
     <string name="storage_access_preference">存储访问</string>
     <string name="storage_access_subtitle">允许桌面端访问本机文件</string>
