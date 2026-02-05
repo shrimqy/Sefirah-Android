@@ -5,6 +5,7 @@ import android.util.Log
 import kotlinx.coroutines.flow.first
 import sefirah.domain.model.ActionInfo
 import sefirah.domain.model.AddressEntry
+import sefirah.domain.model.ApplicationList
 import sefirah.domain.model.AudioDeviceInfo
 import sefirah.domain.model.AudioStreamState
 import sefirah.domain.model.BaseRemoteDevice
@@ -144,7 +145,7 @@ suspend fun NetworkService.handleMediaAction(deviceId: String, action: MediaActi
 
 private fun NetworkService.handleAppListRequest(device: PairedDevice) {
     val appList = getInstalledApps(packageManager)
-    sendMessage(device.deviceId, appList)
+    sendMessage(device.deviceId, ApplicationList(appList))
 }
 
 fun NetworkService.handleRingerMode(ringerMode: RingerModeState) {

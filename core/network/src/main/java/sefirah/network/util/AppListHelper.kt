@@ -4,13 +4,12 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.BitmapDrawable
-import sefirah.domain.model.ApplicationInfo
-import sefirah.domain.model.ApplicationList
 import sefirah.common.util.bitmapToBase64
 import sefirah.common.util.drawableToBitmap
+import sefirah.domain.model.ApplicationInfo
 
 @SuppressLint("QueryPermissionsNeeded")
-fun getInstalledApps(packageManager: PackageManager): ApplicationList {
+fun getInstalledApps(packageManager: PackageManager): List<ApplicationInfo> {
     val appsList = mutableListOf<ApplicationInfo>()
 
     val intent = Intent(Intent.ACTION_MAIN, null)
@@ -32,5 +31,5 @@ fun getInstalledApps(packageManager: PackageManager): ApplicationList {
         }
         appsList.add(ApplicationInfo(packageName, appName, appIcon))
     }
-    return ApplicationList(appsList.sortedBy { it.appName })
+    return appsList.sortedBy { it.appName }
 }

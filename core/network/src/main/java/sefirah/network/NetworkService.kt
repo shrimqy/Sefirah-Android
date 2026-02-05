@@ -801,7 +801,9 @@ class NetworkService : Service() {
     }
 
     private fun sendInstalledApps(device: PairedDevice) {
-        sendMessage(device.deviceId, getInstalledApps(packageManager))
+        getInstalledApps(packageManager).forEach {
+            sendMessage(device.deviceId, it)
+        }
     }
 
     private fun sendContacts(device: PairedDevice) {
