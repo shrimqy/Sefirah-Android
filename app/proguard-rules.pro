@@ -74,3 +74,7 @@
 -keep class com.klinker.android.** { *; }
 -keep class com.android.internal.telephony.** { *; }
 -keep class android.provider.Telephony.** { *; }
+
+# Reference: https://f-droid.org/docs/Reproducible_Builds/#r8-optimizer
+-keep class kotlinx.coroutines.CoroutineExceptionHandler
+-keep class kotlinx.coroutines.internal.MainDispatcherFactory
