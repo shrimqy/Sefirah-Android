@@ -295,7 +295,7 @@ internal class PermissionStep : OnboardingStep {
             }
 
             permissionRationaleDialog?.let { dialog ->
-                if (dialog.show) {
+                if (dialog.show && isAppSideLoaded(context)) {
                     AlertDialog(
                         onDismissRequest = { permissionRationaleDialog = null },
                         title = { Text(stringResource(R.string.restricted_settings_title)) },
