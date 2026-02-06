@@ -1,0 +1,9 @@
+• Fix checking preference opening permission settings even when permission is granted
+• Reorder post connection logic and fix a few race conditions
+• Handle normalised audio stream volume levels
+• Revert isMediaStyle notification check
+• Remove message delay in sending contacts
+• Remove the onboarding permission requirement
+• Add media player control
+• Send individual installed app messages instead of a single list
+• Update strings
