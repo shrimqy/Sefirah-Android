@@ -52,6 +52,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.castle.sefirah.presentation.common.components.LocationPermissionRationaleDialog
 import com.castle.sefirah.presentation.settings.SettingsViewModel
 import sefirah.common.R
 import sefirah.common.util.openAppSettings
@@ -68,6 +69,21 @@ internal class PermissionStep : OnboardingStep {
         var permissionRationaleDialog by remember {
             mutableStateOf<PermissionRationaleDialog?>(null)
         }
+        var showLocationRationaleDialog by remember { mutableStateOf(false) }
+
+        val backgroundLocationRequester = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { /* handled in onResume */ }
+        )
+        val foregroundLocationRequester = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestMultiplePermissions(),
+            onResult = { permissions ->
+                val isForegroundGranted = permissions.entries.all { it.value }
+                if (isForegroundGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    backgroundLocationRequester.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                }
+            }
+        )
 
         // Update permissions on resume
         DisposableEffect(lifecycleOwner.lifecycle) {
@@ -130,27 +146,9 @@ internal class PermissionStep : OnboardingStep {
                     }
 
                     // Location Permission
-                    val backgroundLocationRequester = rememberLauncherForActivityResult(
-                        contract = ActivityResultContracts.RequestPermission(),
-                        onResult = { /* handled in onResume */ }
-                    )
-
-                    val foregroundLocationRequester = rememberLauncherForActivityResult(
-                        contract = ActivityResultContracts.RequestMultiplePermissions(),
-                        onResult = { permissions ->
-                            // Check if foreground permissions were granted
-                            val isForegroundGranted = permissions.entries.all { it.value }
-                            if (isForegroundGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                // If foreground permissions granted, request background permission
-                                backgroundLocationRequester.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                            }
-                        }
-                    )
-
-                    
                     val telephonyPermissionRequester = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.RequestPermission(),
-                        onResult = { 
+                        onResult = {
                             // handled in onResume
                         }
                     )
@@ -177,25 +175,7 @@ internal class PermissionStep : OnboardingStep {
                         subtitle = stringResource(R.string.location_permission_rationale),
                         permission = Manifest.permission.ACCESS_FINE_LOCATION,
                         granted = permissionStates.locationGranted,
-                        onRequest = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                // First request foreground permissions
-                                foregroundLocationRequester.launch(
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                    )
-                                )
-                            } else {
-                                // For Android 9 and below, request only foreground location
-                                foregroundLocationRequester.launch(
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                    )
-                                )
-                            }
-                        },
+                        onRequest = { showLocationRationaleDialog = true },
                         viewModel = viewModel
                     )
 
@@ -343,6 +323,22 @@ internal class PermissionStep : OnboardingStep {
                         }
                     )
                 }
+            }
+
+            if (showLocationRationaleDialog) {
+                LocationPermissionRationaleDialog(
+                    onDismiss = { showLocationRationaleDialog = false },
+                    onConfirm = {
+                        viewModel.savePermissionRequested(Manifest.permission.ACCESS_FINE_LOCATION)
+                        foregroundLocationRequester.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                        showLocationRationaleDialog = false
+                    }
+                )
             }
         }
     }

@@ -25,8 +25,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,6 +43,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.castle.sefirah.navigation.Graph
+import com.castle.sefirah.presentation.common.components.LocationPermissionRationaleDialog
 import com.castle.sefirah.presentation.settings.SettingsViewModel
 import com.castle.sefirah.presentation.settings.components.SwitchPreferenceWidget
 import sefirah.common.R
@@ -60,6 +63,7 @@ fun TrustedNetworkScreen(rootNavController: NavHostController) {
     val currentWifiSsid = viewModel.currentWifiSsid.collectAsState()
     val showDeleteDialog = remember { mutableStateOf(false) }
     val selectedNetwork = remember { mutableStateOf<NetworkEntity?>(null) }
+    var showLocationRationaleDialog by remember { mutableStateOf(false) }
 
     val locationPermission = Manifest.permission.ACCESS_FINE_LOCATION
     val hasRequestedBefore = viewModel.hasRequestedPermission(locationPermission).collectAsState(initial = false).value
@@ -161,13 +165,7 @@ fun TrustedNetworkScreen(rootNavController: NavHostController) {
                                 if (currentShowSettings) {
                                     openAppSettings(context)
                                 } else {
-                                    viewModel.savePermissionRequested(locationPermission)
-                                    foregroundLocationRequester.launch(
-                                        arrayOf(
-                                            Manifest.permission.ACCESS_FINE_LOCATION,
-                                            Manifest.permission.ACCESS_COARSE_LOCATION
-                                        )
-                                    )
+                                    showLocationRationaleDialog = true
                                 }
                             } else {
                                 viewModel.saveTrustAllNetworks(false)
@@ -207,6 +205,22 @@ fun TrustedNetworkScreen(rootNavController: NavHostController) {
             onConfirm = {
                 viewModel.deleteNetwork(selectedNetwork.value!!)
                 showDeleteDialog.value = false
+            }
+        )
+    }
+
+    if (showLocationRationaleDialog) {
+        LocationPermissionRationaleDialog(
+            onDismiss = { showLocationRationaleDialog = false },
+            onConfirm = {
+                viewModel.savePermissionRequested(locationPermission)
+                foregroundLocationRequester.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+                showLocationRationaleDialog = false
             }
         )
     }

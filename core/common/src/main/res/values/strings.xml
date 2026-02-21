@@ -178,6 +178,8 @@
     <string name="media_player_control_subtitle">Allow control of your phone\'s media players from the desktop</string>
     <string name="media_player_control_preference">Media player control</string>
     <string name="location_permission_rationale">Optional permission to know your connected WiFi network.</string>
+    <string name="location_permission_dialog_title">Permission required</string>
+    <string name="location_permission_dialog_message">Sefirah needs background location permission to know the WiFi network when the app is in the background. We only use it to get the WiFi name—nothing else from the location permission is used.</string>
     <string name="media_session_preference">Desktop media sessions</string>
 
 </resources>
