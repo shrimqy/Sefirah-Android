@@ -8,6 +8,4 @@ data class LocalDevice(
     val deviceId: String,
     val deviceName: String,
     val model: String,
-    val publicKey: String,
-    val privateKey: String,
 ) : Parcelable

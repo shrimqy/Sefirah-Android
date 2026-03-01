@@ -10,12 +10,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import sefirah.domain.model.PendingDeviceApproval
+import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.interfaces.PreferencesRepository
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    private val deviceManager: DeviceManager,
     private val networkManager: NetworkManager,
     private val preferencesRepository: PreferencesRepository,
 ): ViewModel() {
@@ -29,7 +31,7 @@ class MainViewModel @Inject constructor(
         }
     }
     
-    val pendingDeviceApproval: StateFlow<PendingDeviceApproval?> = networkManager.pendingDeviceApproval
+    val pendingDeviceApproval: StateFlow<PendingDeviceApproval?> = deviceManager.pendingDeviceApproval
 
     fun approveDevice(deviceId: String) {
         viewModelScope.launch {

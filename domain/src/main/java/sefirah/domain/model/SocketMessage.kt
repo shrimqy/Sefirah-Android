@@ -34,8 +34,6 @@ data class Authentication(
     val deviceId: String,
     val deviceName: String,
     val publicKey: String,
-    val nonce: String,
-    val proof: String,
     val model: String
 ) : SocketMessage()
 
@@ -51,7 +49,6 @@ data class UdpBroadcast(
     val port: Int,
     val deviceId: String,
     val deviceName: String,
-    val publicKey: String,
 ) : SocketMessage()
 
 @Serializable
@@ -276,8 +273,7 @@ data class ActionInfo(
 @Parcelize
 @Serializable
 data class ServerInfo(
-    val port: Int,
-    var password: String
+    val port: Int
 ) : Parcelable
 
 @Serializable

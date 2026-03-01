@@ -10,6 +10,5 @@ data class QrCodeConnectionData(
     val deviceId: String,
     val deviceName: String,
     val addresses: List<String>,
-    val port: Int,
-    val publicKey: String
+    val port: Int
 ) : Parcelable

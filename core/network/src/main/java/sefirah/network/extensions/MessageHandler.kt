@@ -85,9 +85,9 @@ private suspend fun NetworkService.handlePairMessage(device: DiscoveredDevice, m
                 lastConnected = System.currentTimeMillis(),
                 addresses = device.addresses.map { AddressEntry(it) },
                 address = device.address,
-                publicKey = device.publicKey,
                 connectionState = ConnectionState.Connected,
                 port = device.port,
+                certificate = device.certificate.encoded,
             )
 
             deviceManager.removeDiscoveredDevice(device.deviceId)

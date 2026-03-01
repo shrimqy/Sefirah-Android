@@ -17,10 +17,6 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
-import io.ktor.network.sockets.openReadChannel
-import io.ktor.network.sockets.openWriteChannel
-import io.ktor.network.sockets.toJavaAddress
-import io.ktor.util.network.address
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.cancel
@@ -33,9 +29,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -80,9 +73,11 @@ import sefirah.network.extensions.handleMessage
 import sefirah.network.extensions.setNotification
 import sefirah.network.transfer.FileTransferService
 import sefirah.network.transfer.SftpServer
-import sefirah.network.util.ECDHHelper
+import sefirah.network.util.SslHelper
 import sefirah.network.util.getInstalledApps
 import sefirah.common.util.drawableToBase64Compressed
+import sefirah.domain.model.BaseRemoteDevice
+import java.security.cert.X509Certificate
 import javax.inject.Inject
 import javax.net.ssl.SSLSocket
 import kotlin.properties.Delegates
@@ -123,17 +118,12 @@ class NetworkService : Service() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val binder = LocalBinder()
 
-    private val _pendingDeviceApproval = MutableStateFlow<PendingDeviceApproval?>(null)
-    val pendingDeviceApproval: StateFlow<PendingDeviceApproval?> = _pendingDeviceApproval.asStateFlow()
-
     fun emitPendingApproval(device: PendingDeviceApproval) {
-        _pendingDeviceApproval.value = device
+        deviceManager.setPendingApproval(device)
     }
 
     fun clearPendingApproval(deviceId: String) {
-        if (_pendingDeviceApproval.value?.deviceId == deviceId) {
-            _pendingDeviceApproval.value = null
-        }
+        deviceManager.clearPendingApproval(deviceId)
     }
 
     inner class LocalBinder : Binder() {
@@ -321,27 +311,35 @@ class NetworkService : Service() {
                 sslSocket.close()
                 return
             }
-            val address = sslSocket.remoteSocketAddress.address
+            val address = (sslSocket.remoteSocketAddress as? java.net.InetSocketAddress)?.address?.hostAddress ?: ""
 
             Log.d(TAG, "Received Authentication from ${authMessage.deviceId}: ${authMessage.deviceName}")
 
-            val existingDevice = deviceManager.getPairedDevice(authMessage.deviceId)
-            if (existingDevice != null) {
-                authenticatePairedDevice(
+            val certificate = SslHelper.verifySessionCertificate(sslSocket.session, authMessage.publicKey)
+            if (certificate == null) {
+                Log.w(TAG, "No client certificate or public key mismatch with TLS peer; rejecting connection")
+                sslSocket.close()
+                return
+            }
+
+            when (val device = deviceManager.getDevice(authMessage.deviceId)) {
+                is PairedDevice -> authenticatePairedDevice(
                     sslSocket,
                     readChannel,
                     writeChannel,
                     authMessage,
-                    existingDevice,
+                    device,
                     address,
+                    certificate
                 )
-            } else {
-                authenticateNewDevice(
+                else -> authenticateNewDevice(
                     sslSocket,
                     readChannel,
                     writeChannel,
                     authMessage,
-                    address
+                    address,
+                    certificate,
+                    device
                 )
             }
         } catch (e: Exception) {
@@ -356,18 +354,16 @@ class NetworkService : Service() {
         writeChannel: ByteWriteChannel,
         authMessage: Authentication,
         device: PairedDevice,
-        address: String
+        address: String,
+        certificate: X509Certificate
     ) {
-        // Verify authentication
-        if (!verifyAuthentication(device.publicKey, authMessage)) {
-            Log.e(TAG, "Authentication failed for paired device ${authMessage.deviceId}")
+
+        if (!certificate.encoded.contentEquals(device.certificate)) {
+            Log.w(TAG, "Certificate does not match pinned cert for paired device ${authMessage.deviceId}")
             sslSocket.close()
             return
         }
 
-        Log.d(TAG, "Authentication successful for paired device ${authMessage.deviceId}")
-
-        // Create/update DeviceConnection
         val connection = DeviceConnection(
             deviceId = device.deviceId,
             sslSocket = sslSocket,
@@ -385,10 +381,10 @@ class NetworkService : Service() {
                 device.addresses
             },
             address = address,
-            connectionState = ConnectionState.Connected
+            connectionState = ConnectionState.Connected,
         )
 
-        sendAuthMessage(device.publicKey, writeChannel)
+        sendAuthMessage(writeChannel)
 
         deviceManager.addOrUpdatePairedDevice(updatedDevice)
         sendMessage(device.deviceId, ConnectionAck)
@@ -400,44 +396,30 @@ class NetworkService : Service() {
         readChannel: ByteReadChannel,
         writeChannel: ByteWriteChannel,
         authMessage: Authentication,
-        address: String
+        address: String,
+        certificate: X509Certificate,
+        device: BaseRemoteDevice?
     ) {
-        val existingDevice = deviceManager.getDiscoveredDevice(authMessage.deviceId)
-        if (existingDevice != null) {
-            deviceManager.removeDiscoveredDevice(existingDevice.deviceId)
+        if (device != null) {
+            deviceManager.removeDiscoveredDevice(device.deviceId)
         }
 
-        if (!verifyAuthentication(authMessage.publicKey, authMessage)) {
-            Log.e(TAG, "Authentication failed for new device ${authMessage.deviceId}")
-            sslSocket.close()
-            return
-        }
-        sendAuthMessage(authMessage.publicKey, writeChannel)
+        sendAuthMessage(writeChannel)
 
-        val localDevice = deviceManager.localDevice
-        val sharedSecret = ECDHHelper.deriveSharedSecret(
-            localDevice.privateKey,
-            authMessage.publicKey
-        )
-        val verificationCode = generateVerificationCode(sharedSecret)
+        val verificationCode = SslHelper.getVerificationCode(certificate, SslHelper.certificate)
 
         val newDevice = DiscoveredDevice(
-            deviceId = authMessage.deviceId,
-            deviceName = authMessage.deviceName,
-            publicKey = authMessage.publicKey,
-            addresses = listOfNotNull(address),
-            address = address,
-            verificationCode = verificationCode
+            authMessage.deviceId,
+            authMessage.deviceName,
+            address,
+            sslSocket.port,
+            listOfNotNull(address),
+            certificate,
+            verificationCode,
         )
 
-        val connection = DeviceConnection(
-            deviceId = newDevice.deviceId,
-            sslSocket = sslSocket,
-            readChannel = readChannel,
-            writeChannel = writeChannel
-        )
+        val connection = DeviceConnection(newDevice.deviceId, sslSocket, readChannel, writeChannel)
         setConnection(newDevice.deviceId, connection)
-
         deviceManager.addOrUpdateDiscoveredDevice(newDevice)
     }
 
@@ -447,13 +429,9 @@ class NetworkService : Service() {
         val port = device.port ?: PORT_RANGE.first
 
         try {
-            val socket = run {
+            val sslSocket = run {
                 for (ip in device.getAddressesToTry()) {
-                    try {
-                        socketFactory.tcpClientSocket(ip, port)?.let { return@run it }
-                    } catch (e: Exception) {
-                        Log.d(TAG, "Failed to connect to $ip:$port", e)
-                    }
+                    socketFactory.tcpClientSocket(ip, port, device.certificate)?.let { return@run it }
                 }
                 null
             } ?: run {
@@ -462,46 +440,20 @@ class NetworkService : Service() {
                 return
             }
 
-            val writeChannel = socket.openWriteChannel()
-            val readChannel = socket.openReadChannel()
+            val readChannel = sslSocket.inputStream.toByteReadChannel()
+            val writeChannel = sslSocket.outputStream.asByteWriteChannel()
 
-            sendAuthMessage(device.publicKey, writeChannel)
+            sendAuthMessage(writeChannel)
 
-            val authResponse = try {
-                withTimeoutOrNull(3000) {
-                    readChannel.readUTF8Line()?.let {
-                        MessageSerializer.deserialize(it) as? Authentication
-                    }
-                }
-            } catch (_: Exception) {
-                null
-            } ?: run {
-                Log.e(TAG, "Timeout or null response waiting for authentication message")
-                socket.close()
-                deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected()))
-                return
-            }
-
-            if (!verifyAuthentication(device.publicKey, authResponse)) {
-                Log.e(TAG, "Authentication failed ${authResponse.deviceId}")
-                socket.close()
-                deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected()))
-                return
-            }
-
-            val connection = DeviceConnection(
-                deviceId = device.deviceId,
-                socket = socket,
-                readChannel = readChannel,
-                writeChannel = writeChannel
-            )
+            val connection = DeviceConnection(device.deviceId, sslSocket, readChannel, writeChannel)
             setConnection(device.deviceId, connection)
 
+            val remoteAddress = (sslSocket.remoteSocketAddress as? java.net.InetSocketAddress)?.address?.hostAddress ?: ""
             val updatedDevice = device.copy(
                 lastConnected = System.currentTimeMillis(),
                 connectionState = ConnectionState.Connected,
                 port = port,
-                address = socket.remoteAddress.toJavaAddress().address
+                address = remoteAddress
             )
             deviceManager.addOrUpdatePairedDevice(updatedDevice)
 
@@ -519,26 +471,13 @@ class NetworkService : Service() {
         removeConnection(connectionDetails.deviceId)
         deviceManager.removeDiscoveredDevice(connectionDetails.deviceId)
 
-        val addresses = connectionDetails.addresses
-        val port = connectionDetails.port
-        val remotePublicKey = connectionDetails.publicKey
-
         try {
-            val socket = run {
-                // Try prefAddress first if available
+            val sslSocket = run {
                 connectionDetails.prefAddress?.let { prefAddress ->
-                    try {
-                        socketFactory.tcpClientSocket(prefAddress, port)?.let { return@run it }
-                    } catch (_: Exception) { }
+                    socketFactory.tcpClientSocket(prefAddress, connectionDetails.port)?.let { return@run it }
                 }
-
-                // Then try other addresses
-                for (ip in addresses) {
-                    try {
-                        socketFactory.tcpClientSocket(ip, port)?.let { return@run it }
-                    } catch (e: Exception) {
-                        Log.d(TAG, "Failed to connect to $ip:$port", e)
-                    }
+                for (ip in connectionDetails.addresses) {
+                    socketFactory.tcpClientSocket(ip, connectionDetails.port)?.let { return@run it }
                 }
                 null
             } ?: run {
@@ -546,10 +485,10 @@ class NetworkService : Service() {
                 return
             }
 
-            val writeChannel = socket.openWriteChannel()
-            val readChannel = socket.openReadChannel()
+            val readChannel = sslSocket.inputStream.toByteReadChannel()
+            val writeChannel = sslSocket.outputStream.asByteWriteChannel()
 
-            sendAuthMessage(remotePublicKey, writeChannel)
+            sendAuthMessage(writeChannel)
 
             val authResponse = try {
                 withTimeoutOrNull(3000) {
@@ -563,37 +502,33 @@ class NetworkService : Service() {
             } ?: run {
                 Log.e(TAG, "Timeout or null response waiting for Authentication message")
                 readChannel.cancel()
-                socket.close()
+                sslSocket.close()
                 return
             }
 
-            val sharedSecret = ECDHHelper.deriveSharedSecret(deviceManager.localDevice.privateKey, remotePublicKey)
-
-            if (!ECDHHelper.verifyProof(sharedSecret, authResponse.nonce, authResponse.proof)) {
-                Log.e(TAG, "Authentication failed")
+            val certificate = SslHelper.verifySessionCertificate(sslSocket.session, authResponse.publicKey)
+            if (certificate == null) {
+                Log.e(TAG, "No server certificate or public key mismatch with TLS peer; rejecting")
                 readChannel.cancel()
-                socket.close()
+                sslSocket.close()
                 return
             }
 
-            val verificationCode = generateVerificationCode(sharedSecret)
+            val address = (sslSocket.remoteSocketAddress as? java.net.InetSocketAddress)?.address?.hostAddress ?: ""
+
+            val verificationCode = SslHelper.getVerificationCode(certificate, SslHelper.certificate)
 
             val connectedDevice = DiscoveredDevice(
-                deviceId = authResponse.deviceId,
-                deviceName = authResponse.deviceName,
-                publicKey = authResponse.publicKey,
-                addresses = addresses,
-                verificationCode = verificationCode,
-                port = port
+                authResponse.deviceId,
+                authResponse.deviceName,
+                address,
+                connectionDetails.port,
+                connectionDetails.addresses,
+                certificate,
+                verificationCode
             )
 
-            // Create and store DeviceConnection
-            val connection = DeviceConnection(
-                deviceId = connectedDevice.deviceId,
-                socket = socket,
-                readChannel = readChannel,
-                writeChannel = writeChannel
-            )
+            val connection = DeviceConnection(connectedDevice.deviceId, sslSocket, readChannel, writeChannel)
             setConnection(connectedDevice.deviceId, connection)
 
             deviceManager.addOrUpdateDiscoveredDevice(connectedDevice)
@@ -605,7 +540,7 @@ class NetworkService : Service() {
     @SuppressLint("MissingPermission")
     fun sendDeviceInfo(device: PairedDevice) {
         try {
-            val wallpaperBase64 = try {
+            val wallpaper = try {
                 val wallpaperManager = WallpaperManager.getInstance(applicationContext)
                 wallpaperManager.drawable?.let { drawable ->
                     drawableToBase64Compressed(drawable)
@@ -623,9 +558,9 @@ class NetworkService : Service() {
             }
 
             val deviceInfo = DeviceInfo(
-                deviceName = deviceManager.localDevice.deviceName,
-                avatar = wallpaperBase64,
-                phoneNumbers = localPhoneNumbers
+                deviceManager.localDevice.deviceName,
+                wallpaper,
+                localPhoneNumbers
             )
             sendMessage(device.deviceId, deviceInfo)
             Log.d(TAG, "DeviceInfo sent to ${device.deviceId}")
@@ -726,38 +661,12 @@ class NetworkService : Service() {
         }
     }
 
-    private fun verifyAuthentication(
-        remotePublicKey: String,
-        authMessage: Authentication
-    ): Boolean {
-        val sharedSecret = ECDHHelper.deriveSharedSecret(deviceManager.localDevice.privateKey, remotePublicKey)
-        return ECDHHelper.verifyProof(sharedSecret, authMessage.nonce, authMessage.proof)
-    }
-
-    private fun generateVerificationCode(sharedSecret: ByteArray): String {
-        val rawKey = kotlin.math.abs(java.nio.ByteBuffer.wrap(sharedSecret).order(java.nio.ByteOrder.LITTLE_ENDIAN).int)
-        return rawKey.toString().takeLast(6).padStart(6, '0')
-    }
-
-    private suspend fun sendAuthMessage(
-        remotePublicKey: String,
-        writeChannel: ByteWriteChannel
-    ) {
+    private suspend fun sendAuthMessage(writeChannel: ByteWriteChannel) {
         val localDevice = deviceManager.localDevice
-
-        val nonce = ECDHHelper.generateNonce()
-        val sharedSecret = ECDHHelper.deriveSharedSecret(
-            localDevice.privateKey,
-            remotePublicKey
-        )
-
-        val proof = ECDHHelper.generateProof(sharedSecret, nonce)
         val authenticationMessage = Authentication(
             localDevice.deviceId,
             localDevice.deviceName,
-            localDevice.publicKey,
-            nonce,
-            proof,
+            SslHelper.publicKeyString,
             localDevice.model
         )
         val jsonMessage = MessageSerializer.serialize(authenticationMessage)
@@ -855,7 +764,6 @@ class NetworkService : Service() {
         return BatteryState(batteryLevel, isCharging)
     }
 
-
     private fun getDndStatus(): DndState {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val isDndEnabled = notificationManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
@@ -888,10 +796,10 @@ class NetworkService : Service() {
             avatar = null,
             lastConnected = System.currentTimeMillis(),
             addresses = discoveredDevice.addresses.map { AddressEntry(it) },
-            publicKey = discoveredDevice.publicKey,
             connectionState = ConnectionState.Connected,
             port = discoveredDevice.port,
-            address = discoveredDevice.address
+            address = discoveredDevice.address,
+            certificate = discoveredDevice.certificate.encoded
         )
 
         // Send pairing message before removing DiscoveredDevice

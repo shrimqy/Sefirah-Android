@@ -29,7 +29,6 @@ class SendFileHandler(
     private val serverSocket: SSLServerSocket,
     private val fileUris: List<Uri>,
     private val filesMetadata: List<FileMetadata>,
-    private val password: String,
     private val deviceName: String,
     private val notifications: TransferNotificationHelper
 ) {
@@ -61,16 +60,11 @@ class SendFileHandler(
             val readChannel = sslSocket.inputStream.toByteReadChannel()
             val writeChannel = sslSocket.outputStream.asByteWriteChannel()
 
-            withTimeout(5000) {
-                val receivedPassword = readChannel.readUTF8Line()
-                if (receivedPassword != password) throw IOException("Invalid password")
-            }
-
             fileUris.forEachIndexed { index, fileUri ->
                 currentCoroutineContext().ensureActive()
 
                 withTimeout(5000) {
-                    if (readChannel.readUTF8Line() != TRANSFER_START_MESSAGE) throw IOException("Invalid password")
+                    if (readChannel.readUTF8Line() != TRANSFER_START_MESSAGE) throw IOException("Invalid transfer handshake")
                 }
 
                 val metadata = filesMetadata[index]

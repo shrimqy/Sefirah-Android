@@ -20,11 +20,11 @@ import org.apache.sshd.sftp.server.FileHandle
 import org.apache.sshd.sftp.server.SftpFileSystemAccessor
 import org.apache.sshd.sftp.server.SftpSubsystemFactory
 import org.apache.sshd.sftp.server.SftpSubsystemProxy
-import sefirah.domain.model.SftpServerInfo
 import sefirah.domain.interfaces.DeviceManager
+import sefirah.domain.model.SftpServerInfo
 import sefirah.network.util.MediaStoreHelper
 import sefirah.network.util.NetworkHelper.localAddress
-import sefirah.network.util.TrustManager
+import sefirah.network.util.SslHelper
 import sefirah.network.util.generateRandomPassword
 import java.nio.channels.Channel
 import java.nio.channels.SeekableByteChannel
@@ -42,7 +42,6 @@ import javax.inject.Singleton
 @Singleton
 class SftpServer @Inject constructor(
     private val context: Context,
-    private val customTrustManager: TrustManager,
     private val deviceManager: DeviceManager,
 ) {
     private var sshd: SshServer? = null
@@ -50,11 +49,11 @@ class SftpServer @Inject constructor(
 
     private var serverInfo: SftpServerInfo? = null
 
-    private inner class PfxKeyPairProvider : KeyPairProvider {
+    private class PfxKeyPairProvider : KeyPairProvider {
         private val keyPair: KeyPair = initializeKeyPair()
 
         private fun initializeKeyPair(): KeyPair {
-            val keyStore = customTrustManager.getKeyStore()
+            val keyStore = SslHelper.getKeyStore()
             val alias = keyStore.aliases().nextElement()
             val privateKey = keyStore.getKey(alias, null) as PrivateKey
             val cert = keyStore.getCertificate(alias)
@@ -168,7 +167,6 @@ class SftpServer @Inject constructor(
                     }
                 })
             }.build())
-
         this.sshd = sshd
     }
 

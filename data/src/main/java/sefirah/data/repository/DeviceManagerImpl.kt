@@ -26,8 +26,8 @@ import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DiscoveredDevice
 import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.PairedDevice
+import sefirah.domain.model.PendingDeviceApproval
 import sefirah.domain.interfaces.DeviceManager
-import sefirah.network.util.ECDHHelper
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -51,6 +51,19 @@ class DeviceManagerImpl @Inject constructor(
 
     private val _localDevice = MutableStateFlow<LocalDevice?>(null)
     override val localDeviceFlow: StateFlow<LocalDevice?> = _localDevice.asStateFlow()
+
+    private val _pendingDeviceApproval = MutableStateFlow<PendingDeviceApproval?>(null)
+    override val pendingDeviceApproval: StateFlow<PendingDeviceApproval?> = _pendingDeviceApproval.asStateFlow()
+
+    override fun setPendingApproval(approval: PendingDeviceApproval?) {
+        _pendingDeviceApproval.value = approval
+    }
+
+    override fun clearPendingApproval(deviceId: String) {
+        if (_pendingDeviceApproval.value?.deviceId == deviceId) {
+            _pendingDeviceApproval.value = null
+        }
+    }
 
     override val localDevice: LocalDevice
         get() = _localDevice.value ?: runBlocking(Dispatchers.IO) { ensureLocalDevice() }
@@ -87,9 +100,9 @@ class DeviceManagerImpl @Inject constructor(
     }
 
     private suspend fun ensureLocalDevice(): LocalDevice {
-        appRepository.getLocalDevice()?.toDomain()?.also {
-            _localDevice.value = it
-            return it
+        appRepository.getLocalDevice()?.toDomain()?.also { domain ->
+            _localDevice.value = domain
+            return domain
         }
 
         val created = createLocalDevice()
@@ -100,7 +113,6 @@ class DeviceManagerImpl @Inject constructor(
     @SuppressLint("HardwareIds")
     private suspend fun createLocalDevice(): LocalDevice {
         try {
-            val (publicKey, privateKey) = ECDHHelper.generateKeys()
             val deviceName = Settings.Global.getString(context.contentResolver, "device_name")
             val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
 
@@ -115,8 +127,6 @@ class DeviceManagerImpl @Inject constructor(
                 deviceId = androidId,
                 deviceName = deviceName,
                 model = Build.MODEL,
-                publicKey = publicKey,
-                privateKey = privateKey,
             )
             appRepository.addLocalDevice(localDevice.toEntity())
             return localDevice

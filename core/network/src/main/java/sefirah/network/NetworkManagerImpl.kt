@@ -5,11 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import sefirah.domain.model.ConnectionDetails
 import sefirah.domain.model.PairedDevice
-import sefirah.domain.model.PendingDeviceApproval
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.model.ClipboardInfo
@@ -22,10 +19,6 @@ class NetworkManagerImpl @Inject constructor(
 ) : NetworkManager {
     private val serviceIntent by lazy { Intent(context, NetworkService::class.java) }
     private var networkService: NetworkService? = null
-
-    private val emptyPendingFlow = MutableStateFlow<PendingDeviceApproval?>(null)
-    override val pendingDeviceApproval: StateFlow<PendingDeviceApproval?>
-        get() = networkService?.pendingDeviceApproval ?: emptyPendingFlow
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {

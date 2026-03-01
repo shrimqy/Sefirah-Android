@@ -1,12 +1,14 @@
 package sefirah.domain.model
 
+import java.security.cert.Certificate
+
 data class DiscoveredDevice(
     override val deviceId: String,
     override val deviceName: String,
-    override val publicKey: String,
-    override val address: String? = null,
+    val address: String,
+    val port: Int,
     val addresses: List<String> = emptyList(),
+    val certificate: Certificate,
     val verificationCode: String,
     val isPairing: Boolean = false,
-    val port: Int? = null
 ) : BaseRemoteDevice()

@@ -27,8 +27,7 @@ object QrCodeParser {
             } else {
                 qrData.addresses
             },
-            port = qrData.port,
-            publicKey = qrData.publicKey
+            port = qrData.port
         )
     }
 }

@@ -16,7 +16,6 @@ import sefirah.domain.model.ServerInfo
 import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.interfaces.PreferencesRepository
 import sefirah.domain.interfaces.SocketFactory
-import sefirah.network.util.generateRandomPassword
 import sefirah.network.util.getFileMetadata
 import java.io.IOException
 import java.util.UUID
@@ -47,18 +46,17 @@ class FileTransferService @Inject constructor(
                 
                 val filesMetadata = fileUris.map { getFileMetadata(context, it) }
                 
-                val serverSocket = socketFactory.tcpServerSocket(PORT_RANGE)
+                val serverSocket = socketFactory.tcpServerSocket(PORT_RANGE, device.certificate)
                     ?: throw IOException("Failed to create server socket")
 
-                val serverInfo = ServerInfo(serverSocket.localPort, generateRandomPassword())
-                
+                val serverInfo = ServerInfo(serverSocket.localPort)
+
                 val handler = SendFileHandler(
                     context = context,
                     transferId = transferId,
                     serverSocket = serverSocket,
                     fileUris = fileUris,
                     filesMetadata = filesMetadata,
-                    password = serverInfo.password,
                     deviceName = device.deviceName,
                     notifications = notifications
                 )
@@ -88,14 +86,13 @@ class FileTransferService @Inject constructor(
                 val address = device.address 
                     ?: throw IOException("No connected address for device $deviceId")
 
-                val clientSocket = socketFactory.tcpClientSocket(address, transfer.serverInfo.port)
+                val clientSocket = socketFactory.tcpClientSocket(address, transfer.serverInfo.port, device.certificate)
                     ?: throw IOException("Failed to establish connection")
 
                 val handler = ReceiveFileHandler(
                     context = context,
                     transferId = transferId,
                     clientSocket = clientSocket,
-                    serverInfo = transfer.serverInfo,
                     files = transfer.files,
                     deviceName = device.deviceName,
                     preferencesRepository = if (transfer.isClipboard) null else preferencesRepository,

@@ -1,15 +1,11 @@
 package sefirah.domain.interfaces
 
-import kotlinx.coroutines.flow.StateFlow
 import sefirah.domain.model.ClipboardInfo
 import sefirah.domain.model.ConnectionDetails
 import sefirah.domain.model.PairedDevice
-import sefirah.domain.model.PendingDeviceApproval
 import sefirah.domain.model.SocketMessage
 
 interface NetworkManager {
-    val pendingDeviceApproval: StateFlow<PendingDeviceApproval?>
-    
     suspend fun connectPaired(device: PairedDevice)
     suspend fun connectTo(connectionDetails: ConnectionDetails)
     suspend fun disconnect(deviceId: String)

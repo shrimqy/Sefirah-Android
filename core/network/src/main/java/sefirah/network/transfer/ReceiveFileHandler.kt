@@ -9,11 +9,10 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import io.ktor.network.sockets.Socket
-import io.ktor.network.sockets.openReadChannel
-import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.cancel
+import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import io.ktor.utils.io.readAvailable
+import io.ktor.utils.io.streams.asByteWriteChannel
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -21,11 +20,11 @@ import kotlinx.coroutines.flow.first
 import sefirah.common.R
 import sefirah.common.util.createTempFileUri
 import sefirah.domain.model.FileMetadata
-import sefirah.domain.model.ServerInfo
 import sefirah.domain.interfaces.PreferencesRepository
 import sefirah.network.util.formatSize
 import java.io.File
 import java.io.IOException
+import javax.net.ssl.SSLSocket
 
 /**
  * Handles receiving files from a remote device.
@@ -34,8 +33,7 @@ import java.io.IOException
 class ReceiveFileHandler(
     private val context: Context,
     private val transferId: String,
-    private val clientSocket: Socket,
-    private val serverInfo: ServerInfo,
+    private val clientSocket: SSLSocket,
     private val files: List<FileMetadata>,
     private val deviceName: String,
     private val preferencesRepository: PreferencesRepository? = null,
@@ -50,8 +48,8 @@ class ReceiveFileHandler(
     private val isSilent: Boolean get() = notifications == null
 
     suspend fun receive(): Uri? {
-        val readChannel = clientSocket.openReadChannel()
-        val writeChannel = clientSocket.openWriteChannel()
+        val readChannel = clientSocket.inputStream.toByteReadChannel()
+        val writeChannel = clientSocket.outputStream.asByteWriteChannel()
 
         try {
             notifications?.let {
@@ -70,9 +68,6 @@ class ReceiveFileHandler(
                 
                 it.showProgress(transferId = transferId, title = title)
             }
-
-            writeChannel.writeStringUtf8(serverInfo.password)
-            writeChannel.flush()
 
             files.forEachIndexed { index, metadata ->
                 currentCoroutineContext().ensureActive()
@@ -97,6 +92,7 @@ class ReceiveFileHandler(
         } finally {
             readChannel.cancel()
             writeChannel.flushAndClose()
+            try { clientSocket.close() } catch (_: Exception) { }
         }
     }
 

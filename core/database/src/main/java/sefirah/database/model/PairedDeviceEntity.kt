@@ -8,23 +8,41 @@ import sefirah.domain.model.PairedDevice
 @Entity
 data class PairedDeviceEntity (
     @PrimaryKey val deviceId: String,
-    val addresses: List<AddressEntry>,
-    val publicKey: String,
     val deviceName: String,
+    val addresses: List<AddressEntry>,
+    val certificate: ByteArray,
     val avatar: String? = null,
     var lastConnected: Long? = null,
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as PairedDeviceEntity
+
+        if (lastConnected != other.lastConnected) return false
+        if (deviceId != other.deviceId) return false
+        if (addresses != other.addresses) return false
+        if (deviceName != other.deviceName) return false
+        if (avatar != other.avatar) return false
+        if (!certificate.contentEquals(other.certificate)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = lastConnected?.hashCode() ?: 0
+        result = 31 * result + deviceId.hashCode()
+        result = 31 * result + addresses.hashCode()
+        result = 31 * result + deviceName.hashCode()
+        result = 31 * result + (avatar?.hashCode() ?: 0)
+        result = 31 * result + certificate.contentHashCode()
+        return result
+    }
+}
 
 fun PairedDeviceEntity.toDomain(): PairedDevice {
-    return PairedDevice(
-        deviceId = deviceId,
-        addresses = addresses,
-        avatar = avatar,
-        publicKey = publicKey,
-        deviceName = deviceName,
-        lastConnected = lastConnected,
-        port = null // Port is discovered at runtime, not persisted
-    )
+    return PairedDevice(deviceId, deviceName, certificate, addresses, avatar, lastConnected)
 }
 
 fun List<PairedDeviceEntity>.toDomain(): List<PairedDevice> {
@@ -32,12 +50,5 @@ fun List<PairedDeviceEntity>.toDomain(): List<PairedDevice> {
 }
 
 fun PairedDevice.toEntity(): PairedDeviceEntity {
-    return PairedDeviceEntity(
-        deviceId = deviceId,
-        deviceName = deviceName,
-        addresses = addresses,
-        avatar = avatar,
-        publicKey = publicKey,
-        lastConnected = lastConnected
-    )
+    return PairedDeviceEntity(deviceId, deviceName, addresses, certificate, avatar, lastConnected)
 }

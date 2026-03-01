@@ -86,7 +86,6 @@ class NsdService @Inject constructor(val context: Context) {
                 it.port = port
             }
             serviceInfo.setAttribute("deviceName", broadcast.deviceName)
-            serviceInfo.setAttribute("publicKey", broadcast.publicKey)
 
             registrationListener = createRegistrationListener()
             nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)

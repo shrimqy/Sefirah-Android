@@ -21,7 +21,6 @@ import javax.net.ssl.SSLSocket
 
 class DeviceConnection(
     val deviceId: String,
-    var socket: Socket? = null,
     var sslSocket: SSLSocket? = null,
     var readChannel: ByteReadChannel? = null,
     var writeChannel: ByteWriteChannel? = null
@@ -104,13 +103,11 @@ class DeviceConnection(
         stopListening()
         scope.cancel()
         try {
-            socket?.close()
             sslSocket?.close()
             readChannel?.cancel(kotlinx.io.IOException())
             writeChannel?.cancel(kotlinx.io.IOException())
         } catch (_: Exception) {
         }
-        socket = null
         sslSocket = null
         readChannel = null
         writeChannel = null
