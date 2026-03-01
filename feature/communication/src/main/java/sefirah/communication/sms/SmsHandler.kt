@@ -72,7 +72,7 @@ class SmsHandler @Inject constructor(
     }
 
     private fun startContentObserver() {
-        if(!smsPermissionGranted(context)) return
+        if (!smsPermissionGranted(context)) return
         Log.d(TAG, "Message content observer started")
         context.contentResolver.registerContentObserver(mConversationUri, true, messageObserver)
         isObserverRegistered = true
@@ -183,7 +183,7 @@ class SmsHandler @Inject constructor(
     fun sendAllConversations(deviceId: String?) {
         val targetDeviceIds = deviceId?.let { setOf(it) } ?: deviceIds.value
         if (targetDeviceIds.isEmpty()) return
-        
+
         val conversations = getConversations(this.context)
         // Build a set of thread IDs while we process the conversations
         val currentThreadIds = mutableSetOf<Long>()

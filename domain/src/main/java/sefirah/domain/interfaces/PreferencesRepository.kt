@@ -37,7 +37,10 @@ interface PreferencesRepository {
     
     suspend fun saveNotificationSyncSettingsForDevice(deviceId: String, notificationSync: Boolean)
     fun readNotificationSyncSettingsForDevice(deviceId: String): Flow<Boolean>
-    
+
+    suspend fun saveCallStateSyncSettingsForDevice(deviceId: String, callStateSync: Boolean)
+    fun readCallStateSyncSettingsForDevice(deviceId: String): Flow<Boolean>
+
     suspend fun saveImageClipboardSettingsForDevice(deviceId: String, copyImagesToClipboard: Boolean)
     fun readImageClipboardSettingsForDevice(deviceId: String): Flow<Boolean>
     

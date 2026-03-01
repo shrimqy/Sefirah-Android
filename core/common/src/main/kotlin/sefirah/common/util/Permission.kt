@@ -19,7 +19,8 @@ data class PermissionStates(
     val accessibilityGranted: Boolean = false,
     val notificationListenerGranted: Boolean = false,
     val readSensitiveNotificationsGranted: Boolean = false,
-    val smsPermissionGranted: Boolean = false
+    val smsPermissionGranted: Boolean = false,
+    val phoneStateGranted: Boolean = false
 )
 
 fun checkNotificationPermission(
@@ -132,4 +133,22 @@ fun smsPermissionGranted(
     return allGranted
 }
 
+fun isContactsPermissionGranted(context: Context) : Boolean {
+    return context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+}
 
+fun phoneStatePermissionGranted(
+    context: Context,
+    onGranted: (String) -> Unit = {}
+): Boolean {
+    val phoneStateGranted = context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) ==
+        PackageManager.PERMISSION_GRANTED
+    val callLogGranted = context.checkSelfPermission(Manifest.permission.READ_CALL_LOG) ==
+        PackageManager.PERMISSION_GRANTED
+    val bothGranted = phoneStateGranted && callLogGranted
+    if (bothGranted) {
+        onGranted(Manifest.permission.READ_PHONE_STATE)
+        onGranted(Manifest.permission.READ_CALL_LOG)
+    }
+    return bothGranted
+}

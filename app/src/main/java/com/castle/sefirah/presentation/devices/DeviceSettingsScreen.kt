@@ -130,6 +130,11 @@ fun DeviceSettingsScreen(
             }
         )
 
+        val phoneCallPermissionRequester = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestMultiplePermissions(),
+            onResult = { viewModel.updatePermissionStates() }
+        )
+
         val contactsPermissionRequester = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestPermission(),
             onResult = {
@@ -243,6 +248,30 @@ fun DeviceSettingsScreen(
                     },
                     onCheckedChanged = { checked ->
                         viewModel.saveMessageSyncSettings(checked)
+                    },
+                    viewModel = viewModel
+                )
+            }
+
+            item {
+                SwitchPermissionPrefWidget(
+                    title = stringResource(R.string.call_notifier_preference),
+                    subtitle = stringResource(R.string.call_notifier_preference_subtitle),
+                    filledIcon = ImageVector.vectorResource(R.drawable.ic_mobile_fill),
+                    outlinedIcon = ImageVector.vectorResource(R.drawable.ic_mobile_fill),
+                    granted = permissionStates.phoneStateGranted,
+                    checked = preferences.callStateSync && permissionStates.phoneStateGranted,
+                    permission = Manifest.permission.READ_PHONE_STATE,
+                    onRequest = {
+                        phoneCallPermissionRequester.launch(
+                            arrayOf(
+                                Manifest.permission.READ_PHONE_STATE,
+                                Manifest.permission.READ_CALL_LOG
+                            )
+                        )
+                    },
+                    onCheckedChanged = { checked ->
+                        viewModel.saveCallStateSyncSettings(checked)
                     },
                     viewModel = viewModel
                 )

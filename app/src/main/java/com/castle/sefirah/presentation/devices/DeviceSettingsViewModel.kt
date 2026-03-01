@@ -20,6 +20,7 @@ import sefirah.common.util.checkNotificationPermission
 import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
+import sefirah.common.util.phoneStatePermissionGranted
 import sefirah.common.util.smsPermissionGranted
 import sefirah.domain.model.AddressEntry
 import sefirah.domain.model.PairedDevice
@@ -72,7 +73,8 @@ class DeviceSettingsViewModel @Inject constructor(
             storageGranted = checkStoragePermission(context),
             accessibilityGranted = isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}"),
             notificationListenerGranted = isNotificationListenerEnabled(context),
-            smsPermissionGranted = smsPermissionGranted(context)
+            smsPermissionGranted = smsPermissionGranted(context),
+            phoneStateGranted = phoneStatePermissionGranted(context)
         )
         _permissionStates.value = newStates
     }
@@ -182,6 +184,12 @@ class DeviceSettingsViewModel @Inject constructor(
     fun saveRemoteStorageSettings(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.saveRemoteStorageSettingsForDevice(deviceId, enabled)
+        }
+    }
+
+    fun saveCallStateSyncSettings(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveCallStateSyncSettingsForDevice(deviceId, enabled)
         }
     }
 

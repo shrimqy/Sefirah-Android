@@ -158,7 +158,10 @@ internal class PermissionStep : OnboardingStep {
                             telephonyPermissionRequester.launch(Manifest.permission.READ_PHONE_STATE)
                         }
                     )
-                
+                    val phoneCallPermissionRequester = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestMultiplePermissions(),
+                        onResult = { viewModel.updatePermissionStates() }
+                    )
                     val smsPermissionRequester = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.RequestMultiplePermissions(),
                         onResult = { permissions ->
@@ -187,6 +190,22 @@ internal class PermissionStep : OnboardingStep {
                         onRequest = {
                             smsPermissionRequester.launch(
                                 arrayOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS) 
+                            )
+                        },
+                        viewModel = viewModel
+                    )
+
+                    PermissionItem(
+                        title = stringResource(R.string.phone_permission),
+                        subtitle = stringResource(R.string.phone_permission_rationale),
+                        granted = permissionStates.phoneStateGranted,
+                        permission = Manifest.permission.READ_PHONE_STATE,
+                        onRequest = {
+                            phoneCallPermissionRequester.launch(
+                                arrayOf(
+                                    Manifest.permission.READ_PHONE_STATE,
+                                    Manifest.permission.READ_CALL_LOG
+                                )
                             )
                         },
                         viewModel = viewModel

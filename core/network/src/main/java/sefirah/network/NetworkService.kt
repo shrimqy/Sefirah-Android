@@ -37,6 +37,7 @@ import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
 import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.smsPermissionGranted
+import sefirah.communication.call.CallStateReceiver
 import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.database.AppRepository
@@ -111,6 +112,8 @@ class NetworkService : Service() {
     @Inject lateinit var deviceManager: DeviceManager
 
     @Inject lateinit var fileTransferService: FileTransferService
+
+    @Inject lateinit var callStateReceiver: CallStateReceiver
 
     val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
     val notificationManager by lazy { getSystemService(NOTIFICATION_SERVICE) as NotificationManager }
@@ -659,6 +662,7 @@ class NetworkService : Service() {
             sendInstalledApps(device)
             sendContacts(device)
         }
+        callStateReceiver.register(this)
     }
 
     private suspend fun sendAuthMessage(writeChannel: ByteWriteChannel) {
@@ -717,10 +721,8 @@ class NetworkService : Service() {
 
     private fun sendContacts(device: PairedDevice) {
         try {
-            if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "READ_CONTACTS permission not granted, skipping contacts sync")
-                return
-            }
+            if (smsPermissionGranted(this)) return
+
             ContactsHelper().getAllContacts(this).forEach { contact ->
                 sendMessage(device.deviceId, contact)
             }
@@ -852,6 +854,7 @@ class NetworkService : Service() {
         unregisterReceiver(interruptionFilterReceiver)
         unregisterReceiver(screenOnReceiver)
         unregisterReceiver(wifiStateReceiver)
+        callStateReceiver.unregister(this)
         sftpServer.stop()
         remotePlaybackHandler.release()
         smsHandler.stop()

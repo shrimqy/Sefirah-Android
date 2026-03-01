@@ -5,7 +5,6 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.PhoneLookup
-import android.telephony.PhoneNumberUtils
 import android.util.Base64
 import android.util.Base64OutputStream
 import android.util.Log
@@ -25,33 +24,35 @@ class ContactsHelper {
      * @return Contact object containing name, phone number and base64 encoded photo
      */
     fun getContactInfo(context: Context, phoneNumber: String): ContactInfo? {
-        // Check if the number is valid
-        val isValidNumber = try {
-            PhoneNumberUtils.isGlobalPhoneNumber(phoneNumber)
-        } catch (e: Exception) {
-            false
-        }
-
-        // If not a valid number, return a Contact with just the original input
-        if (!isValidNumber) {
-            return null
-        }
-
-        // Look up contact info for valid numbers
         val uri = Uri.withAppendedPath(PhoneLookup.CONTENT_FILTER_URI, Uri.encode(phoneNumber))
+        val projection = arrayOf(
+            PhoneLookup._ID,
+            PhoneLookup.LOOKUP_KEY,
+            PhoneLookup.DISPLAY_NAME,
+            PhoneLookup.PHOTO_URI,
+        )
 
         try {
-            context.contentResolver.query(uri, PROJECTION, null, null, null).use { cursor ->
+            context.contentResolver.query(uri, projection, null, null, null).use { cursor ->
                 if (cursor != null && cursor.moveToFirst()) {
-                    val id = cursor.getString(COLUMN_ID)           
-                    val lookupKey = cursor.getString(COLUMN_LOOKUP_KEY)    
-                    val number = cursor.getString(COLUMN_NUMBER)    
-                    val displayName = cursor.getString(COLUMN_DISPLAY_NAME)  
-                    val photoBase64 = photoId64Encoded(context, cursor.getString(COLUMN_PHOTO_URI))
-                    return ContactInfo(id, lookupKey, displayName, number, photoBase64)
+                    // Order matches projection: _ID, LOOKUP_KEY, DISPLAY_NAME, PHOTO_URI
+                    val id = cursor.getString(0)
+                    val lookupKey = cursor.getString(1)
+                    val displayName = cursor.getString(2)
+                    val photoUri = cursor.getString(3)
+                    if (id == null && lookupKey == null && displayName == null) return null
+                    val photoBase64 = photoId64Encoded(context, photoUri)
+                    return ContactInfo(
+                        id = id,
+                        lookupKey = lookupKey,
+                        displayName = displayName ?: phoneNumber,
+                        number = phoneNumber,
+                        photoBase64 = photoBase64
+                    )
                 }
             }
-        } catch (ignored: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Contact lookup failed for $phoneNumber", e)
             return null
         }
 

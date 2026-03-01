@@ -41,3 +41,9 @@ enum class AudioInfoType {
     Active
 }
 
+enum class CallState {
+    Ringing,
+    InProgress,
+    MissedCall
+}
+

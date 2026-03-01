@@ -102,6 +102,8 @@
     <string name="image_clipboard_subtitle">Copies the receiving image files to your clipboard</string>
     <string name="notification_sync_preference">Sync notifications</string>
     <string name="notification_sync_subtitle">Reads notifications from apps and syncs them to desktop</string>
+    <string name="call_notifier_preference">Call notifier</string>
+    <string name="call_notifier_preference_subtitle">Notifies desktop of incoming calls</string>
     <string name="media_session_subtitle">Media playback will be shown in the notification bar</string>
     <string name="storage_access_preference">Storage access</string>
     <string name="storage_access_subtitle">Allows Windows to access your Android storage</string>
@@ -148,6 +150,8 @@
     <string name="convert_to_mms_after_default" translatable="false">3</string>
     <string name="messages_permission">Messages permission</string>
     <string name="messages_permission_rationale">For sending and reading messages</string>
+    <string name="phone_permission">Phone permission</string>
+    <string name="phone_permission_rationale">Required to notify desktop of incoming calls</string>
     <string name="message_sync_preference">Sync messages</string>
     <string name="message_sync_subtitle">Enables reading and texting messages from desktop</string>
     <string-array name="convert_to_mms_after_entries">

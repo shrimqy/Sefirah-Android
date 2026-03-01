@@ -74,6 +74,14 @@ data class RingerModeState(
 ) : SocketMessage()
 
 @Serializable
+@SerialName("CallInfo")
+data class CallInfo(
+    val callState: CallState,
+    val phoneNumber: String,
+    val contactInfo: ContactInfo? = null
+) : SocketMessage()
+
+@Serializable
 @SerialName("DndState")
 data class DndState(
     val isEnabled: Boolean

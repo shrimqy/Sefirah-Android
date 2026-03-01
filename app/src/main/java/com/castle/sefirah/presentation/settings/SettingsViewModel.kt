@@ -24,6 +24,7 @@ import sefirah.common.util.checkNotificationPermission
 import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
+import sefirah.common.util.phoneStatePermissionGranted
 import sefirah.common.util.smsPermissionGranted
 import sefirah.database.AppRepository
 import sefirah.database.model.NetworkEntity
@@ -108,6 +109,7 @@ class SettingsViewModel @Inject constructor(
             val locationGranted = checkLocationPermissions(context, clearPermission)
             val storageGranted = checkStoragePermission(context, clearPermission)
             val smsGranted = smsPermissionGranted(context, clearPermission)
+            val phoneStateGranted = phoneStatePermissionGranted(context, clearPermission)
             
             _permissionStates.value = PermissionStates(
                 notificationGranted = notificationGranted,
@@ -116,7 +118,8 @@ class SettingsViewModel @Inject constructor(
                 storageGranted = storageGranted,
                 accessibilityGranted = isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}"),
                 notificationListenerGranted = isNotificationListenerEnabled(context),
-                smsPermissionGranted = smsGranted
+                smsPermissionGranted = smsGranted,
+                phoneStateGranted = phoneStateGranted
             )
         }
     }
