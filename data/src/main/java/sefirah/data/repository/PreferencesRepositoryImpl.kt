@@ -177,7 +177,7 @@ class PreferencesRepositoryImpl @Inject constructor(
 
     override fun readRemoteStorageSettingsForDevice(deviceId: String): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            preferences[deviceRemoteStorageKey(deviceId)] != false
+            preferences[deviceRemoteStorageKey(deviceId)] == true
         }
     }
 
@@ -199,7 +199,7 @@ class PreferencesRepositoryImpl @Inject constructor(
                 imageClipboard = preferences[deviceImageClipboardKey(deviceId)] != false,
                 mediaSession = preferences[deviceMediaSessionKey(deviceId)] != false,
                 mediaPlayerControl = preferences[deviceMediaPlayerControlKey(deviceId)] != false,
-                remoteStorage = preferences[deviceRemoteStorageKey(deviceId)] != false
+                remoteStorage = preferences[deviceRemoteStorageKey(deviceId)] == true
             )
         }
     }
