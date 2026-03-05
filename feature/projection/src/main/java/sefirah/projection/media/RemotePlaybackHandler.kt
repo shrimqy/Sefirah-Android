@@ -174,13 +174,8 @@ class RemotePlaybackHandler @Inject constructor(
             val metadata = MediaMetadataCompat.Builder()
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, session.trackTitle)
                     .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, session.artist)
-                    .putLong(MediaMetadataCompat.METADATA_KEY_DURATION,
-                        session.maxSeekTime?.toLong() ?: 0
-                    )
-                    .putBitmap(
-                        MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
-                        session.thumbnail?.let { base64ToBitmap(it) }
-                    )
+                    .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, session.maxSeekTime.toLong())
+                    .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, session.thumbnail?.let { base64ToBitmap(it) })
 
             val playbackState = PlaybackStateCompat.Builder()
                 .setState(
