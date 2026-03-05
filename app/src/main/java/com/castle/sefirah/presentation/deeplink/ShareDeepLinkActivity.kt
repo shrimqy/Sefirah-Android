@@ -74,9 +74,8 @@ class ShareDeepLinkActivity : ComponentActivity() {
             CoroutineScope(Dispatchers.IO).launch {
                 networkManager.sendClipboardMessage(ClipboardInfo("text/plain", text))
             }
-        } else {
-            finishAffinity()
-        }
+        } 
+        finishAffinity()
     }
 
     private fun handleSingleFileTransfer(intent: Intent) {
