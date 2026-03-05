@@ -1,0 +1,3 @@
+• Update network architecture and authentication
+• Add call notifier
+• Fix share activity not closing after text share
