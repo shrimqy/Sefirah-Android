@@ -16,7 +16,7 @@
     <string name="notification_status_disconnected">未连接</string>
     <string name="notification_status_connected">已连接至%s</string>
     <string name="notification_disconnect_action">断开连接</string>
-    <string name="notification_clipboard_action">发送剪贴板</string>
+    <string name="send_clipboard">发送剪贴板</string>
     <string name="notification_file_transfer_error">文件传输错误</string>
     <string name="notification_file_transfer_complete">File Transfer Complete</string>
     <string name="notification_transfer_preparing">Preparing transfer…</string>

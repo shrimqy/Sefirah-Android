@@ -23,7 +23,7 @@
     <string name="notification_status_disconnected">Not connected</string>
     <string name="notification_status_connected">Connected to %s</string>
     <string name="notification_disconnect_action">Disconnect</string>
-    <string name="notification_clipboard_action">Send Clipboard</string>
+    <string name="send_clipboard">Send clipboard</string>
     <string name="notification_file_transfer_error">File Transfer Error</string>
     <string name="notification_file_transfer_complete">File Transfer Complete</string>
     <string name="notification_transfer_preparing">Preparing transfer…</string>

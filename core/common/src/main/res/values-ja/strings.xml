@@ -19,7 +19,7 @@
   <string name="notification_status_disconnected">何も接続されていません</string>
   <string name="notification_status_connected">「%s」に接続しました</string>
   <string name="notification_disconnect_action">切断しました</string>
-  <string name="notification_clipboard_action">クリップボードを送信</string>
+  <string name="send_clipboard">クリップボードを送信</string>
   <string name="notification_file_transfer_error">ファイル転送に失敗しました</string>
   <string name="notification_file_transfer_complete">File Transfer Complete</string>
   <string name="notification_transfer_preparing">Preparing transfer…</string>
@@ -145,6 +145,6 @@
   <string name="update_check_open">Open on Github</string>
   <string name="error">Error</string>
   <string name="connection_toggle">Connection toggle</string>
-  <string name="trust_all_networks">Trust all networks</string>
+    <string name="trust_all_networks">Trust all networks</string>
     <string name="device_settings">Device settings</string>
 </resources>

@@ -22,7 +22,7 @@
     <string name="notification_status_disconnected">Não conectado</string>
     <string name="notification_status_connected">Conectado à %s</string>
     <string name="notification_disconnect_action">Desconectar</string>
-    <string name="notification_clipboard_action">Enviar área de transfência</string>
+    <string name="send_clipboard">Enviar área de transfência</string>
     <string name="notification_file_transfer_error">Falha no envio de arquivo</string>
     <string name="notification_file_transfer_complete">Envio concluído</string>
     <string name="notification_transfer_preparing">Preparing transfer…</string>
