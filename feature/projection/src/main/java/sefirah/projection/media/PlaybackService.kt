@@ -49,6 +49,8 @@ class PlaybackService @Inject constructor(
 
     @Volatile
     private var notificationListenerConnected = false
+    @Volatile
+    private var spotifyRunning = false
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -94,7 +96,6 @@ class PlaybackService @Inject constructor(
 
             val controllers = manager.getActiveSessions(notificationListener)
             createSessions(controllers)
-            Log.d(tag, "MediaSessionTracker initialized in init with ${mediaSessions.size} sessions")
         } catch (e: Exception) {
             // Permission not granted or service not connected yet - will initialize in onListenerConnected
             Log.d(tag, "Could not initialize in init, will wait for onListenerConnected: ${e.message}")
@@ -103,17 +104,30 @@ class PlaybackService @Inject constructor(
     
     override fun onListenerConnected(service: NotificationListenerService) {
         notificationListenerConnected = true
+        try {
+            val isSpotifyActive = service.activeNotifications?.any { it.isSpotify() } == true
+            spotifyRunning = isSpotifyActive
+        } catch (e: SecurityException) {
+            Log.w(tag, "Failed to inspect active notifications for Spotify", e)
+        }
         updateActivation()
     }
 
     override fun onListenerDisconnected() {
         notificationListenerConnected = false
+        spotifyRunning = false
         release()
     }
     
-    override fun onNotificationPosted(notification: StatusBarNotification) { }
+    override fun onNotificationPosted(notification: StatusBarNotification) {
+        if (!notification.isSpotify()) return
+        spotifyRunning = true
+    }
     
-    override fun onNotificationRemoved(notification: StatusBarNotification) { }
+    override fun onNotificationRemoved(notification: StatusBarNotification) {
+        if (!notification.isSpotify()) return
+        spotifyRunning = false
+    }
 
     fun release() {
         mediaSessionManager?.let { manager ->
@@ -188,6 +202,8 @@ class PlaybackService @Inject constructor(
     }
 
     fun getActivePackageNames(): Set<String> = mediaSessions.keys
+
+    fun isSpotifyActive(): Boolean = spotifyRunning
     
     /**
      * Handle incoming PlaybackAction from connected devices to control
@@ -257,5 +273,12 @@ class PlaybackService @Inject constructor(
         override fun onPlaybackStateChanged(state: PlaybackState?) {
             service.onSessionPlaybackStateChanged(packageName)
         }
+    }
+
+    private fun StatusBarNotification.isSpotify(): Boolean =
+        this.packageName == SPOTIFY_PACKAGE_NAME
+
+    companion object {
+        private const val SPOTIFY_PACKAGE_NAME = "com.spotify.music"
     }
 }

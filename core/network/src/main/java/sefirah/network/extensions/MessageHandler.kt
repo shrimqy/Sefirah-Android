@@ -127,9 +127,7 @@ suspend fun NetworkService.handleDeviceInfo(deviceInfo: DeviceInfo, device: Pair
 }
 
 suspend fun NetworkService.handleMediaInfo(deviceId: String, playbackSession: PlaybackInfo) {
-    if (preferencesRepository.readMediaSessionSettingsForDevice(deviceId).first()) {
-        remotePlaybackHandler.handlePlaybackSessionUpdates(deviceId, playbackSession)
-    }
+    remotePlaybackHandler.handlePlaybackSessionUpdates(deviceId, playbackSession)
 }
 
 suspend fun NetworkService.handleMediaAction(deviceId: String, action: MediaAction) {

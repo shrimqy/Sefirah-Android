@@ -17,6 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import sefirah.common.R
@@ -30,6 +31,7 @@ import sefirah.domain.model.MediaActionType
 import sefirah.domain.model.PlaybackInfo
 import sefirah.domain.model.PlaybackInfoType
 import sefirah.common.util.base64ToBitmap
+import sefirah.domain.interfaces.PreferencesRepository
 import sefirah.projection.media.MediaActionReceiver.Companion.ACTION_NEXT
 import sefirah.projection.media.MediaActionReceiver.Companion.ACTION_PLAY
 import sefirah.projection.media.MediaActionReceiver.Companion.ACTION_PREVIOUS
@@ -42,12 +44,13 @@ import javax.inject.Singleton
 class RemotePlaybackHandler @Inject constructor(
     private val context: Context,
     private val networkManager: NetworkManager,
-    private val notificationCenter: NotificationCenter
+    private val notificationCenter: NotificationCenter,
+    private val playbackService: PlaybackService,
+    private val preferencesRepository: PreferencesRepository
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     private var mediaSession: MediaSessionCompat? = null
-
     private val _activeSessionsByDevice = MutableStateFlow<Map<String, List<PlaybackInfo>>>(emptyMap())
     val activeSessionsByDevice: StateFlow<Map<String, List<PlaybackInfo>>> = _activeSessionsByDevice.asStateFlow()
     
@@ -87,7 +90,7 @@ class RemotePlaybackHandler @Inject constructor(
         }
     }
 
-    fun handlePlaybackSessionUpdates(deviceId: String, playbackSession: PlaybackInfo) {
+    suspend fun handlePlaybackSessionUpdates(deviceId: String, playbackSession: PlaybackInfo) {
         when (playbackSession.infoType) {
             PlaybackInfoType.PlaybackInfo -> addSession(deviceId, playbackSession)
             PlaybackInfoType.RemovedSession -> removeSession(deviceId, playbackSession)
@@ -96,7 +99,7 @@ class RemotePlaybackHandler @Inject constructor(
         }
     }
 
-    private fun updateTimeline(deviceId: String, playbackSession: PlaybackInfo) {
+    private suspend fun updateTimeline(deviceId: String, playbackSession: PlaybackInfo) {
         _activeSessionsByDevice.update { currentMap ->
             val currentSessions = currentMap.getOrDefault(deviceId, emptyList())
             val updatedSessions = currentSessions.map { session ->
@@ -114,7 +117,7 @@ class RemotePlaybackHandler @Inject constructor(
     }
 
 
-    private fun updatePlaybackInfo(deviceId: String, playbackSession: PlaybackInfo) {
+    private suspend fun updatePlaybackInfo(deviceId: String, playbackSession: PlaybackInfo) {
         _activeSessionsByDevice.update { currentMap ->
             val currentSessions = currentMap.getOrDefault(deviceId, emptyList())
             val updatedSessions = currentSessions.map { session ->
@@ -133,7 +136,7 @@ class RemotePlaybackHandler @Inject constructor(
         }
     }
 
-    private fun addSession(deviceId: String, session: PlaybackInfo) {
+    private suspend fun addSession(deviceId: String, session: PlaybackInfo) {
         _activeSessionsByDevice.update { currentMap ->
             val currentSessions = currentMap.getOrDefault(deviceId, emptyList())
             val updatedSessions = if (currentSessions.any { it.source == session.source }) {
@@ -146,7 +149,7 @@ class RemotePlaybackHandler @Inject constructor(
         showMediaSession(deviceId, session)
     }
 
-    private fun removeSession(deviceId: String, session: PlaybackInfo) {
+    private suspend fun removeSession(deviceId: String, session: PlaybackInfo) {
         _activeSessionsByDevice.update { currentMap ->
             val currentSessions = currentMap.getOrDefault(deviceId, emptyList())
             val updatedSessions = currentSessions.filter { it.source != session.source }
@@ -169,7 +172,12 @@ class RemotePlaybackHandler @Inject constructor(
     private val mainPendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
-    private fun showMediaSession(deviceId: String, session: PlaybackInfo) {
+    private suspend fun showMediaSession(deviceId: String, session: PlaybackInfo) {
+        if (isSpotify(session) || !preferencesRepository.readMediaSessionSettingsForDevice(deviceId).first()) {
+            closeMediaNotification()
+            return
+        }
+
         scope.launch(Dispatchers.Main) {
             val metadata = MediaMetadataCompat.Builder()
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, session.trackTitle)
@@ -195,23 +203,23 @@ class RemotePlaybackHandler @Inject constructor(
 
             val mediaSessionCallback : MediaSessionCompat.Callback = object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
-                    handleMediaAction(deviceId, MediaAction(MediaActionType.Play, session.source))
+                    networkManager.sendMessage(deviceId, MediaAction(MediaActionType.Play, session.source))
                 }
 
                 override fun onPause() {
-                    handleMediaAction(deviceId, MediaAction(MediaActionType.Pause, session.source))
+                    networkManager.sendMessage(deviceId, MediaAction(MediaActionType.Pause, session.source))
                 }
 
                 override fun onSkipToNext() {
-                    handleMediaAction(deviceId, MediaAction(MediaActionType.Next, session.source))
+                    networkManager.sendMessage(deviceId, MediaAction(MediaActionType.Next, session.source))
                 }
 
                 override fun onSkipToPrevious() {
-                    handleMediaAction(deviceId, MediaAction(MediaActionType.Previous, session.source))
+                    networkManager.sendMessage(deviceId, MediaAction(MediaActionType.Previous, session.source))
                 }
 
                 override fun onSeekTo(pos: Long) {
-                    handleMediaAction(deviceId, MediaAction(MediaActionType.Seek, session.source, pos.toDouble()))
+                    networkManager.sendMessage(deviceId, MediaAction(MediaActionType.Seek, session.source,pos.toDouble()))
                 }
             }
 
@@ -265,20 +273,23 @@ class RemotePlaybackHandler @Inject constructor(
 
             val audioDevicesForDevice = _audioDevicesByDevice.value[deviceId] ?: emptyList()
             val currentAudioDevice = audioDevicesForDevice.firstOrNull { it.isSelected } ?: audioDevicesForDevice.firstOrNull()
-            mediaSession.setPlaybackToRemote(object : VolumeProviderCompat(
-                VOLUME_CONTROL_ABSOLUTE,
-                getMaxVolume(),
-                getCurrentVolume(currentAudioDevice?.volume)
-            ) {
-                override fun onSetVolumeTo(volume: Int) {
-                    currentVolume = volume
-                    val normalizedVolume = volume.toFloat() / maxVolume
-                    if (currentAudioDevice != null) {
-                        val action = MediaAction(MediaActionType.VolumeUpdate, currentAudioDevice.deviceId, normalizedVolume.toDouble())
-                        handleMediaAction(deviceId, action)
+
+            if (session.isPlaying) {
+                mediaSession.setPlaybackToRemote(object : VolumeProviderCompat(
+                    VOLUME_CONTROL_ABSOLUTE,
+                    getMaxVolume(),
+                    getCurrentVolume(currentAudioDevice?.volume)
+                ) {
+                    override fun onSetVolumeTo(volume: Int) {
+                        currentVolume = volume
+                        val normalizedVolume = volume.toFloat() / maxVolume
+                        if (currentAudioDevice != null) {
+                            val action = MediaAction(MediaActionType.VolumeUpdate, currentAudioDevice.deviceId, normalizedVolume.toDouble())
+                            networkManager.sendMessage(deviceId, action)
+                        }
                     }
-                }
-            })
+                })
+            }
 
             notificationCenter.showNotification(
                 channelId = AppNotifications.MEDIA_PLAYBACK_CHANNEL,
@@ -307,9 +318,13 @@ class RemotePlaybackHandler @Inject constructor(
         }
     }
 
-    fun handleMediaAction(deviceId: String, action: MediaAction) {
-        Log.d(TAG, "Action received: ${action.actionType}${action.source} device: $deviceId")
-        networkManager.sendMessage(deviceId, action)
+    private fun closeMediaNotification() {
+        mediaSession?.let {
+            it.isActive = false
+            it.release()
+        }
+        mediaSession = null
+        notificationCenter.cancelNotification(AppNotifications.MEDIA_PLAYBACK_ID)
     }
 
     fun clearDeviceData(deviceId: String) {
@@ -328,13 +343,14 @@ class RemotePlaybackHandler @Inject constructor(
     }
 
     fun release() {
-        mediaSession?.let {
-            it.isActive = false
-            it.release()
-            mediaSession = null
-        }
+        closeMediaNotification()
         _activeSessionsByDevice.value = emptyMap()
         notificationCenter.cancelNotification(AppNotifications.MEDIA_PLAYBACK_ID)
+    }
+
+    private fun isSpotify(session: PlaybackInfo): Boolean {
+        if (!playbackService.isSpotifyActive()) return false
+        return session.source.contains(SPOTIFY_SOURCE, ignoreCase = true)
     }
 
     private fun getMaxVolume(): Int {
@@ -362,6 +378,7 @@ class RemotePlaybackHandler @Inject constructor(
     companion object {
         private const val TAG = "MediaHandler"
         private const val MEDIA_SESSION_TAG = "DesktopMediaSession"
+        private const val SPOTIFY_SOURCE = "spotify"
     }
 }
 
