@@ -55,7 +55,7 @@ class DeviceConnection(
     fun startListening(
         getDevice: suspend (String) -> BaseRemoteDevice?,
         onMessage: (BaseRemoteDevice, SocketMessage) -> Unit,
-        onClose: (String) -> Unit
+        onClose: (DeviceConnection) -> Unit
     ) {
         // Stop existing listener if any
         listeningJob?.cancel()
@@ -83,24 +83,17 @@ class DeviceConnection(
                 Log.e("DeviceConnection", "Session error for device $deviceId", e)
             } finally {
                 Log.e("DeviceConnection", "Session closed for device $deviceId")
-                onClose(deviceId)
+                onClose(this@DeviceConnection)
             }
         }
-    }
-
-    /**
-     * Stops listening for messages.
-     */
-    fun stopListening() {
-        listeningJob?.cancel()
-        listeningJob = null
     }
 
     /**
      * Closes all connection resources and stops listening.
      */
     fun close() {
-        stopListening()
+        listeningJob?.cancel()
+        listeningJob = null
         scope.cancel()
         try {
             sslSocket?.close()

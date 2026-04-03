@@ -78,15 +78,12 @@ class NotificationService @Inject constructor(
         } else {
             scope.launch {
                 if (!::listener.isInitialized) {
-                    Log.w(TAG, "listener not connected")
+                    Log.w(TAG, "Notification listener not connected")
                     return@launch
                 }
 
                 val activeNotifications = listener.activeNotifications
-                if (activeNotifications.isNullOrEmpty()) {
-                    Log.d(TAG, "No active notifications found.")
-                } else {
-                    Log.d(TAG, "Active notifications found: ${activeNotifications.size}")
+                if (!activeNotifications.isNullOrEmpty()) {
                     activeNotifications.forEach { sbn ->
                         sendNotification(sbn, NotificationInfoType.Active, targetDeviceIds)
                     }
@@ -261,9 +258,9 @@ class NotificationService @Inject constructor(
             }
 
             // Get picture (if available)
-            val picture = notification.extras.get(Notification.EXTRA_PICTURE)?.let { pictureBitmap ->
-                bitmapToBase64(pictureBitmap as Bitmap)
-            }
+//            val picture = notification.extras.get(Notification.EXTRA_PICTURE)?.let { pictureBitmap ->
+//                bitmapToBase64(pictureBitmap as Bitmap)
+//            }
 
             // Use the utility function to get text from SpannableString
             val title = getSpannableText(notification.extras.getCharSequence(Notification.EXTRA_TITLE))

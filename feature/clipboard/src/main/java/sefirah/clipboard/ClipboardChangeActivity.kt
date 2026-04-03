@@ -31,8 +31,8 @@ class ClipboardChangeActivity : FragmentActivity() {
              */
             delay(500)
             if (hasFocus) {
-                val data = clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()
-                sendClip(data)
+                val data = clipboardManager.primaryClip?.getItemAt(0)?.text.toString()
+                networkManager.sendClipboardMessage(ClipboardInfo("text/plain", data))
                 finish()
             }
         }
@@ -46,13 +46,6 @@ class ClipboardChangeActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.e("ClipboardChangeActivity", "Destroyed()")
-    }
-
-    private fun sendClip(data: String?) {
-        if (data != null) {
-            networkManager.sendClipboardMessage(ClipboardInfo("text/plain", data))
-        }
     }
 
     companion object {

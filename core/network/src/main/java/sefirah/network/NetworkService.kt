@@ -367,12 +367,7 @@ class NetworkService : Service() {
             return
         }
 
-        val connection = DeviceConnection(
-            deviceId = device.deviceId,
-            sslSocket = sslSocket,
-            readChannel = readChannel,
-            writeChannel = writeChannel
-        )
+        val connection = DeviceConnection(device.deviceId, sslSocket, readChannel, writeChannel)
         setConnection(device.deviceId, connection)
 
         val updatedDevice = device.copy(
@@ -415,10 +410,9 @@ class NetworkService : Service() {
             authMessage.deviceId,
             authMessage.deviceName,
             address,
-            sslSocket.port,
             listOfNotNull(address),
             certificate,
-            verificationCode,
+            verificationCode
         )
 
         val connection = DeviceConnection(newDevice.deviceId, sslSocket, readChannel, writeChannel)
@@ -525,10 +519,10 @@ class NetworkService : Service() {
                 authResponse.deviceId,
                 authResponse.deviceName,
                 address,
-                connectionDetails.port,
                 connectionDetails.addresses,
                 certificate,
-                verificationCode
+                verificationCode,
+                connectionDetails.port
             )
 
             val connection = DeviceConnection(connectedDevice.deviceId, sslSocket, readChannel, writeChannel)
@@ -560,11 +554,7 @@ class NetworkService : Service() {
                 emptyList()
             }
 
-            val deviceInfo = DeviceInfo(
-                deviceManager.localDevice.deviceName,
-                wallpaper,
-                localPhoneNumbers
-            )
+            val deviceInfo = DeviceInfo(deviceManager.localDevice.deviceName, wallpaper, localPhoneNumbers)
             sendMessage(device.deviceId, deviceInfo)
             Log.d(TAG, "DeviceInfo sent to ${device.deviceId}")
         } catch (e: Exception) {
@@ -621,11 +611,14 @@ class NetworkService : Service() {
         connection.startListening(
             getDevice = { deviceManager.getDevice(it) },
             onMessage = { device, message -> scope.launch { handleMessage(device, message) } },
-            onClose = { id ->
+            onClose = { closed ->
                 scope.launch {
-                    when (val device = deviceManager.getDevice(id)) {
-                        is PairedDevice -> connections[id]?.let { disconnectDevice(device) }
-                        is DiscoveredDevice -> disconnectDevice(device)
+                    val id = closed.deviceId
+                    if (connections[id] === closed) {
+                        when (val device = deviceManager.getDevice(id)) {
+                            is PairedDevice -> disconnectDevice(device)
+                            is DiscoveredDevice -> disconnectDevice(device)
+                        }
                     }
                 }
             }
@@ -832,7 +825,7 @@ class NetworkService : Service() {
 
     // Connection management methods
     private fun setConnection(deviceId: String, connection: DeviceConnection) {
-        connections.remove(deviceId)?.close()
+        removeConnection(deviceId)
         connections[deviceId] = connection
         startListeningForDevice(connection)
     }

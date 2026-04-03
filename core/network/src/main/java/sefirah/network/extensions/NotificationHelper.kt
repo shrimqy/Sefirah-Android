@@ -95,8 +95,7 @@ fun NetworkService.setNotification(
         action = Intent.ACTION_SEND
         type = "text/plain"
     }
-    val clipboardPendingIntent: PendingIntent =
-        PendingIntent.getActivity(this, 0, clipboardIntent, PendingIntent.FLAG_IMMUTABLE)
+    val clipboardPendingIntent: PendingIntent = PendingIntent.getActivity(this, 0, clipboardIntent, PendingIntent.FLAG_IMMUTABLE)
 
     val contentText =  if (deviceName.isNullOrEmpty()) {
         getString(R.string.notification_status_disconnected)
@@ -112,21 +111,21 @@ fun NetworkService.setNotification(
         setOngoing(true)
         setSilent(true)
         setShowWhen(false)
-
-        // Only add actions if connected
-        if (!deviceName.isNullOrEmpty()) {
-            // Disconnect action - only if single device (deviceId provided)
-            if (deviceId != null) {
-                val disconnectIntent = Intent(this@setNotification, NetworkService::class.java).apply {
-                    action = Actions.DISCONNECT.name
-                    putExtra(DEVICE_ID_EXTRA, deviceId)
-                }
-                val disconnectPendingIntent: PendingIntent =
-                    PendingIntent.getService(this@setNotification, 0, disconnectIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-                addAction(R.drawable.ic_launcher_foreground, getString(R.string.notification_disconnect_action), disconnectPendingIntent)
-            }
-            addAction(R.drawable.ic_launcher_foreground, getString(R.string.notification_clipboard_action), clipboardPendingIntent)
-        }
     }
+
+    // Only add actions if connected
+    if (!deviceName.isNullOrEmpty()) {
+        // Disconnect action - only if single device (deviceId provided)
+        if (deviceId != null) {
+            val disconnectIntent = Intent(this, NetworkService::class.java).apply {
+                action = Actions.DISCONNECT.name
+                putExtra(DEVICE_ID_EXTRA, deviceId)
+            }
+            val disconnectPendingIntent: PendingIntent = PendingIntent.getService(this, 0, disconnectIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            notificationBuilder.addAction(R.drawable.ic_launcher_foreground, getString(R.string.notification_disconnect_action), disconnectPendingIntent)
+        }
+        notificationBuilder.addAction(R.drawable.ic_launcher_foreground, getString(R.string.send_clipboard), clipboardPendingIntent)
+    }
+
     startForeground(notificationId, notificationBuilder.build())
 }

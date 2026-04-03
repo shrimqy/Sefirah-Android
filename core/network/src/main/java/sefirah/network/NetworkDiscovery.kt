@@ -249,8 +249,7 @@ class NetworkDiscovery @Inject constructor(
 
                         when (val device = deviceManager.getDevice(deviceId)) {
                             is PairedDevice -> {
-                                // Skip if already connected or forced disconnected
-                                if (device.connectionState.isConnected || device.connectionState.isForcedDisconnect) return@forEach
+                                if (device.connectionState.isConnectedOrConnecting || device.connectionState.isForcedDisconnect) return@forEach
 
                                 // Merge discovered IPs with existing entries
                                 val existingAddresses = device.addresses.map { it.address }.toSet()
@@ -334,7 +333,6 @@ class NetworkDiscovery @Inject constructor(
                 Log.d(TAG, "Received UDP broadcast from ${udpBroadcast.deviceName}")
                 when (val device = deviceManager.getDevice(udpBroadcast.deviceId)) {
                     is PairedDevice -> {
-                         // Skip if already connected or forced disconnected
                          if (device.connectionState.isConnectedOrConnecting || device.connectionState.isForcedDisconnect) continue
 
                         // Update IP addresses if new ones are found

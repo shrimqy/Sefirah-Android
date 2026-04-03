@@ -22,7 +22,7 @@ class SocketFactoryImpl @Inject constructor() : SocketFactory {
 
     override suspend fun tcpClientSocket(address: String, port: Int, certificate: ByteArray?): SSLSocket? {
         return try {
-            Log.d(TAG, "Connecting with client cert to $address:$port")
+            Log.d(TAG, "Connecting to $address:$port")
             val sslContext = SslHelper.sslContext(certificate)
             withTimeoutOrNull(3000L) {
                 withContext(Dispatchers.IO) {
@@ -31,7 +31,7 @@ class SocketFactoryImpl @Inject constructor() : SocketFactory {
                     }
                 }
             }?.also {
-                Log.d(TAG, "Connected with client cert to ${it.remoteSocketAddress}")
+                Log.d(TAG, "Connected to ${it.remoteSocketAddress}")
             } ?: run {
                 Log.e(TAG, "Connection timed out to $address:$port")
                 null
