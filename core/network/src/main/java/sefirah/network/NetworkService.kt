@@ -150,6 +150,15 @@ class NetworkService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            Actions.START_SERVICE.name -> {
+                Log.d(TAG, "Network Service started explicitly")
+            }
+
+            Actions.STOP_SERVICE.name -> {
+                Log.d(TAG, "Stopping Network Service via intent")
+                stopServiceGracefully()
+            }
+
             Actions.CONNECT.name -> {
                 val connectionDetails = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getParcelableExtra(EXTRA_CONNECTION_DETAILS, ConnectionDetails::class.java)
@@ -840,6 +849,26 @@ class NetworkService : Service() {
         }
     }
 
+    private fun stopServiceGracefully() {
+        scope.launch {
+            deviceManager.pairedDevices.value.forEach { device ->
+                if (device.connectionState.isConnected) {
+                    sendMessage(device.deviceId, Disconnect)
+                    disconnectDevice(device, true)
+                }
+            }
+            withContext(Dispatchers.Main) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+                stopSelf()
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         scope.cancel()
@@ -862,7 +891,32 @@ class NetworkService : Service() {
     }
 
     companion object {
+        fun start(context: Context) {
+            val serviceIntent = Intent(context, NetworkService::class.java).apply {
+                action = Actions.START_SERVICE.name
+            }
+
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent)
+                } else {
+                    context.startService(serviceIntent)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start NetworkService", e)
+            }
+        }
+
+        fun stop(context: Context) {
+            val stopIntent = Intent(context, NetworkService::class.java).apply {
+                action = Actions.STOP_SERVICE.name
+            }
+            context.startService(stopIntent)
+        }
+
         enum class Actions {
+            START_SERVICE,
+            STOP_SERVICE,
             CONNECT,
             APPROVE_DEVICE,
             REJECT_DEVICE,
