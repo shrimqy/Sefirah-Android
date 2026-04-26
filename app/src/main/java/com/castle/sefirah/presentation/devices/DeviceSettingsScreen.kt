@@ -63,6 +63,7 @@ import kotlinx.coroutines.launch
 import sefirah.clipboard.ClipboardListener
 import sefirah.common.R
 import sefirah.common.util.isAccessibilityServiceEnabled
+import sefirah.common.util.isCallLogsPermissionGranted
 import sefirah.common.util.isNotificationListenerEnabled
 import sefirah.common.util.openAppSettings
 import sefirah.domain.model.PairedDevice
@@ -108,6 +109,7 @@ fun DeviceSettingsScreen(
     ) { padding ->
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
+        val callLogsPermissionGranted = isCallLogsPermissionGranted(context)
         
         // Update permissions on resume
         DisposableEffect(lifecycleOwner.lifecycle) {
@@ -257,21 +259,35 @@ fun DeviceSettingsScreen(
                 SwitchPermissionPrefWidget(
                     title = stringResource(R.string.call_notifier_preference),
                     subtitle = stringResource(R.string.call_notifier_preference_subtitle),
-                    filledIcon = ImageVector.vectorResource(R.drawable.ic_mobile_fill),
-                    outlinedIcon = ImageVector.vectorResource(R.drawable.ic_mobile_fill),
+                    filledIcon = ImageVector.vectorResource(R.drawable.ic_call_fill),
+                    outlinedIcon = ImageVector.vectorResource(R.drawable.ic_call),
                     granted = permissionStates.phoneStateGranted,
                     checked = preferences.callStateSync && permissionStates.phoneStateGranted,
                     permission = Manifest.permission.READ_PHONE_STATE,
                     onRequest = {
                         phoneCallPermissionRequester.launch(
-                            arrayOf(
-                                Manifest.permission.READ_PHONE_STATE,
-                                Manifest.permission.READ_CALL_LOG
-                            )
+                            arrayOf(Manifest.permission.READ_PHONE_STATE)
                         )
                     },
                     onCheckedChanged = { checked ->
                         viewModel.saveCallStateSyncSettings(checked)
+                    },
+                    viewModel = viewModel
+                )
+            }
+
+            item {
+                SwitchPermissionPrefWidget(
+                    title = stringResource(R.string.call_log_sync_preference),
+                    subtitle = stringResource(R.string.call_log_sync_preference_subtitle),
+                    filledIcon = ImageVector.vectorResource(R.drawable.ic_call_log_fill),
+                    outlinedIcon = ImageVector.vectorResource(R.drawable.ic_call_log),
+                    granted = callLogsPermissionGranted,
+                    checked = preferences.callLogSync && callLogsPermissionGranted,
+                    permission = Manifest.permission.READ_CALL_LOG,
+                    onRequest = { telephonyPermissionRequester.launch(Manifest.permission.READ_CALL_LOG) },
+                    onCheckedChanged = { checked ->
+                        viewModel.saveCallLogSyncSettings(checked)
                     },
                     viewModel = viewModel
                 )

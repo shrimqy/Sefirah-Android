@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import sefirah.clipboard.ClipboardChangeActivity
+import sefirah.communication.bluetooth.BluetoothDiscoverableActivity
 import sefirah.common.R
 import sefirah.common.notifications.AppNotifications
 import sefirah.domain.model.PendingDeviceApproval
@@ -71,6 +72,33 @@ fun NetworkService.showPairingVerificationNotification(approval: PendingDeviceAp
 
 fun NetworkService.cancelPairingVerificationNotification(deviceId: String) {
     notificationCenter.cancelNotification(AppNotifications.PAIRING_REQUEST_ID + deviceId.hashCode())
+}
+
+fun NetworkService.showBluetoothDiscoverableRequestNotification(sourceDeviceId: String) {
+    val intent = BluetoothDiscoverableActivity.createIntent(this, sourceDeviceId).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    }
+    val requestCode = sourceDeviceId.hashCode()
+    val contentPendingIntent = PendingIntent.getActivity(
+        this,
+        requestCode,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+
+    notificationCenter.showNotification(
+        channelId = AppNotifications.BLUETOOTH_DISCOVERABLE_CHANNEL,
+        notificationId = AppNotifications.BLUETOOTH_DISCOVERABLE_REQUEST_ID + requestCode,
+    ) {
+        setContentTitle("Allow Bluetooth pairing")
+        val body = "Tap to make this phone discoverable for your desktop."
+        setContentText(body)
+        setStyle(NotificationCompat.BigTextStyle().bigText(body))
+        setContentIntent(contentPendingIntent)
+        setAutoCancel(true)
+        setPriority(NotificationCompat.PRIORITY_HIGH)
+        setCategory(NotificationCompat.CATEGORY_STATUS)
+    }
 }
 
 /**

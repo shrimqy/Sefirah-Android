@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
@@ -104,6 +106,7 @@ internal class PermissionStep : OnboardingStep {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = MaterialTheme.padding.medium)
+                .verticalScroll(rememberScrollState())
         ) {
             if (!viewModel.appEntry) {
                 Row(
@@ -145,7 +148,10 @@ internal class PermissionStep : OnboardingStep {
                         )
                     }
 
-                    // Location Permission
+                    val nearbyDevicesPermissionRequester = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestMultiplePermissions(),
+                        onResult = { viewModel.updatePermissionStates() }
+                    )
                     val telephonyPermissionRequester = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.RequestPermission(),
                         onResult = {
@@ -182,6 +188,35 @@ internal class PermissionStep : OnboardingStep {
                         viewModel = viewModel
                     )
 
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        PermissionItem(
+                            title = stringResource(R.string.nearby_devices_permission),
+                            subtitle = stringResource(R.string.nearby_devices_permission_rationale),
+                            granted = permissionStates.nearbyDevicesGranted,
+                            permission = Manifest.permission.BLUETOOTH_CONNECT,
+                            onRequest = {
+                                nearbyDevicesPermissionRequester.launch(
+                                    arrayOf(
+                                        Manifest.permission.BLUETOOTH_CONNECT,
+                                        Manifest.permission.BLUETOOTH_SCAN
+                                    )
+                                )
+                            },
+                            viewModel = viewModel
+                        )
+                    }
+
+                    PermissionItem(
+                        title = stringResource(R.string.contacts_permission),
+                        subtitle = stringResource(R.string.contacts_permission_rationale),
+                        granted = permissionStates.contactsGranted,
+                        permission = Manifest.permission.READ_CONTACTS,
+                        onRequest = {
+                            contactsPermissionRequester.launch(Manifest.permission.READ_CONTACTS)
+                        },
+                        viewModel = viewModel
+                    )
+
                     PermissionItem(
                         title = stringResource(R.string.messages_permission),
                         subtitle = stringResource(R.string.messages_permission_rationale),
@@ -212,7 +247,6 @@ internal class PermissionStep : OnboardingStep {
                     )
 
                     HorizontalDivider()
-
                     // Battery Optimization
                     PermissionItem(
                         title = stringResource(R.string.background_battery_usage),
@@ -228,7 +262,20 @@ internal class PermissionStep : OnboardingStep {
                         viewModel = viewModel
                     )
 
-
+                    PermissionItem(
+                        title = stringResource(R.string.overlay_permission),
+                        subtitle = stringResource(R.string.overlay_permission_rationale),
+                        granted = permissionStates.overlayGranted,
+                        permission = Manifest.permission.SYSTEM_ALERT_WINDOW,
+                        onRequest = {
+                            val intent = Intent(
+                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                "package:${context.packageName}".toUri()
+                            )
+                            context.startActivity(intent)
+                        },
+                        viewModel = viewModel
+                    )
 
                     // Storage Permission
                     PermissionItem(

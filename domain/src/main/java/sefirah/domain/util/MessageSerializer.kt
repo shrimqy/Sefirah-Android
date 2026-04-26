@@ -8,10 +8,14 @@ import kotlinx.serialization.modules.subclass
 import sefirah.domain.model.ActionInfo
 import sefirah.domain.model.ApplicationInfo
 import sefirah.domain.model.ApplicationList
-import sefirah.domain.model.Authentication
 import sefirah.domain.model.AudioDeviceInfo
 import sefirah.domain.model.AudioStreamState
+import sefirah.domain.model.Authentication
 import sefirah.domain.model.BatteryState
+import sefirah.domain.model.BluetoothPairingRequest
+import sefirah.domain.model.BluetoothPairingResult
+import sefirah.domain.model.CallInfo
+import sefirah.domain.model.CallLogInfo
 import sefirah.domain.model.ClearNotifications
 import sefirah.domain.model.ClipboardInfo
 import sefirah.domain.model.ConnectionAck
@@ -40,7 +44,6 @@ object MessageSerializer {
     private val json = Json {
         serializersModule = SerializersModule {
             polymorphic(SocketMessage::class) {
-                // Same order as Desktop JsonDerivedType
                 subclass(ActionInfo::class)
                 subclass(ApplicationInfo::class)
                 subclass(ApplicationList::class)
@@ -48,6 +51,10 @@ object MessageSerializer {
                 subclass(AudioDeviceInfo::class)
                 subclass(AudioStreamState::class)
                 subclass(BatteryState::class)
+                subclass(BluetoothPairingResult::class)
+                subclass(BluetoothPairingRequest::class)
+                subclass(CallInfo::class)
+                subclass(CallLogInfo::class)
                 subclass(ClearNotifications::class)
                 subclass(ClipboardInfo::class)
                 subclass(ConnectionAck::class)

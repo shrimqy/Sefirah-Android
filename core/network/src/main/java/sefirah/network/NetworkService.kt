@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.app.Service
 import android.app.WallpaperManager
+import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -33,29 +34,31 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import sefirah.clipboard.ClipboardHandler
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
 import sefirah.common.util.checkStoragePermission
+import sefirah.common.util.drawableToBase64Compressed
+import sefirah.common.util.isCallLogsPermissionGranted
+import sefirah.common.util.isContactsPermissionGranted
 import sefirah.common.util.smsPermissionGranted
+import sefirah.communication.call.CallLogHelper
 import sefirah.communication.call.CallStateReceiver
+import sefirah.communication.sms.SmsHandler
 import sefirah.communication.utils.ContactsHelper
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.database.AppRepository
 import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.interfaces.PreferencesRepository
 import sefirah.domain.interfaces.SocketFactory
-import sefirah.projection.media.RemotePlaybackHandler
-import sefirah.projection.media.PlaybackService
-import sefirah.communication.sms.SmsHandler
-import sefirah.notification.NotificationService
-import sefirah.clipboard.ClipboardHandler
 import sefirah.domain.model.AddressEntry
 import sefirah.domain.model.AudioStreamState
 import sefirah.domain.model.Authentication
+import sefirah.domain.model.BaseRemoteDevice
 import sefirah.domain.model.BatteryState
 import sefirah.domain.model.ClipboardInfo
-import sefirah.domain.model.ConnectionDetails
 import sefirah.domain.model.ConnectionAck
+import sefirah.domain.model.ConnectionDetails
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceConnection
 import sefirah.domain.model.DeviceInfo
@@ -76,8 +79,9 @@ import sefirah.network.transfer.FileTransferService
 import sefirah.network.transfer.SftpServer
 import sefirah.network.util.SslHelper
 import sefirah.network.util.getInstalledApps
-import sefirah.common.util.drawableToBase64Compressed
-import sefirah.domain.model.BaseRemoteDevice
+import sefirah.notification.NotificationService
+import sefirah.projection.media.PlaybackService
+import sefirah.projection.media.RemotePlaybackHandler
 import java.security.cert.X509Certificate
 import javax.inject.Inject
 import javax.net.ssl.SSLSocket
@@ -115,6 +119,7 @@ class NetworkService : Service() {
 
     @Inject lateinit var callStateReceiver: CallStateReceiver
 
+    val bluetoothManager by lazy { getSystemService(BLUETOOTH_SERVICE) as BluetoothManager }
     val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
     val notificationManager by lazy { getSystemService(NOTIFICATION_SERVICE) as NotificationManager }
 
@@ -370,6 +375,7 @@ class NetworkService : Service() {
         val connection = DeviceConnection(device.deviceId, sslSocket, readChannel, writeChannel)
         setConnection(device.deviceId, connection)
 
+        val previousLastConnected = device.lastConnected
         val updatedDevice = device.copy(
             deviceName = authMessage.deviceName,
             lastConnected = System.currentTimeMillis(),
@@ -386,7 +392,7 @@ class NetworkService : Service() {
 
         deviceManager.addOrUpdatePairedDevice(updatedDevice)
         sendMessage(device.deviceId, ConnectionAck)
-        finalizeConnection(updatedDevice, false)
+        finalizeConnection(updatedDevice, false, previousLastConnected)
     }
 
     private suspend fun authenticateNewDevice(
@@ -446,6 +452,7 @@ class NetworkService : Service() {
             setConnection(device.deviceId, connection)
 
             val remoteAddress = (sslSocket.remoteSocketAddress as? java.net.InetSocketAddress)?.address?.hostAddress ?: ""
+            val previousLastConnected = device.lastConnected
             val updatedDevice = device.copy(
                 lastConnected = System.currentTimeMillis(),
                 connectionState = ConnectionState.Connected,
@@ -456,7 +463,7 @@ class NetworkService : Service() {
 
             Log.d(TAG, "Device ${updatedDevice.deviceId} connected")
             sendMessage(device.deviceId, ConnectionAck)
-            finalizeConnection(updatedDevice, false)
+            finalizeConnection(updatedDevice, false, previousLastConnected)
         } catch (e: Exception) {
             Log.e(TAG, "Error during connection", e)
             deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected()))
@@ -625,7 +632,11 @@ class NetworkService : Service() {
         )
     }
 
-    suspend fun finalizeConnection(device: PairedDevice, isNewDevice: Boolean) {
+    suspend fun finalizeConnection(
+        device: PairedDevice,
+        isNewDevice: Boolean,
+        previousLastConnected: Long? = null,
+    ) {
         sendDeviceInfo(device)
         sendDeviceStatus(device.deviceId)
 
@@ -655,7 +666,14 @@ class NetworkService : Service() {
             sendInstalledApps(device)
             sendContacts(device)
         }
-        callStateReceiver.register(this)
+
+        if (preferencesRepository.readCallLogSyncSettingsForDevice(device.deviceId).first()
+            && isCallLogsPermissionGranted(this)) {
+            val sinceMillis = if (isNewDevice) null else previousLastConnected
+            CallLogHelper.getCallLogs(this, sinceMillis).forEach {
+                sendMessage(device.deviceId, it)
+            }
+        }
     }
 
     private suspend fun sendAuthMessage(writeChannel: ByteWriteChannel) {
@@ -714,7 +732,7 @@ class NetworkService : Service() {
 
     private fun sendContacts(device: PairedDevice) {
         try {
-            if (smsPermissionGranted(this)) return
+            if (!isContactsPermissionGranted(this)) return
 
             ContactsHelper().getAllContacts(this).forEach { contact ->
                 sendMessage(device.deviceId, contact)

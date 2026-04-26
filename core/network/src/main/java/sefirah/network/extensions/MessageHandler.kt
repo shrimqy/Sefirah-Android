@@ -1,14 +1,20 @@
 package sefirah.network.extensions
 
 import android.app.NotificationManager
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import kotlinx.coroutines.flow.first
+import sefirah.communication.bluetooth.BluetoothDiscoverableActivity
 import sefirah.domain.model.ActionInfo
 import sefirah.domain.model.AddressEntry
 import sefirah.domain.model.ApplicationList
 import sefirah.domain.model.AudioDeviceInfo
 import sefirah.domain.model.AudioStreamState
 import sefirah.domain.model.BaseRemoteDevice
+import sefirah.domain.model.BluetoothPairingResult
+import sefirah.domain.model.BluetoothPairingRequest
 import sefirah.domain.model.ClipboardInfo
 import sefirah.domain.model.ClearNotifications
 import sefirah.domain.model.Disconnect
@@ -66,6 +72,7 @@ suspend fun NetworkService.handleMessage(device: BaseRemoteDevice, message: Sock
                 is AudioDeviceInfo -> remotePlaybackHandler.handleAudioDevice(device.deviceId, message)
                 is AudioStreamState -> setStreamVolume(device, message)
                 is ActionInfo -> actionHandler.addAction(device.deviceId, message)
+                is BluetoothPairingRequest -> handleBluetoothMakeDiscoverable(device.deviceId)
                 else -> {}
             }
         }
@@ -195,4 +202,25 @@ fun NetworkService.setStreamVolume(device: PairedDevice, message: AudioStreamSta
             sendMessage(device.deviceId, actualMessage)
         }
     }
+}
+
+private fun NetworkService.handleBluetoothMakeDiscoverable(sourceDeviceId: String) {
+    val adapter = bluetoothManager.adapter
+    if (adapter == null || !adapter.isEnabled) {
+        Log.w(TAG, "Bluetooth unavailable/disabled; cannot open discoverable flow")
+        sendMessage(sourceDeviceId, BluetoothPairingResult(false))
+        return
+    }
+
+    val intent = BluetoothDiscoverableActivity.createIntent(this, sourceDeviceId).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    if (!Settings.canDrawOverlays(this)) {
+        showBluetoothDiscoverableRequestNotification(sourceDeviceId)
+        return
+    }
+
+    runCatching { startActivity(intent) }
+        .onFailure { Log.w(TAG, "Bluetooth discoverable activity start failed", it) }
 }

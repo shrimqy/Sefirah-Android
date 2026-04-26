@@ -19,11 +19,14 @@ import kotlinx.coroutines.launch
 import sefirah.clipboard.ClipboardListener
 import sefirah.common.util.PermissionStates
 import sefirah.common.util.checkBatteryOptimization
+import sefirah.common.util.contactsPermissionGranted
 import sefirah.common.util.checkLocationPermissions
 import sefirah.common.util.checkNotificationPermission
 import sefirah.common.util.checkStoragePermission
 import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
+import sefirah.common.util.nearbyDevicesPermissionGranted
+import sefirah.common.util.overlayPermissionGranted
 import sefirah.common.util.phoneStatePermissionGranted
 import sefirah.common.util.smsPermissionGranted
 import sefirah.database.AppRepository
@@ -107,18 +110,23 @@ class SettingsViewModel @Inject constructor(
             
             val notificationGranted = checkNotificationPermission(context, clearPermission)
             val locationGranted = checkLocationPermissions(context, clearPermission)
+            val nearbyDevicesGranted = nearbyDevicesPermissionGranted(context, clearPermission)
             val storageGranted = checkStoragePermission(context, clearPermission)
             val smsGranted = smsPermissionGranted(context, clearPermission)
+            val contactsGranted = contactsPermissionGranted(context, clearPermission)
             val phoneStateGranted = phoneStatePermissionGranted(context, clearPermission)
             
             _permissionStates.value = PermissionStates(
                 notificationGranted = notificationGranted,
                 batteryGranted = checkBatteryOptimization(context),
                 locationGranted = locationGranted,
+                nearbyDevicesGranted = nearbyDevicesGranted,
+                overlayGranted = overlayPermissionGranted(context),
                 storageGranted = storageGranted,
                 accessibilityGranted = isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}"),
                 notificationListenerGranted = isNotificationListenerEnabled(context),
                 smsPermissionGranted = smsGranted,
+                contactsGranted = contactsGranted,
                 phoneStateGranted = phoneStateGranted
             )
         }

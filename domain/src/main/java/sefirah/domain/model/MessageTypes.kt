@@ -47,3 +47,13 @@ enum class CallState {
     MissedCall
 }
 
+enum class CallLogType {
+    Incoming,
+    Outgoing,
+    Missed,
+    Voicemail,
+    Rejected,
+    Blocked,
+    AnsweredExternally,
+    Unknown,
+}

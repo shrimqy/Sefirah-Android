@@ -29,6 +29,17 @@ object ClearNotifications : SocketMessage()
 object RequestApplicationList : SocketMessage()
 
 @Serializable
+@SerialName("BluetoothPairingRequest")
+object BluetoothPairingRequest : SocketMessage()
+
+@Serializable
+@SerialName("BluetoothPairingResult")
+data class BluetoothPairingResult(
+    val granted: Boolean,
+    val deviceName: String? = null,
+) : SocketMessage()
+
+@Serializable
 @SerialName("Authentication")
 data class Authentication(
     val deviceId: String,
@@ -79,6 +90,17 @@ data class CallInfo(
     val callState: CallState,
     val phoneNumber: String,
     val contactInfo: ContactInfo? = null
+) : SocketMessage()
+
+@Serializable
+@SerialName("CallLogInfo")
+data class CallLogInfo(
+    val callLogId: Long,
+    val phoneNumber: String,
+    val timestampMillis: Long,
+    val durationSeconds: Long,
+    val callType: CallLogType,
+    val contactInfo: ContactInfo? = null,
 ) : SocketMessage()
 
 @Serializable

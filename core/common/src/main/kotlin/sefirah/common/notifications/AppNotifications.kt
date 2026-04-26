@@ -25,8 +25,10 @@ object AppNotifications {
     private const val NETWORK_GROUP = "group_network"
     const val DEVICE_CONNECTION_CHANNEL = "device_connection_channel"
     const val PAIRING_REQUEST_CHANNEL = "pairing_request_channel"
+    const val BLUETOOTH_DISCOVERABLE_CHANNEL = "bluetooth_discoverable_channel"
     const val DEVICE_CONNECTION_ID = 2001
     const val PAIRING_REQUEST_ID = 2003
+    const val BLUETOOTH_DISCOVERABLE_REQUEST_ID = 2005
     
     // Media related constants
     private const val MEDIA_GROUP = "group_media"
@@ -74,6 +76,10 @@ object AppNotifications {
                 },
                 buildNotificationChannel(PAIRING_REQUEST_CHANNEL, IMPORTANCE_HIGH) {
                     setName(context.getString(R.string.channel_pairing_request))
+                    setGroup(NETWORK_GROUP)
+                },
+                buildNotificationChannel(BLUETOOTH_DISCOVERABLE_CHANNEL, IMPORTANCE_HIGH) {
+                    setName("Bluetooth pairing")
                     setGroup(NETWORK_GROUP)
                 },
                 

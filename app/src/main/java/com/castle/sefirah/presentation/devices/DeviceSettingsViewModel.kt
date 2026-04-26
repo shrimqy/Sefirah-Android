@@ -193,6 +193,12 @@ class DeviceSettingsViewModel @Inject constructor(
         }
     }
 
+    fun saveCallLogSyncSettings(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveCallLogSyncSettingsForDevice(deviceId, enabled)
+        }
+    }
+
     fun hasRequestedPermission(permission: String): Flow<Boolean> {
         return preferencesRepository.hasRequestedPermission(permission)
     }

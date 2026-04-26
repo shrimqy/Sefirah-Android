@@ -137,7 +137,17 @@ class PreferencesRepositoryImpl @Inject constructor(
 
     override fun readCallStateSyncSettingsForDevice(deviceId: String): Flow<Boolean> {
         return datastore.data.map { preferences ->
-            preferences[deviceCallStateSyncKey(deviceId)] != false
+            preferences[deviceCallStateSyncKey(deviceId)] == true
+        }
+    }
+
+    override suspend fun saveCallLogSyncSettingsForDevice(deviceId: String, callLogSync: Boolean) {
+        deviceCallLogSyncKey(deviceId).update(callLogSync)
+    }
+
+    override fun readCallLogSyncSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceCallLogSyncKey(deviceId)] != false
         }
     }
 
@@ -195,7 +205,8 @@ class PreferencesRepositoryImpl @Inject constructor(
                 clipboardSync = preferences[deviceClipboardSyncKey(deviceId)] != false,
                 messageSync = preferences[deviceMessageSyncKey(deviceId)] != false,
                 notificationSync = preferences[deviceNotificationSyncKey(deviceId)] != false,
-                callStateSync = preferences[deviceCallStateSyncKey(deviceId)] != false,
+                callStateSync = preferences[deviceCallStateSyncKey(deviceId)] == true,
+                callLogSync = preferences[deviceCallLogSyncKey(deviceId)] != false,
                 imageClipboard = preferences[deviceImageClipboardKey(deviceId)] != false,
                 mediaSession = preferences[deviceMediaSessionKey(deviceId)] != false,
                 mediaPlayerControl = preferences[deviceMediaPlayerControlKey(deviceId)] != false,
@@ -220,6 +231,7 @@ class PreferencesRepositoryImpl @Inject constructor(
         fun deviceMessageSyncKey(deviceId: String) = booleanPreferencesKey("messageSync_$deviceId")
         fun deviceNotificationSyncKey(deviceId: String) = booleanPreferencesKey("notificationSync_$deviceId")
         fun deviceCallStateSyncKey(deviceId: String) = booleanPreferencesKey("callStateSync_$deviceId")
+        fun deviceCallLogSyncKey(deviceId: String) = booleanPreferencesKey("callLogSync_$deviceId")
         fun deviceImageClipboardKey(deviceId: String) = booleanPreferencesKey("imageClipboard_$deviceId")
         fun deviceMediaSessionKey(deviceId: String) = booleanPreferencesKey("mediaSession_$deviceId")
         fun deviceMediaPlayerControlKey(deviceId: String) = booleanPreferencesKey("mediaPlayerControl_$deviceId")

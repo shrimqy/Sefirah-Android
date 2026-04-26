@@ -5,6 +5,7 @@ data class DevicePreferences(
     val messageSync: Boolean = false,
     val notificationSync: Boolean = false,
     val callStateSync: Boolean = false,
+    val callLogSync: Boolean = false,
     val imageClipboard: Boolean = false,
     val mediaSession: Boolean = false,
     val mediaPlayerControl: Boolean = false,
