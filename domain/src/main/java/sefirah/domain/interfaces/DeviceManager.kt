@@ -1,8 +1,10 @@
 package sefirah.domain.interfaces
 
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import sefirah.domain.model.BaseRemoteDevice
 import sefirah.domain.model.DiscoveredDevice
+import sefirah.domain.model.DeviceConnectionEvent
 import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.PairedDevice
 import sefirah.domain.model.PendingDeviceApproval
@@ -14,6 +16,7 @@ interface DeviceManager {
     val localDevice: LocalDevice
     val localDeviceFlow: StateFlow<LocalDevice?>
     val pendingDeviceApproval: StateFlow<PendingDeviceApproval?>
+    val connectionEvents: SharedFlow<DeviceConnectionEvent>
 
     fun setPendingApproval(approval: PendingDeviceApproval?)
     fun clearPendingApproval(deviceId: String)

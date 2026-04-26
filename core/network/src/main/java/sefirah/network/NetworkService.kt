@@ -847,7 +847,7 @@ class NetworkService : Service() {
         unregisterReceiver(interruptionFilterReceiver)
         unregisterReceiver(screenOnReceiver)
         unregisterReceiver(wifiStateReceiver)
-        callStateReceiver.unregister(this)
+        callStateReceiver.unregister()
         sftpServer.stop()
         remotePlaybackHandler.release()
         smsHandler.stop()

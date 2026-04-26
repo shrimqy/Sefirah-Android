@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sefirah.domain.model.NotificationTextMessage
@@ -57,17 +58,22 @@ class NotificationService @Inject constructor(
 
     init {
         scope.launch {
-            deviceManager.pairedDevices.collect { pairedDevices ->
-                val connectedDeviceIds = pairedDevices
-                    .filter { it.connectionState.isConnected }
-                    .filter { device ->
-                        preferencesRepository.readNotificationSyncSettingsForDevice(device.deviceId).first()
-                    }
-                    .map { it.deviceId }
-                    .toSet()
-                deviceIds.value = connectedDeviceIds
+            refreshConnectedDeviceIds()
+            deviceManager.connectionEvents.collectLatest {
+                refreshConnectedDeviceIds()
             }
         }
+    }
+
+    private suspend fun refreshConnectedDeviceIds() {
+        val connectedDeviceIds = deviceManager.pairedDevices.value
+            .filter { it.connectionState.isConnected }
+            .filter { device ->
+                preferencesRepository.readNotificationSyncSettingsForDevice(device.deviceId).first()
+            }
+            .map { it.deviceId }
+            .toSet()
+        deviceIds.value = connectedDeviceIds
     }
 
     fun sendActiveNotifications(deviceId: String? = null) {

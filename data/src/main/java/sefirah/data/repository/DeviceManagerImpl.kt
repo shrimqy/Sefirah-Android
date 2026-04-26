@@ -5,11 +5,15 @@ import android.content.Context
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -24,6 +28,7 @@ import sefirah.database.model.toEntity
 import sefirah.domain.model.BaseRemoteDevice
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DiscoveredDevice
+import sefirah.domain.model.DeviceConnectionEvent
 import sefirah.domain.model.LocalDevice
 import sefirah.domain.model.PairedDevice
 import sefirah.domain.model.PendingDeviceApproval
@@ -54,6 +59,11 @@ class DeviceManagerImpl @Inject constructor(
 
     private val _pendingDeviceApproval = MutableStateFlow<PendingDeviceApproval?>(null)
     override val pendingDeviceApproval: StateFlow<PendingDeviceApproval?> = _pendingDeviceApproval.asStateFlow()
+    private val _connectionEvents = MutableSharedFlow<DeviceConnectionEvent>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    override val connectionEvents: SharedFlow<DeviceConnectionEvent> = _connectionEvents.asSharedFlow()
 
     override fun setPendingApproval(approval: PendingDeviceApproval?) {
         _pendingDeviceApproval.value = approval
@@ -191,6 +201,12 @@ class DeviceManagerImpl @Inject constructor(
                         currentDevices + device
                     }
                 }
+
+                if (device.connectionState is ConnectionState.Connected ||
+                    device.connectionState is ConnectionState.Disconnected
+                ) {
+                    _connectionEvents.tryEmit(DeviceConnectionEvent.OnConnectionStatusChanged)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error adding/updating device", e)
             }
@@ -204,6 +220,7 @@ class DeviceManagerImpl @Inject constructor(
                 _pairedDevices.update { currentDevices ->
                     currentDevices.filter { it.deviceId != deviceId }
                 }
+                _connectionEvents.tryEmit(DeviceConnectionEvent.OnConnectionStatusChanged)
                 Log.d(TAG, "Device $deviceId removed")
             } catch (e: Exception) {
                 Log.e(TAG, "Error removing device", e)

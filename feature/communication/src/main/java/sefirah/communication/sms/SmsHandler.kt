@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sefirah.common.util.smsPermissionGranted
@@ -50,24 +51,29 @@ class SmsHandler @Inject constructor(
 
     init {
         scope.launch {
-            deviceManager.pairedDevices.collect { pairedDevices ->
-                val connectedDeviceIds = pairedDevices
-                    .filter {
-                        it.connectionState.isConnected &&
-                                preferencesRepository.readMessageSyncSettingsForDevice(it.deviceId).first()
-                    }
-                    .map { it.deviceId }
-                    .toSet()
-
-                deviceIds.value = connectedDeviceIds
-                
-                // Start content observer when deviceIds becomes non-empty
-                if (connectedDeviceIds.isNotEmpty() && !isObserverRegistered) {
-                    startContentObserver()
-                } else if (connectedDeviceIds.isEmpty() && isObserverRegistered) {
-                    stopContentObserver()
-                }
+            refreshConnectedDeviceIds()
+            deviceManager.connectionEvents.collectLatest {
+                refreshConnectedDeviceIds()
             }
+        }
+    }
+
+    private suspend fun refreshConnectedDeviceIds() {
+        val connectedDeviceIds = deviceManager.pairedDevices.value
+            .filter {
+                it.connectionState.isConnected &&
+                    preferencesRepository.readMessageSyncSettingsForDevice(it.deviceId).first()
+            }
+            .map { it.deviceId }
+            .toSet()
+
+        deviceIds.value = connectedDeviceIds
+
+        // Start content observer when deviceIds becomes non-empty
+        if (connectedDeviceIds.isNotEmpty() && !isObserverRegistered) {
+            startContentObserver()
+        } else if (connectedDeviceIds.isEmpty() && isObserverRegistered) {
+            stopContentObserver()
         }
     }
 

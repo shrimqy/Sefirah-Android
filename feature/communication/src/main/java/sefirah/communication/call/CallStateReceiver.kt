@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import sefirah.communication.utils.ContactsHelper
 import sefirah.domain.interfaces.DeviceManager
@@ -24,6 +25,7 @@ import javax.inject.Singleton
 
 @Singleton
 class CallStateReceiver @Inject constructor(
+    private val context: Context,
     private val networkManager: NetworkManager,
     private val deviceManager: DeviceManager,
     private val preferencesRepository: PreferencesRepository
@@ -36,7 +38,16 @@ class CallStateReceiver @Inject constructor(
     /** Last state we sent per phone number, to avoid duplicate events. */
     private val lastStateByNumber = mutableMapOf<String, Int>()
 
-    fun register(context: Context) {
+    init {
+        scope.launch {
+            refreshRegistration()
+            deviceManager.connectionEvents.collectLatest {
+                refreshRegistration()
+            }
+        }
+    }
+
+    fun register() {
         if (isRegistered) return
         ContextCompat.registerReceiver(
             context,
@@ -47,7 +58,7 @@ class CallStateReceiver @Inject constructor(
         isRegistered = true
     }
 
-    fun unregister(context: Context) {
+    fun unregister() {
         if (!isRegistered) return
         try {
             context.unregisterReceiver(this)
@@ -56,6 +67,20 @@ class CallStateReceiver @Inject constructor(
         }
         isRegistered = false
         lastStateByNumber.clear()
+    }
+
+    suspend fun refreshRegistration() {
+        val shouldRegister = deviceManager.pairedDevices.value
+            .filter { it.connectionState.isConnected }
+            .any { connectedDevice ->
+                preferencesRepository.readCallStateSyncSettingsForDevice(connectedDevice.deviceId).first()
+            }
+
+        if (shouldRegister) {
+            register()
+        } else {
+            unregister()
+        }
     }
 
     @SuppressLint("MissingPermission")

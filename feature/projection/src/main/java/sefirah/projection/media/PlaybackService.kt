@@ -16,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sefirah.domain.interfaces.DeviceManager
@@ -56,15 +57,20 @@ class PlaybackService @Inject constructor(
 
     init {
         scope.launch {
-            deviceManager.pairedDevices.collect { pairedDevices ->
-                val connectedDeviceIds = pairedDevices
-                    .filter { it.connectionState.isConnected }
-                    .map { it.deviceId }
-                    .toSet()
-                deviceIds.value = connectedDeviceIds
-                updateActivation()
+            refreshConnectedDeviceIds()
+            deviceManager.connectionEvents.collectLatest {
+                refreshConnectedDeviceIds()
             }
         }
+    }
+
+    private fun refreshConnectedDeviceIds() {
+        val connectedDeviceIds = deviceManager.pairedDevices.value
+            .filter { it.connectionState.isConnected }
+            .map { it.deviceId }
+            .toSet()
+        deviceIds.value = connectedDeviceIds
+        updateActivation()
     }
 
     private fun updateActivation() {
