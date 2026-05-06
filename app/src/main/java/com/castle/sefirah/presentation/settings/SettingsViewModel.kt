@@ -1,6 +1,7 @@
 package com.castle.sefirah.presentation.settings
 
 import android.app.Application
+import android.provider.Settings
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,21 +20,20 @@ import kotlinx.coroutines.launch
 import sefirah.clipboard.ClipboardListener
 import sefirah.common.util.PermissionStates
 import sefirah.common.util.checkBatteryOptimization
-import sefirah.common.util.contactsPermissionGranted
 import sefirah.common.util.checkLocationPermissions
 import sefirah.common.util.checkNotificationPermission
 import sefirah.common.util.checkStoragePermission
+import sefirah.common.util.contactsPermissionGranted
 import sefirah.common.util.isAccessibilityServiceEnabled
 import sefirah.common.util.isNotificationListenerEnabled
 import sefirah.common.util.nearbyDevicesPermissionGranted
-import sefirah.common.util.overlayPermissionGranted
 import sefirah.common.util.phoneStatePermissionGranted
 import sefirah.common.util.smsPermissionGranted
 import sefirah.database.AppRepository
 import sefirah.database.model.NetworkEntity
-import sefirah.domain.model.LocalDevice
 import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.interfaces.PreferencesRepository
+import sefirah.domain.model.LocalDevice
 import sefirah.network.NetworkDiscovery
 import javax.inject.Inject
 
@@ -121,7 +121,7 @@ class SettingsViewModel @Inject constructor(
                 batteryGranted = checkBatteryOptimization(context),
                 locationGranted = locationGranted,
                 nearbyDevicesGranted = nearbyDevicesGranted,
-                overlayGranted = overlayPermissionGranted(context),
+                overlayGranted = Settings.canDrawOverlays(context),
                 storageGranted = storageGranted,
                 accessibilityGranted = isAccessibilityServiceEnabled(context, "${context.packageName}/${ClipboardListener::class.java.canonicalName}"),
                 notificationListenerGranted = isNotificationListenerEnabled(context),

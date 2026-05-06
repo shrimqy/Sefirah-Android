@@ -2,8 +2,6 @@ package sefirah.network.extensions
 
 import android.app.NotificationManager
 import android.content.Intent
-import android.os.Build
-import android.provider.Settings
 import android.util.Log
 import kotlinx.coroutines.flow.first
 import sefirah.communication.bluetooth.BluetoothDiscoverableActivity
@@ -13,27 +11,27 @@ import sefirah.domain.model.ApplicationList
 import sefirah.domain.model.AudioDeviceInfo
 import sefirah.domain.model.AudioStreamState
 import sefirah.domain.model.BaseRemoteDevice
-import sefirah.domain.model.BluetoothPairingResult
 import sefirah.domain.model.BluetoothPairingRequest
-import sefirah.domain.model.ClipboardInfo
+import sefirah.domain.model.BluetoothPairingResult
 import sefirah.domain.model.ClearNotifications
-import sefirah.domain.model.Disconnect
-import sefirah.domain.model.RequestApplicationList
+import sefirah.domain.model.ClipboardInfo
 import sefirah.domain.model.ConnectionAck
 import sefirah.domain.model.ConnectionState
 import sefirah.domain.model.DeviceInfo
+import sefirah.domain.model.Disconnect
 import sefirah.domain.model.DiscoveredDevice
 import sefirah.domain.model.DndState
 import sefirah.domain.model.FileTransferInfo
+import sefirah.domain.model.MediaAction
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationInfo
 import sefirah.domain.model.NotificationInfoType
+import sefirah.domain.model.NotificationReply
 import sefirah.domain.model.PairMessage
 import sefirah.domain.model.PairedDevice
 import sefirah.domain.model.PendingDeviceApproval
-import sefirah.domain.model.MediaAction
 import sefirah.domain.model.PlaybackInfo
-import sefirah.domain.model.NotificationReply
+import sefirah.domain.model.RequestApplicationList
 import sefirah.domain.model.RingerModeState
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.TextMessage
@@ -216,10 +214,7 @@ private fun NetworkService.handleBluetoothMakeDiscoverable(sourceDeviceId: Strin
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
-    if (!Settings.canDrawOverlays(this)) {
-        showBluetoothDiscoverableRequestNotification(sourceDeviceId)
-        return
-    }
+    showBluetoothDiscoverableRequestNotification(sourceDeviceId)
 
     runCatching { startActivity(intent) }
         .onFailure { Log.w(TAG, "Bluetooth discoverable activity start failed", it) }

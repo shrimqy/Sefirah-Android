@@ -10,9 +10,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
+import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import sefirah.common.notifications.AppNotifications
+import sefirah.common.util.NEARBY_DEVICES_PERMISSIONS
+import sefirah.common.util.nearbyDevicesPermissionGranted
 import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.model.BluetoothPairingResult
 import javax.inject.Inject
@@ -26,6 +29,12 @@ class BluetoothDiscoverableActivity : FragmentActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             sendResult(result.resultCode > 0)
             finish()
+        }
+
+    private val permissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val granted = permissions.values.all { it }
+            if (granted) launchDiscoverable() else { sendResult(false); finish() }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,12 +57,22 @@ class BluetoothDiscoverableActivity : FragmentActivity() {
             return
         }
 
+        if (!nearbyDevicesPermissionGranted(this)) {
+            permissionLauncher.launch(NEARBY_DEVICES_PERMISSIONS)
+            return
+        }
+
+        launchDiscoverable()
+    }
+
+    private fun launchDiscoverable() {
         val discoverableIntent = Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
             putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, DISCOVERABLE_DURATION_SECONDS)
         }
 
         runCatching { discoverableLauncher.launch(discoverableIntent) }
-            .onFailure {
+            .onFailure { e ->
+                Log.e(TAG, "Failed to launch discoverable intent", e)
                 sendResult(false)
                 finish()
             }
@@ -61,7 +80,7 @@ class BluetoothDiscoverableActivity : FragmentActivity() {
 
     private fun sendResult(granted: Boolean) {
         val sourceDeviceId = intent.getStringExtra(EXTRA_SOURCE_DEVICE_ID) ?: return
-        val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as? BluetoothManager
+        val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val deviceName = bluetoothManager?.adapter?.name
         lifecycleScope.launch {
             networkManager.sendMessage(sourceDeviceId, BluetoothPairingResult(granted, deviceName))
@@ -69,6 +88,7 @@ class BluetoothDiscoverableActivity : FragmentActivity() {
     }
 
     companion object {
+        private const val TAG = "BluetoothDiscoverable"
         private const val EXTRA_SOURCE_DEVICE_ID = "extra_source_device_id"
         private const val DISCOVERABLE_DURATION_SECONDS = 120
 

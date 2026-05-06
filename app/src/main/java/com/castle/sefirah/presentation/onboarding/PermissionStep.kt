@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.castle.sefirah.presentation.common.components.LocationPermissionRationaleDialog
 import com.castle.sefirah.presentation.settings.SettingsViewModel
 import sefirah.common.R
+import sefirah.common.util.NEARBY_DEVICES_PERMISSIONS
 import sefirah.common.util.openAppSettings
 import sefirah.presentation.components.padding
 
@@ -195,12 +196,7 @@ internal class PermissionStep : OnboardingStep {
                             granted = permissionStates.nearbyDevicesGranted,
                             permission = Manifest.permission.BLUETOOTH_CONNECT,
                             onRequest = {
-                                nearbyDevicesPermissionRequester.launch(
-                                    arrayOf(
-                                        Manifest.permission.BLUETOOTH_CONNECT,
-                                        Manifest.permission.BLUETOOTH_SCAN
-                                    )
-                                )
+                                nearbyDevicesPermissionRequester.launch(NEARBY_DEVICES_PERMISSIONS)
                             },
                             viewModel = viewModel
                         )

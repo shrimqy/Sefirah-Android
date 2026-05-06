@@ -157,9 +157,9 @@
     <string name="phone_permission">Phone permission</string>
     <string name="phone_permission_rationale">Required to notify desktop of incoming calls</string>
     <string name="nearby_devices_permission">Nearby devices</string>
-    <string name="nearby_devices_permission_rationale">Needed for Bluetooth pairing and nearby device operations</string>
+    <string name="nearby_devices_permission_rationale">For Bluetooth device pairing</string>
     <string name="overlay_permission">Display over other apps</string>
-    <string name="overlay_permission_rationale">Used to show the Bluetooth discoverable approval flow when the app is in background</string>
+    <string name="overlay_permission_rationale">Used for background permission prompts</string>
     <string name="message_sync_preference">Sync messages</string>
     <string name="message_sync_subtitle">Enables reading and texting messages from desktop</string>
     <string-array name="convert_to_mms_after_entries">

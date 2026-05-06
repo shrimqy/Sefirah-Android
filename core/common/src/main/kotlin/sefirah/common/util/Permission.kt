@@ -1,6 +1,7 @@
 package sefirah.common.util
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -71,30 +72,23 @@ fun checkLocationPermissions(
     return hasFineLocation && hasBackgroundLocation
 }
 
+@SuppressLint("InlinedApi")
+val NEARBY_DEVICES_PERMISSIONS = arrayOf(
+    Manifest.permission.BLUETOOTH_CONNECT,
+    Manifest.permission.BLUETOOTH_SCAN,
+)
+
 fun nearbyDevicesPermissionGranted(
     context: Context,
     onGranted: (String) -> Unit = {}
 ): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
 
-    val connectGranted = context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) ==
-        PackageManager.PERMISSION_GRANTED
-    val scanGranted = context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) ==
-        PackageManager.PERMISSION_GRANTED
-    val allGranted = connectGranted && scanGranted
-    if (allGranted) {
-        onGranted(Manifest.permission.BLUETOOTH_CONNECT)
-        onGranted(Manifest.permission.BLUETOOTH_SCAN)
+    val allGranted = NEARBY_DEVICES_PERMISSIONS.all {
+        context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
     }
+    if (allGranted) NEARBY_DEVICES_PERMISSIONS.forEach { onGranted(it) }
     return allGranted
-}
-
-fun overlayPermissionGranted(context: Context): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        Settings.canDrawOverlays(context)
-    } else {
-        true
-    }
 }
 
 fun checkStoragePermission(
