@@ -12,10 +12,8 @@ object CallLogHelper {
     private const val MAX_SYNC_CALL_LOGS = 200
 
     @SuppressLint("MissingPermission")
-    fun getCallLogs(context: Context, sinceMillisExclusive: Long? = null): List<CallLogInfo> {
+    fun getCallLogs(context: Context): List<CallLogInfo> {
         val resolver = context.contentResolver
-        val selection = sinceMillisExclusive?.let { "${CallLog.Calls.DATE} > ?" }
-        val selectionArgs = sinceMillisExclusive?.let { arrayOf(it.toString()) }
         val cursor = resolver.query(
             CallLog.Calls.CONTENT_URI,
             arrayOf(
@@ -25,8 +23,8 @@ object CallLogHelper {
                 CallLog.Calls.DURATION,
                 CallLog.Calls.TYPE,
             ),
-            selection,
-            selectionArgs,
+            null,
+            null,
             "${CallLog.Calls.DATE} DESC",
         ) ?: return emptyList()
 
@@ -46,7 +44,7 @@ object CallLogHelper {
                         timestampMillis = it.getLong(dateIdx),
                         durationSeconds = it.getLong(durationIdx),
                         callType = mapCallType(it.getInt(typeIdx)),
-                        contactInfo = if (sinceMillisExclusive != null) contactHelper.getContactInfo(context, number) else null,
+                        contactInfo = contactHelper.getContactInfo(context, number),
                     ),
                 )
             }

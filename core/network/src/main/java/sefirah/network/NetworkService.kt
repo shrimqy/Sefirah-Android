@@ -375,7 +375,6 @@ class NetworkService : Service() {
         val connection = DeviceConnection(device.deviceId, sslSocket, readChannel, writeChannel)
         setConnection(device.deviceId, connection)
 
-        val previousLastConnected = device.lastConnected
         val updatedDevice = device.copy(
             deviceName = authMessage.deviceName,
             lastConnected = System.currentTimeMillis(),
@@ -392,7 +391,7 @@ class NetworkService : Service() {
 
         deviceManager.addOrUpdatePairedDevice(updatedDevice)
         sendMessage(device.deviceId, ConnectionAck)
-        finalizeConnection(updatedDevice, false, previousLastConnected)
+        finalizeConnection(updatedDevice, false)
     }
 
     private suspend fun authenticateNewDevice(
@@ -452,7 +451,6 @@ class NetworkService : Service() {
             setConnection(device.deviceId, connection)
 
             val remoteAddress = (sslSocket.remoteSocketAddress as? java.net.InetSocketAddress)?.address?.hostAddress ?: ""
-            val previousLastConnected = device.lastConnected
             val updatedDevice = device.copy(
                 lastConnected = System.currentTimeMillis(),
                 connectionState = ConnectionState.Connected,
@@ -463,7 +461,7 @@ class NetworkService : Service() {
 
             Log.d(TAG, "Device ${updatedDevice.deviceId} connected")
             sendMessage(device.deviceId, ConnectionAck)
-            finalizeConnection(updatedDevice, false, previousLastConnected)
+            finalizeConnection(updatedDevice, false)
         } catch (e: Exception) {
             Log.e(TAG, "Error during connection", e)
             deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected()))
@@ -635,7 +633,6 @@ class NetworkService : Service() {
     suspend fun finalizeConnection(
         device: PairedDevice,
         isNewDevice: Boolean,
-        previousLastConnected: Long? = null,
     ) {
         sendDeviceInfo(device)
         sendDeviceStatus(device.deviceId)
@@ -652,15 +649,7 @@ class NetworkService : Service() {
             notificationHandler.sendActiveNotifications(device.deviceId)
         }
 
-        if (preferencesRepository.readMessageSyncSettingsForDevice(device.deviceId).first()
-            && smsPermissionGranted(this)
-        ) {
-            smsHandler.sendAllConversations(device.deviceId)
-        }
-
         playbackService.sendActiveSessions(device.deviceId)
-
-        networkDiscovery.saveCurrentNetworkAsTrusted()
 
         if (isNewDevice) {
             sendInstalledApps(device)
@@ -669,11 +658,18 @@ class NetworkService : Service() {
 
         if (preferencesRepository.readCallLogSyncSettingsForDevice(device.deviceId).first()
             && isCallLogsPermissionGranted(this)) {
-            val sinceMillis = if (isNewDevice) null else previousLastConnected
-            CallLogHelper.getCallLogs(this, sinceMillis).forEach {
+            CallLogHelper.getCallLogs(this).forEach {
                 sendMessage(device.deviceId, it)
             }
         }
+
+        if (preferencesRepository.readMessageSyncSettingsForDevice(device.deviceId).first()
+            && smsPermissionGranted(this)
+        ) {
+            smsHandler.sendAllConversations(device.deviceId)
+        }
+
+        networkDiscovery.saveCurrentNetworkAsTrusted()
     }
 
     private suspend fun sendAuthMessage(writeChannel: ByteWriteChannel) {
