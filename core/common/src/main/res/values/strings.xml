@@ -106,7 +106,12 @@
     <string name="call_notifier_preference_subtitle">Notifies desktop of incoming calls</string>
     <string name="call_log_sync_preference">Sync call logs</string>
     <string name="call_log_sync_preference_subtitle">Shares recent call history with desktop</string>
-    <string name="media_session_subtitle">Media playback will be shown in the notification bar</string>
+    <string name="media_session_subtitle">Control remote media playback from the app</string>
+    <string name="media_session_notification_preference">Show media playback notification</string>
+    <string name="media_session_notification_subtitle">Show now playing controls in the notification bar</string>
+    <string name="preference_settings_with_name">%1$s settings</string>
+    <string name="remote_volume_control_preference">Volume button control</string>
+    <string name="remote_volume_control_subtitle">Use phone volume keys to change remote device volume</string>
     <string name="storage_access_preference">Storage access</string>
     <string name="storage_access_subtitle">Allows Windows to access your Android storage</string>
     <string name="network_preference">Network settings</string>

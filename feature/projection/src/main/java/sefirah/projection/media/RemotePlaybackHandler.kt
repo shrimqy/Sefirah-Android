@@ -91,6 +91,10 @@ class RemotePlaybackHandler @Inject constructor(
     }
 
     suspend fun handlePlaybackSessionUpdates(deviceId: String, playbackSession: PlaybackInfo) {
+        if (!preferencesRepository.readMediaSessionSettingsForDevice(deviceId).first()) {
+            clearDeviceData(deviceId)
+            return
+        }
         when (playbackSession.infoType) {
             PlaybackInfoType.PlaybackInfo -> addSession(deviceId, playbackSession)
             PlaybackInfoType.RemovedSession -> removeSession(deviceId, playbackSession)
@@ -173,10 +177,13 @@ class RemotePlaybackHandler @Inject constructor(
 
 
     private suspend fun showMediaSession(deviceId: String, session: PlaybackInfo) {
-        if (isSpotify(session) || !preferencesRepository.readMediaSessionSettingsForDevice(deviceId).first()) {
+        if (isSpotify(session) || !preferencesRepository.readMediaSessionNotificationSettingsForDevice(deviceId).first()
+        ) {
             closeMediaNotification()
             return
         }
+
+        val remoteVolumeControlEnabled = preferencesRepository.readRemoteVolumeControlSettingsForDevice(deviceId).first()
 
         scope.launch(Dispatchers.Main) {
             val metadata = MediaMetadataCompat.Builder()
@@ -274,7 +281,7 @@ class RemotePlaybackHandler @Inject constructor(
             val audioDevicesForDevice = _audioDevicesByDevice.value[deviceId] ?: emptyList()
             val currentAudioDevice = audioDevicesForDevice.firstOrNull { it.isSelected } ?: audioDevicesForDevice.firstOrNull()
 
-            if (session.isPlaying) {
+            if (session.isPlaying && remoteVolumeControlEnabled) {
                 mediaSession.setPlaybackToRemote(object : VolumeProviderCompat(
                     VOLUME_CONTROL_ABSOLUTE,
                     getMaxVolume(),

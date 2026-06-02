@@ -30,6 +30,7 @@ sealed class SettingsRouteScreen(var route: String) {
 
 sealed class DeviceRouteScreen(var route: String) {
     data object AddressScreen: DeviceRouteScreen("addressScreen")
+    data object MediaSessionSettings: DeviceRouteScreen("mediaSessionSettings")
 }
 
 sealed class OnboardingRoute(var route: String) {

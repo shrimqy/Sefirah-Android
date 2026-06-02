@@ -175,6 +175,18 @@ class DeviceSettingsViewModel @Inject constructor(
         }
     }
 
+    fun saveMediaSessionNotificationSettings(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveMediaSessionNotificationSettingsForDevice(deviceId, enabled)
+        }
+    }
+
+    fun saveRemoteVolumeControlSettings(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveRemoteVolumeControlSettingsForDevice(deviceId, enabled)
+        }
+    }
+
     fun saveMediaPlayerControlSettings(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.saveMediaPlayerControlSettingsForDevice(deviceId, enabled)

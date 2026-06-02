@@ -9,8 +9,9 @@ import androidx.navigation.navigation
 import com.castle.sefirah.navigation.DeviceRouteScreen
 import com.castle.sefirah.navigation.Graph
 import com.castle.sefirah.navigation.MainRouteScreen
-import com.castle.sefirah.presentation.devices.DeviceSettingsScreen
 import com.castle.sefirah.presentation.devices.AddressScreen
+import com.castle.sefirah.presentation.devices.DeviceSettingsScreen
+import com.castle.sefirah.presentation.devices.MediaSessionSettingsScreen
 
 fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
     navigation(
@@ -31,7 +32,10 @@ fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
                     onNavigateBack = { rootNavController.navigateUp() },
                     onNavigateToAddressScreen = {
                         rootNavController.navigate(DeviceRouteScreen.AddressScreen.route)
-                    }
+                    },
+                    onNavigateToMediaSessionSettings = {
+                        rootNavController.navigate(DeviceRouteScreen.MediaSessionSettings.route)
+                    },
                 )
             }
         }
@@ -42,6 +46,15 @@ fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
             AddressScreen(
                 rootNavController = rootNavController,
                 onNavigateBack = { rootNavController.navigateUp() }
+            )
+        }
+
+        composable(
+            route = DeviceRouteScreen.MediaSessionSettings.route
+        ) {
+            MediaSessionSettingsScreen(
+                rootNavController = rootNavController,
+                onNavigateBack = { rootNavController.navigateUp() },
             )
         }
     }
