@@ -288,6 +288,20 @@ class RemotePlaybackHandler @Inject constructor(
                             networkManager.sendMessage(deviceId, action)
                         }
                     }
+
+                    override fun onAdjustVolume(direction: Int) {
+                        val newVolume = when (direction) {
+                            AudioManager.ADJUST_RAISE -> minOf(currentVolume + 1, maxVolume)
+                            AudioManager.ADJUST_LOWER -> maxOf(currentVolume - 1, 0)
+                            else -> return
+                        }
+                        currentVolume = newVolume
+                        val normalizedVolume = newVolume.toFloat() / maxVolume
+                        if (currentAudioDevice != null) {
+                            val action = MediaAction(MediaActionType.VolumeUpdate, currentAudioDevice.deviceId, normalizedVolume.toDouble())
+                            networkManager.sendMessage(deviceId, action)
+                        }
+                    }
                 })
             }
 
