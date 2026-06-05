@@ -2,6 +2,7 @@ package sefirah.network.transfer
 
 import android.content.Context
 import android.os.Build
+import android.os.storage.StorageManager
 import android.util.Log
 import androidx.core.net.toUri
 import org.apache.sshd.common.file.nativefs.NativeFileSystemFactory
@@ -67,7 +68,7 @@ class SftpServer @Inject constructor(
 
     private class SimpleFileSystemFactory : VirtualFileSystemFactory() {
         init {
-            defaultHomeDir = Paths.get("/storage/emulated/0/")
+            defaultHomeDir = Paths.get("/")
         }
     }
 
@@ -177,6 +178,17 @@ class SftpServer @Inject constructor(
         val localDevice = deviceManager.localDevice
         val username = localDevice.deviceName
 
+        val paths = mutableListOf<String>()
+        val pathNames = mutableListOf<String>()
+        if (SUPPORTS_NATIVEFS) {
+            val volumes = context.getSystemService(StorageManager::class.java).storageVolumes
+            for (sv in volumes) {
+                val dir = sv.directory ?: continue
+                paths.add(dir.path)
+                pathNames.add(sv.getDescription(context))
+            }
+        }
+
         PORT_RANGE.forEach { port ->
             try {
                 sshd = SshServer.setUpDefaultServer().apply {
@@ -194,13 +206,15 @@ class SftpServer @Inject constructor(
 
                 isRunning = true
 
-                Log.d(TAG, "SFTP server started: $localAddress on port $port, Pass: $pwd")
+                Log.d(TAG, "SFTP server started: $localAddress on port $port, Pass: $pwd, paths: $paths")
 
                 serverInfo = SftpServerInfo(
                     username = username,
                     password = pwd,
                     ipAddress = localAddress!!,
-                    port = port
+                    port = port,
+                    paths = paths,
+                    pathNames = pathNames
                 )
 
                 return serverInfo
