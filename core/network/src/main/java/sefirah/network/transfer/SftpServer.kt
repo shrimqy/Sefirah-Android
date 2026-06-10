@@ -211,7 +211,6 @@ class SftpServer @Inject constructor(
                 serverInfo = SftpServerInfo(
                     username = username,
                     password = pwd,
-                    ipAddress = localAddress!!,
                     port = port,
                     paths = paths,
                     pathNames = pathNames

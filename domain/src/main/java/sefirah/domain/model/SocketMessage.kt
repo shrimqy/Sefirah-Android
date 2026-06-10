@@ -235,7 +235,6 @@ data class FileTransferInfo(
 data class SftpServerInfo(
     val username: String,
     val password: String,
-    val ipAddress: String,
     val port: Int,
     val paths: List<String> = emptyList(),
     val pathNames: List<String> = emptyList()
