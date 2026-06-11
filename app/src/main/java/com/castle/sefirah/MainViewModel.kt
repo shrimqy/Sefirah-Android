@@ -34,13 +34,13 @@ class MainViewModel @Inject constructor(
     val pendingDeviceApproval: StateFlow<PendingDeviceApproval?> = deviceManager.pendingDeviceApproval
 
     fun approveDevice(deviceId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             networkManager.approveDeviceConnection(deviceId)
         }
     }
 
     fun rejectDevice(deviceId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             networkManager.rejectDeviceConnection(deviceId)
         }
     }
