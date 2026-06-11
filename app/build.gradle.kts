@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.lifecycle.runtime.ktx)
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.android)
+    implementation(libs.material3.adaptive.navigation.suite)
     implementation(libs.coil.compose)
     implementation(libs.compose.navigation)
     implementation(libs.splashscreen)

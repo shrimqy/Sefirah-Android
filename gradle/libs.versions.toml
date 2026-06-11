@@ -110,6 +110,7 @@ ui-util = { module = "androidx.compose.ui:ui-util" }
 compose-ui-test-junit = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "composeUi" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "composeUi" }
 material3-core = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+material3-adaptive-navigation-suite = { module = "androidx.compose.material3:material3-adaptive-navigation-suite" }
 material-icons = { module = "androidx.compose.material:material-icons-extended", version.ref = "composeUi" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "composeCoil" }
 
