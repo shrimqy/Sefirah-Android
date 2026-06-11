@@ -31,6 +31,7 @@ class NetworkManagerImpl @Inject constructor(
     }
 
     init {
+        NetworkService.start(context)
         context.bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
