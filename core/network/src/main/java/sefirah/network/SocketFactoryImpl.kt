@@ -27,6 +27,7 @@ class SocketFactoryImpl @Inject constructor() : SocketFactory {
             withTimeoutOrNull(3000L.milliseconds) {
                 withContext(Dispatchers.IO) {
                     (sslContext.socketFactory.createSocket(address, port) as SSLSocket).apply {
+                        keepAlive = true
                         startHandshake()
                     }
                 }

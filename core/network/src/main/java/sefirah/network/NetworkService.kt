@@ -280,6 +280,7 @@ class NetworkService : Service() {
                             tcpServerSocket?.accept() as? SSLSocket
                         } ?: break
 
+                        sslSocket.keepAlive = true
                         Log.d(TAG, "Accepted incoming connection from ${sslSocket.remoteSocketAddress}")
                         launch { handleIncomingConnection(sslSocket) }
                     } catch (e: Exception) {
