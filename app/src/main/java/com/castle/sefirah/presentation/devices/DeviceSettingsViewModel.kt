@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.komu.sekia.di.AppCoroutineScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -135,7 +136,7 @@ class DeviceSettingsViewModel @Inject constructor(
     }
 
     fun removeDevice() {
-        appScope.launch {
+        appScope.launch(Dispatchers.IO) {
             networkManager.disconnect(deviceId)
             deviceManager.removePairedDevice(deviceId)
         }
