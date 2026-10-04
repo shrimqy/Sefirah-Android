@@ -66,8 +66,8 @@ class NetworkManagerImpl @Inject constructor(
         networkService?.broadcastMessage(message)
     }
 
-    override fun sendMessage(deviceId: String, message: SocketMessage) {
-        networkService?.sendMessage(deviceId, message)
+    override fun sendMessage(deviceId: String, message: SocketMessage): Boolean {
+        return networkService?.sendMessage(deviceId, message) ?: false
     }
 
     override suspend fun approveDeviceConnection(deviceId: String) {

@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -18,6 +20,13 @@ import kotlinx.coroutines.sync.withLock
 import sefirah.domain.util.MessageSerializer
 import javax.net.ssl.SSLSocket
 
+/**
+ * Owns one peer's SSL session.
+ *
+ * Outbound traffic goes through a single writer coroutine fed by [outbound].
+ * That keeps writes serialized and lets [close] stop the writer before
+ * tearing down the socket.
+ */
 class DeviceConnection(
     val deviceId: String,
     var sslSocket: SSLSocket? = null,
@@ -25,40 +34,46 @@ class DeviceConnection(
     var writeChannel: ByteWriteChannel? = null
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val mutex = Mutex()
+    private val closeMutex = Mutex()
+    private val outbound = Channel<SocketMessage>(Channel.UNLIMITED)
     private var listeningJob: Job? = null
+    @Volatile private var closed = false
 
-    fun sendMessage(message: SocketMessage) {
-        scope.launch {
-            mutex.withLock {
+    private val writerJob = scope.launch {
+        try {
+            for (message in outbound) {
+                val channel = writeChannel ?: continue
+                val jsonMessage = MessageSerializer.serialize(message) ?: continue
                 try {
-                    writeChannel?.let { channel ->
-                        MessageSerializer.serialize(message)?.let { jsonMessage ->
-                            channel.writeStringUtf8(jsonMessage)
-                            channel.writeStringUtf8("\n")
-                            channel.flush()
-                        }
-                    }
-                } catch (ex: Exception) {
-                    Log.e(TAG, "Failed to send message to $deviceId", ex)
+                    channel.writeStringUtf8(jsonMessage)
+                    channel.writeStringUtf8("\n")
+                    channel.flush()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to send message to $deviceId", e)
+                    break
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Writer failed for $deviceId", e)
         }
     }
 
+    /** @return false if the connection is closed / outbound cancelled. */
+    fun sendMessage(message: SocketMessage): Boolean =
+        outbound.trySend(message).isSuccess
+
     /**
      * Starts listening for messages from the device.
-     * @param scope The coroutine scope to launch the listener in
-     * @param getDevice Function to get the device by deviceId
-     * @param onMessage Callback to handle received messages
-     * @param onClose Callback when connection closes
      */
     fun startListening(
         getDevice: suspend (String) -> BaseRemoteDevice?,
         onMessage: (BaseRemoteDevice, SocketMessage) -> Unit,
         onClose: (DeviceConnection) -> Unit,
     ) {
-        // Stop existing listener if any
         listeningJob?.cancel()
 
         val channel = readChannel ?: return
@@ -80,30 +95,48 @@ class DeviceConnection(
                         break
                     }
                 }
+            } catch (e: CancellationException) {
+                // Expected on close
             } catch (e: Exception) {
                 Log.e(TAG, "Session error for $deviceId", e)
             } finally {
-                onClose(this@DeviceConnection)
+                // Only notify for remote/unexpected end — local [close] owns cleanup
+                if (!closed) {
+                    onClose(this@DeviceConnection)
+                }
             }
         }
     }
 
     /**
-     * Closes all connection resources and stops listening.
+     * Aborts this connection: drop queued messages, close the socket to unblock
+     * any in-flight SSL I/O, then join the writer/listener.
      */
-    fun close() {
-        listeningJob?.cancel()
-        listeningJob = null
-        scope.cancel()
-        try {
-            sslSocket?.close()
-            readChannel?.cancel(kotlinx.io.IOException())
-            writeChannel?.cancel(kotlinx.io.IOException())
-        } catch (_: Exception) {
+    suspend fun close() {
+        closeMutex.withLock {
+            if (closed) return
+            closed = true
+
+            outbound.cancel()
+
+            // Close the socket first so a blocked write/read fails immediately
+            // instead of cancelAndJoin waiting on non-interruptible SSL I/O.
+            try {
+                sslSocket?.close()
+                readChannel?.cancel(kotlinx.io.IOException())
+                writeChannel?.cancel(kotlinx.io.IOException())
+            } catch (_: Exception) {
+            }
+            sslSocket = null
+            readChannel = null
+            writeChannel = null
+
+            writerJob.cancelAndJoin()
+            listeningJob?.cancelAndJoin()
+            listeningJob = null
+
+            scope.cancel()
         }
-        sslSocket = null
-        readChannel = null
-        writeChannel = null
     }
 
     private companion object {

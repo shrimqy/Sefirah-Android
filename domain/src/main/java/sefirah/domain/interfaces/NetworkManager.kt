@@ -11,7 +11,8 @@ interface NetworkManager {
     suspend fun connectTo(connectionDetails: ConnectionDetails)
     suspend fun disconnect(deviceId: String)
     fun broadcastMessage(message: SocketMessage)
-    fun sendMessage(deviceId: String, message: SocketMessage)
+    /** @return false if there is no live connection */
+    fun sendMessage(deviceId: String, message: SocketMessage): Boolean
     suspend fun approveDeviceConnection(deviceId: String)
     suspend fun rejectDeviceConnection(deviceId: String)
 }
