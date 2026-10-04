@@ -2,8 +2,6 @@ package sefirah
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.interfaces.PreferencesRepository
@@ -20,25 +18,25 @@ class FeatureManager @Inject constructor(
     private val deviceManager: DeviceManager,
     private val preferencesRepository: PreferencesRepository,
 ) {
-    private val mutex = Mutex()
 
     /** Connected: enable features whose prefs + permissions allow. */
-    suspend fun onConnect(deviceId: String) = mutex.withLock {
-        apply(deviceId, preferencesRepository.preferenceSettings(deviceId).first())
+    suspend fun onConnect(deviceId: String) {
+        val prefs = preferencesRepository.preferenceSettings(deviceId).first()
+        apply(deviceId, prefs)
     }
 
     /** Disconnected: disable every feature for [deviceId]. */
-    suspend fun onDisconnect(deviceId: String) = mutex.withLock {
+    suspend fun onDisconnect(deviceId: String) {
         withContext(Dispatchers.IO) {
             features.forEach { it.disable(deviceId) }
         }
     }
 
     /** Prefs changed; if connected, re-apply enable/disable for [deviceId]. */
-    suspend fun onPreferencesChanged(deviceId: String) = mutex.withLock {
+    suspend fun onPreferencesChanged(deviceId: String) {
         val connected = deviceManager.pairedDevices.value
             .any { it.deviceId == deviceId && it.connectionState.isConnected }
-        if (!connected) return@withLock
+        if (!connected) return
 
         apply(deviceId, preferencesRepository.preferenceSettings(deviceId).first())
     }

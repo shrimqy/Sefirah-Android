@@ -1,5 +1,7 @@
 package sefirah
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.model.DevicePreferences
 
@@ -9,6 +11,7 @@ import sefirah.domain.model.DevicePreferences
 abstract class Feature(
     protected val deviceManager: DeviceManager,
 ) {
+    protected val lifecycleMutex = Mutex()
 
     /** Device IDs for which this feature is currently active. */
     protected val enabledDevices = mutableSetOf<String>()
@@ -36,15 +39,15 @@ abstract class Feature(
     protected open suspend fun onStop(deviceId: String) {}
 
     /** Mark [deviceId] active and run start hooks. Idempotent if already enabled. */
-    open suspend fun enable(deviceId: String) {
-        if (deviceId in enabledDevices) return
+    open suspend fun enable(deviceId: String) = lifecycleMutex.withLock {
+        if (deviceId in enabledDevices) return@withLock
         enabledDevices.add(deviceId)
         onStart(deviceId)
     }
 
     /** Mark [deviceId] inactive and run stop hooks. Idempotent if already disabled. */
-    open suspend fun disable(deviceId: String) {
-        if (deviceId !in enabledDevices) return
+    open suspend fun disable(deviceId: String) = lifecycleMutex.withLock {
+        if (deviceId !in enabledDevices) return@withLock
         enabledDevices.remove(deviceId)
         onStop(deviceId)
     }
