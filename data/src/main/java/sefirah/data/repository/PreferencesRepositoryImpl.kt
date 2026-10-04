@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -151,6 +152,36 @@ class PreferencesRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun saveLongTextAsMmsSettingsForDevice(deviceId: String, enabled: Boolean) {
+        deviceLongTextAsMmsKey(deviceId).update(enabled)
+    }
+
+    override fun readLongTextAsMmsSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceLongTextAsMmsKey(deviceId)] == true
+        }
+    }
+
+    override suspend fun saveGroupMessageAsMmsSettingsForDevice(deviceId: String, enabled: Boolean) {
+        deviceGroupMessageAsMmsKey(deviceId).update(enabled)
+    }
+
+    override fun readGroupMessageAsMmsSettingsForDevice(deviceId: String): Flow<Boolean> {
+        return datastore.data.map { preferences ->
+            preferences[deviceGroupMessageAsMmsKey(deviceId)] != false
+        }
+    }
+
+    override suspend fun saveConvertToMmsAfterSettingsForDevice(deviceId: String, after: Int) {
+        deviceConvertToMmsAfterKey(deviceId).update(after)
+    }
+
+    override fun readConvertToMmsAfterSettingsForDevice(deviceId: String): Flow<Int> {
+        return datastore.data.map { preferences ->
+            preferences[deviceConvertToMmsAfterKey(deviceId)] ?: 3
+        }
+    }
+
     override suspend fun saveNotificationSyncSettingsForDevice(deviceId: String, notificationSync: Boolean) {
         deviceNotificationSyncKey(deviceId).update(notificationSync)
     }
@@ -264,6 +295,9 @@ class PreferencesRepositoryImpl @Inject constructor(
             DevicePreferences(
                 clipboardSync = preferences[deviceClipboardSyncKey(deviceId)] != false,
                 messageSync = preferences[deviceMessageSyncKey(deviceId)] != false,
+                longTextAsMms = preferences[deviceLongTextAsMmsKey(deviceId)] == true,
+                groupMessageAsMms = preferences[deviceGroupMessageAsMmsKey(deviceId)] != false,
+                convertToMmsAfter = preferences[deviceConvertToMmsAfterKey(deviceId)] ?: 3,
                 notificationSync = preferences[deviceNotificationSyncKey(deviceId)] != false,
                 callStateSync = preferences[deviceCallStateSyncKey(deviceId)] == true,
                 callLogSync = preferences[deviceCallLogSyncKey(deviceId)] != false,
@@ -295,6 +329,9 @@ class PreferencesRepositoryImpl @Inject constructor(
         fun permissionRequestedKey(permission: String) = booleanPreferencesKey("permission_requested_$permission")
         fun deviceClipboardSyncKey(deviceId: String) = booleanPreferencesKey("clipboardSync_$deviceId")
         fun deviceMessageSyncKey(deviceId: String) = booleanPreferencesKey("messageSync_$deviceId")
+        fun deviceLongTextAsMmsKey(deviceId: String) = booleanPreferencesKey("longTextAsMms_$deviceId")
+        fun deviceGroupMessageAsMmsKey(deviceId: String) = booleanPreferencesKey("groupMessageAsMms_$deviceId")
+        fun deviceConvertToMmsAfterKey(deviceId: String) = intPreferencesKey("convertToMmsAfter_$deviceId")
         fun deviceNotificationSyncKey(deviceId: String) = booleanPreferencesKey("notificationSync_$deviceId")
         fun deviceCallStateSyncKey(deviceId: String) = booleanPreferencesKey("callStateSync_$deviceId")
         fun deviceCallLogSyncKey(deviceId: String) = booleanPreferencesKey("callLogSync_$deviceId")

@@ -22,11 +22,27 @@
             android:name="sefirah.playsound.PlaySoundReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name="sefirah.communication.sms.SmsSentReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="sefirah.communication.sms.SMS_SENT" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="sefirah.worker.WorkerBridgeProvider"
             android:authorities="${applicationId}.worker.bridge"
             android:exported="true"
             android:grantUriPermissions="false"
             tools:ignore="ExportedContentProvider" />
+
+        <!-- Used by SmsManager.sendMultimediaMessage to read the composed PDU from cache. -->
+        <provider
+            android:name="com.klinker.android.send_message.MmsFileProvider"
+            android:authorities="${applicationId}.MmsFileProvider"
+            android:enabled="true"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>

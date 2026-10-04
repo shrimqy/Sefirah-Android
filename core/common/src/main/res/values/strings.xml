@@ -185,7 +185,7 @@
     <string name="convert_to_mms_after" translatable="false">convert_to_mms_after</string>
     <string name="set_long_text_as_mms" translatable="false">set_long_text_as_mms</string>
     <string name="convert_to_mms_after_default" translatable="false">3</string>
-    <string name="message_sync_preference">Sync messages</string>
+    <string name="message_sync_preference">Sync SMS</string>
     <string name="message_sync_subtitle">Enables reading and texting messages from desktop</string>
     <string-array name="convert_to_mms_after_entries">
         <item>After one message</item>

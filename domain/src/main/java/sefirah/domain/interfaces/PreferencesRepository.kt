@@ -43,6 +43,15 @@ interface PreferencesRepository {
     
     suspend fun saveMessageSyncSettingsForDevice(deviceId: String, messageSync: Boolean)
     fun readMessageSyncSettingsForDevice(deviceId: String): Flow<Boolean>
+
+    suspend fun saveLongTextAsMmsSettingsForDevice(deviceId: String, enabled: Boolean)
+    fun readLongTextAsMmsSettingsForDevice(deviceId: String): Flow<Boolean>
+
+    suspend fun saveGroupMessageAsMmsSettingsForDevice(deviceId: String, enabled: Boolean)
+    fun readGroupMessageAsMmsSettingsForDevice(deviceId: String): Flow<Boolean>
+
+    suspend fun saveConvertToMmsAfterSettingsForDevice(deviceId: String, after: Int)
+    fun readConvertToMmsAfterSettingsForDevice(deviceId: String): Flow<Int>
     
     suspend fun saveNotificationSyncSettingsForDevice(deviceId: String, notificationSync: Boolean)
     fun readNotificationSyncSettingsForDevice(deviceId: String): Flow<Boolean>

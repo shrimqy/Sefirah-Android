@@ -7,18 +7,21 @@
 
 package sefirah.communication.sms
 
+import android.app.PendingIntent
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
-import android.content.SharedPreferences
+import android.content.Intent
+import android.os.Build
+import android.media.MediaMetadataRetriever
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.provider.Telephony
 import android.telephony.SmsManager
+import android.telephony.SubscriptionManager
 import android.text.TextUtils
 import android.util.Base64
 import android.util.Log
@@ -40,8 +43,10 @@ import com.klinker.android.send_message.Message
 import com.klinker.android.send_message.Settings
 import com.klinker.android.send_message.Transaction
 import com.klinker.android.send_message.Utils
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 import org.apache.commons.io.IOUtils
-import sefirah.common.R
+import sefirah.common.util.MimeType
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.communication.utils.TelephonyHelper.LocalPhoneNumber
 import sefirah.domain.model.SmsAttachment
@@ -51,11 +56,22 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.Random
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.math.abs
+import androidx.core.graphics.scale
+import kotlin.time.Duration.Companion.milliseconds
 
 object SmsMmsUtils {
+    const val EXTRA_TEMP_ID = "tempId"
+
     private const val SENDING_MESSAGE = "Sending message"
+    private const val THUMBNAIL_MAX_EDGE = 512
+    private const val TEMP_ID_AWAIT_TIMEOUT_MS = 5_000L
+    private val sentIntentRequestCode = AtomicInteger()
+    private val tempIdByUniqueId = ConcurrentHashMap<Long, Long>()
+    @Volatile private var pendingTempIdMap: CompletableDeferred<Unit>? = null
 
     private fun getSendingPhoneNumber(context: Context, subscriptionID: Int): LocalPhoneNumber {
         val sendingPhoneNumber: LocalPhoneNumber
@@ -88,11 +104,13 @@ object SmsMmsUtils {
         return sendingPhoneNumber
     }
 
-    private fun getTransactionSettings(context: Context, subID: Int, prefs: SharedPreferences): Settings {
-        val longTextAsMms = prefs.getBoolean(context.getString(R.string.set_long_text_as_mms), false)
-        val groupMessageAsMms = prefs.getBoolean(context.getString(R.string.set_group_message_as_mms), true)
-        val sendLongAsMmsAfter = prefs.getString(context.getString(R.string.convert_to_mms_after), context.getString(R.string.convert_to_mms_after_default))!!.toInt()
-
+    private fun getTransactionSettings(
+        context: Context,
+        subID: Int,
+        longTextAsMms: Boolean,
+        groupMessageAsMms: Boolean,
+        convertToMmsAfter: Int,
+    ): Settings {
         val settings = Settings()
 
         val apnSettings = TelephonyHelper.getPreferredApn(context, subID)
@@ -105,11 +123,10 @@ object SmsMmsUtils {
         }
 
         settings.sendLongAsMms = longTextAsMms
-        settings.sendLongAsMmsAfter = sendLongAsMmsAfter
-
+        settings.sendLongAsMmsAfter = convertToMmsAfter
         settings.group = groupMessageAsMms
 
-        if (subID != -1) {
+        if (subID > 0) {
             settings.subscriptionId = subID
         }
 
@@ -126,9 +143,17 @@ object SmsMmsUtils {
      * @param subID         Note that here subID is of type int and not long because klinker library requires it as int
      * I don't really know the exact reason why they implemented it as int instead of long
      */
-    fun sendMessage(context: Context, textMessage: String?, attachedFiles: List<SMSHelper.Attachment>?, addressList: MutableList<SMSHelper.Address>, subID: Int) {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-
+    fun sendMessage(
+        context: Context,
+        textMessage: String?,
+        attachedFiles: List<SMSHelper.Attachment>?,
+        addressList: MutableList<SMSHelper.Address>,
+        subID: Int,
+        tempId: Long,
+        longTextAsMms: Boolean = false,
+        groupMessageAsMms: Boolean = true,
+        convertToMmsAfter: Int = 3,
+    ) {
         val sendingPhoneNumber: LocalPhoneNumber = getSendingPhoneNumber(context, subID)
         if (addressList.size > 1) {
             // Remove the user's phone number if present in the list of recipients
@@ -136,7 +161,13 @@ object SmsMmsUtils {
         }
 
         try {
-            val settings = getTransactionSettings(context, subID, prefs)
+            val settings = getTransactionSettings(
+                context,
+                subID,
+                longTextAsMms,
+                groupMessageAsMms,
+                convertToMmsAfter,
+            )
 
             val transaction = Transaction(context, settings)
 
@@ -146,7 +177,7 @@ object SmsMmsUtils {
             // If there are any attachment files add those into the message
             if (attachedFiles != null) {
                 for (attachedFile in attachedFiles) {
-                    val file = Base64.decode(attachedFile.base64EncodedFile, Base64.NO_WRAP)
+                    val file = Base64.decode(attachedFile.encodedFile, Base64.NO_WRAP)
                     val mimeType = attachedFile.mimeType
                     val fileName = attachedFile.uniqueIdentifier
                     message.addMedia(file, mimeType, fileName)
@@ -160,16 +191,74 @@ object SmsMmsUtils {
             // but sending SMS doesn't needs the app to be set as the default app.
             // This is the reason why there are separate branch handling for SMS and MMS.
             if (transaction.checkMMS(message)) {
-                Log.v("", "Sending new MMS")
-                //transaction.sendNewMessage(message, Transaction.NO_THREAD_ID);
-                sendMmsMessageNative(context, message, settings)
+                Log.v(SENDING_MESSAGE, "Sending new MMS")
+                sendMmsMessageNative(context, message, settings, tempId)
             } else {
                 Log.v(SENDING_MESSAGE, "Sending new SMS")
-                transaction.sendNewMessage(message, Transaction.NO_THREAD_ID)
+                sendSmsWithSentIntent(context, message, settings, tempId)
             }
         } catch (e: Exception) {
             Log.e(SENDING_MESSAGE, "Exception", e)
         }
+    }
+
+    /**
+     * Resolve a concrete subscription: background sends on multi-SIM devices without a default
+     * SMS SIM fail instead of showing the disambiguation dialog.
+     */
+    private fun smsManagerFor(context: Context, subscriptionId: Int): SmsManager {
+        val subId = subscriptionId.takeIf { it > 0 }
+            ?: SubscriptionManager.getDefaultSmsSubscriptionId()
+                .takeIf { it != SubscriptionManager.INVALID_SUBSCRIPTION_ID }
+            ?: context.getSystemService(SubscriptionManager::class.java)?.activeSubscriptionInfoList?.firstOrNull()?.subscriptionId
+            ?: SubscriptionManager.INVALID_SUBSCRIPTION_ID
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context.getSystemService(SmsManager::class.java).createForSubscriptionId(subId)
+        } else {
+            @Suppress("DEPRECATION")
+            SmsManager.getSmsManagerForSubscriptionId(subId)
+        }
+    }
+
+    private fun sendSmsWithSentIntent(
+        context: Context,
+        message: Message,
+        settings: Settings,
+        tempId: Long,
+    ) {
+        val smsManager = smsManagerFor(context, settings.subscriptionId)
+        val parts = smsManager.divideMessage(message.text.orEmpty())
+        val destination = message.addresses.firstOrNull()
+        if (destination.isNullOrBlank()) {
+            Log.e(SENDING_MESSAGE, "No destination address for SMS")
+            return
+        }
+        beginTempIdMap()
+        if (parts.size <= 1) {
+            smsManager.sendTextMessage(
+                destination, null, message.text,
+                createSmsSentIntent(context, tempId), null,
+            )
+        } else {
+            val sentIntents = ArrayList<PendingIntent>(parts.size)
+            repeat(parts.size) { sentIntents.add(createSmsSentIntent(context, tempId)) }
+            smsManager.sendMultipartTextMessage(destination, null, parts, sentIntents, null)
+        }
+    }
+
+    private fun createSmsSentIntent(
+        context: Context,
+        tempId: Long,
+    ): PendingIntent {
+        val requestCode = sentIntentRequestCode.incrementAndGet()
+        val intent = Intent(context, SmsSentReceiver::class.java)
+            .setAction(SmsSentReceiver.ACTION)
+            .putExtra(EXTRA_TEMP_ID, tempId)
+        var flags = PendingIntent.FLAG_ONE_SHOT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flags = flags or PendingIntent.FLAG_MUTABLE
+        }
+        return PendingIntent.getBroadcast(context, requestCode, intent, flags)
     }
 
     /**
@@ -179,7 +268,12 @@ object SmsMmsUtils {
      * @param message
      * @param klinkerSettings
      */
-    internal fun sendMmsMessageNative(context: Context, message: Message, klinkerSettings: Settings) {
+    internal fun sendMmsMessageNative(
+        context: Context,
+        message: Message,
+        klinkerSettings: Settings,
+        tempId: Long,
+    ) {
         val data = ArrayList<MMSPart>()
 
         for (p in message.parts) {
@@ -226,13 +320,13 @@ object SmsMmsUtils {
             Log.e(SENDING_MESSAGE, "Error while writing temporary PDU file: ", e)
         }
 
-        val mSmsManager = if (klinkerSettings.subscriptionId < 0) {
-            SmsManager.getDefault()
-        } else {
-            SmsManager.getSmsManagerForSubscriptionId(klinkerSettings.subscriptionId)
-        }
+        val mSmsManager = smsManagerFor(context, klinkerSettings.subscriptionId)
 
-        mSmsManager.sendMultimediaMessage(context, contentUri, null, null, null)
+        beginTempIdMap()
+        mSmsManager.sendMultimediaMessage(
+            context, contentUri, null, configOverrides,
+            createSmsSentIntent(context, tempId),
+        )
     }
 
     const val DEFAULT_EXPIRY_TIME: Long = (7 * 24 * 60 * 60).toLong()
@@ -241,7 +335,7 @@ object SmsMmsUtils {
     /**
      * Copy of the same-name method from https://github.com/klinker41/android-smsmms
      */
-    private fun buildPdu(context: Context, fromAddress: String, recipients: Array<String>, subject: String, parts: List<MMSPart>, settings: Settings): SendReq {
+    private fun buildPdu(context: Context, fromAddress: String, recipients: Array<String>, subject: String?, parts: List<MMSPart>, settings: Settings): SendReq {
         val req = SendReq()
         // From, per spec
         req.prepareFromAddress(context, fromAddress, settings.subscriptionId)
@@ -376,21 +470,30 @@ object SmsMmsUtils {
     }
 
     /**
-     * Converts a given bitmap to an encoded Base64 string for sending to desktop
-     * @param bitmap bitmap to be encoded into string*
-     * @return Returns the Base64 encoded string
+     * Downscaled JPEG thumbnail, aspect ratio preserved.
      */
-    fun bitMapToBase64(bitmap: Bitmap): String? {
-        val byteArrayOutputStream = ByteArrayOutputStream()
-
-        // The below line is not really compressing to PNG so much as encoding as PNG, since PNG is lossless
-        val isCompressed = bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
-        if (isCompressed) {
-            val b = byteArrayOutputStream.toByteArray()
-            val encodedString = Base64.encodeToString(b, Base64.DEFAULT)
-            return encodedString
+    fun encodeThumbnail(bitmap: Bitmap): String? {
+        val longest = maxOf(bitmap.width, bitmap.height)
+        val toEncode = if (longest > THUMBNAIL_MAX_EDGE) {
+            val scale = THUMBNAIL_MAX_EDGE.toFloat() / longest
+            bitmap.scale(
+                (bitmap.width * scale).toInt().coerceAtLeast(1),
+                (bitmap.height * scale).toInt().coerceAtLeast(1),
+            )
+        } else {
+            bitmap
         }
-        return null
+        return try {
+            val outputStream = ByteArrayOutputStream()
+            if (!toEncode.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)) {
+                return null
+            }
+            Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
+        } finally {
+            if (toEncode !== bitmap) {
+                toEncode.recycle()
+            }
+        }
     }
 
     /**
@@ -401,17 +504,94 @@ object SmsMmsUtils {
      */
     fun getMmsImage(context: Context, id: Long): Bitmap? {
         val partURI = ContentUris.withAppendedId(SMSHelper.mMSPartUri, id)
-        var bitmap: Bitmap? = null
 
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         try {
-            context.contentResolver.openInputStream(partURI).use { inputStream ->
-                bitmap = BitmapFactory.decodeStream(inputStream)
+            context.contentResolver.openInputStream(partURI)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, bounds)
             }
         } catch (e: IOException) {
             Log.e("SmsMmsUtils", "Exception", e)
+            return null
         }
 
-        return bitmap
+        val longest = maxOf(bounds.outWidth, bounds.outHeight)
+        var sample = 1
+        if (longest > THUMBNAIL_MAX_EDGE) {
+            while (longest / (sample * 2) >= THUMBNAIL_MAX_EDGE) {
+                sample *= 2
+            }
+        }
+
+        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sample }
+        return try {
+            context.contentResolver.openInputStream(partURI)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, decodeOptions)
+            }
+        } catch (e: IOException) {
+            Log.e("SmsMmsUtils", "Exception", e)
+            null
+        }
+    }
+
+    fun getMmsPartInfo(context: Context, partId: Long): Pair<String, String>? {
+        val columns = arrayOf(
+            Telephony.Mms.Part.CONTENT_TYPE,
+            Telephony.Mms.Part.FILENAME,
+            Telephony.Mms.Part.NAME,
+            Telephony.Mms.Part.CONTENT_LOCATION,
+            Telephony.Mms.Part._DATA,
+        )
+        try {
+            context.contentResolver.query(
+                SMSHelper.mMSPartUri,
+                columns,
+                "${Telephony.Mms.Part._ID} = ?",
+                arrayOf(partId.toString()),
+                null,
+            ).use { cursor ->
+                if (cursor == null || !cursor.moveToFirst()) return null
+                val mimeType = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Mms.Part.CONTENT_TYPE))
+                    ?: return null
+                val fileName = resolveMmsPartFileName(
+                    partId = partId,
+                    fileName = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Mms.Part.FILENAME)),
+                    name = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Mms.Part.NAME)),
+                    contentLocation = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Mms.Part.CONTENT_LOCATION)),
+                    dataPath = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Mms.Part._DATA)),
+                )
+                return mimeType to fileName
+            }
+        } catch (e: Exception) {
+            Log.e("SmsMmsUtils", "Failed to read MMS part info", e)
+            return null
+        }
+    }
+
+    /**
+     * Best-effort original filename from MMS part metadata.
+     * Carriers often put the real name in [contentLocation]; PDU FILENAME/NAME may be empty.
+     */
+    fun resolveMmsPartFileName(
+        partId: Long,
+        fileName: String?,
+        name: String?,
+        contentLocation: String?,
+        dataPath: String?,
+    ): String {
+        sequenceOf(
+            contentLocation?.substringAfterLast('/')?.substringAfterLast('\\'),
+            fileName,
+            name,
+            dataPath?.substringAfterLast('/')
+                ?.takeUnless { it.startsWith("PART_", ignoreCase = true) },
+        ).firstNotNullOfOrNull { raw ->
+            raw?.trim()
+                ?.removeSurrounding("\"")
+                ?.takeIf { it.isNotEmpty() }
+        }?.let { return it }
+
+        return "attachment_$partId"
     }
 
     /**
@@ -438,28 +618,6 @@ object SmsMmsUtils {
 
         return byteArray
     }
-
-    /**
-     * Create a SMS attachment packet using the partID of the file requested by the device
-     */
-//    fun partIdToMessageAttachmentPacket(context: Context, partID: Long, filename: String?, type: String): NetworkPacket? {
-//        val attachment = loadAttachment(context, partID)
-//        val size = attachment.size.toLong()
-//        if (size == 0L) {
-//            Log.e("SmsMmsUtils", "Loaded attachment is empty.")
-//        }
-//
-//        try {
-//            val inputStream: InputStream = ByteArrayInputStream(attachment)
-//
-//            val np = NetworkPacket(type)
-//            np["filename"] = filename
-//            np.payload = NetworkPacket.Payload(inputStream, size)
-//            return np
-//        } catch (e: Exception) {
-//            return null
-//        }
-//    }
 
     /**
      * Marks a conversation as read in the database.
@@ -492,7 +650,7 @@ object SmsMmsUtils {
     }
 
 
-    fun SMSHelper.Message.toTextMessage(): TextMessage {
+    fun SMSHelper.Message.toTextMessage(tempId: Long? = null): TextMessage {
         val addresses = this.addresses.map { it.getAddress() }
 
         return TextMessage(
@@ -501,39 +659,60 @@ object SmsMmsUtils {
             timestamp = this.date,
             messageType = this.type,
             read = this.read == 1,
-            threadId = this.threadID.threadID,
             uniqueId = this.uID,
             subscriptionId = this.subscriptionID,
-            attachments = this.attachments?.map { 
+            attachments = this.attachments?.map {
                 SmsAttachment(
-                    id = it.uniqueIdentifier,
+                    fileName = it.uniqueIdentifier,
                     mimeType = it.mimeType,
-                    base64EncodedFile = it.base64EncodedFile
+                    thumbnail = it.encodedFile,
+                    partId = it.partID,
                 )
             },
-            isTextMessage = (this.event and SMSHelper.Message.EVENT_TEXT_MESSAGE) != 0,
-            hasMultipleRecipients = (this.event and SMSHelper.Message.EVENT_MULTI_TARGET) != 0
+            tempId = tempId,
         )
     }
 
-    fun List<SmsAttachment>.toHelperSmsAttachment() : List<SMSHelper.Attachment> {
-        return this.map {
-            SMSHelper.Attachment(
-                base64EncodedFile = it.base64EncodedFile,
-                mimeType = it.mimeType,
-                uniqueIdentifier = it.id,
-                partID = -1
-            )
+    /** Base64 preview for an image or video MMS part; null when none can be generated. */
+    fun createThumbnail(context: Context, partId: Long, contentType: String): String? = try {
+        val bitmap = when {
+            // Get the actual image from the mms database convert it into thumbnail and encode to Base64
+            MimeType.isTypeImage(contentType) -> getMmsImage(context, partId)
+            MimeType.isTypeVideo(contentType) -> {
+                // Can't use try-with-resources since MediaMetadataRetriever's close method was only added in API 29
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, ContentUris.withAppendedId(SMSHelper.mMSPartUri, partId))
+                    retriever.frameAtTime
+                } finally { retriever.release() }
+            }
+            else -> null
         }
+        bitmap?.let { try { encodeThumbnail(it) } finally { it.recycle() } }
+    } catch (e: Exception) {
+        Log.w("SmsFeature", "Could not generate preview for part $partId", e)
+        null
     }
 
+    fun beginTempIdMap() {
+        pendingTempIdMap?.complete(Unit)
+        pendingTempIdMap = CompletableDeferred()
+    }
 
-    fun List<String>.toHelperSmsAddress(context: Context) : MutableList<SMSHelper.Address> {
-        return this.map {
-            SMSHelper.Address(
-                context,
-                address = it
-            )
-        }.toMutableList()
+    fun completeTempIdMap(tempId: Long, uniqueId: Long) {
+        tempIdByUniqueId[uniqueId] = tempId
+        pendingTempIdMap?.complete(Unit)
+    }
+
+    fun failTempIdMap() {
+        pendingTempIdMap?.complete(Unit)
+    }
+
+    fun takeTempId(uniqueId: Long): Long? = tempIdByUniqueId.remove(uniqueId)
+
+    suspend fun awaitPendingTempIdMaps() {
+        val deferred = pendingTempIdMap ?: return
+        if (deferred.isCompleted) return
+        withTimeoutOrNull(TEMP_ID_AWAIT_TIMEOUT_MS.milliseconds) { deferred.await() }
     }
 }

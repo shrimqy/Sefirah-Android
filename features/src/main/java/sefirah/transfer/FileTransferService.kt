@@ -22,6 +22,7 @@ import sefirah.domain.model.FileMetadata
 import sefirah.domain.model.FileTransferSession
 import sefirah.domain.model.ServerInfo
 import sefirah.domain.model.ShareTransfer
+import sefirah.domain.model.SmsAttachmentTransfer
 import sefirah.domain.model.SocketMessage
 import sefirah.transfer.util.getFileMetadata
 import java.io.FileInputStream
@@ -64,11 +65,20 @@ class FileTransferService @Inject constructor(
         }
     }
 
+    /**
+     * Stream [pfd] as an SMS attachment. Takes ownership of [pfd] and closes it when finished.
+     */
+    fun sendSmsAttachment(
         deviceId: String,
         pfd: ParcelFileDescriptor,
         metadata: FileMetadata,
-        isClipboard: Boolean = false,
+        partId: Long,
     ) {
+        send(deviceId, pfdSource(pfd, metadata), TransferKind.SmsAttachment(partId)) {
+            runCatching { pfd.close() }
+        }
+    }
+
     fun receiveShare(deviceId: String, transfer: ShareTransfer) {
         receive(deviceId, transfer.transfer, TransferKind.Share)
     }
@@ -179,12 +189,14 @@ class FileTransferService @Inject constructor(
     private sealed class TransferKind {
         data object Share : TransferKind()
         data object Clipboard : TransferKind()
+        data class SmsAttachment(val partId: Long) : TransferKind()
 
         val showNotification: Boolean get() = this is Share
 
         fun toMessage(session: FileTransferSession): SocketMessage = when (this) {
             Share -> ShareTransfer(session)
             Clipboard -> ClipboardTransfer(session)
+            is SmsAttachment -> SmsAttachmentTransfer(session, partId)
         }
     }
 

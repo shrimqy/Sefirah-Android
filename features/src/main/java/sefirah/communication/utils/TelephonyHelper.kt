@@ -150,7 +150,7 @@ object TelephonyHelper {
                 Log.d(LOGGING_TAG, "Skipping subscription ${info.subscriptionId} with null or empty phone number")
                 continue
             }
-            val thisPhoneNumber = LocalPhoneNumber(phoneNumber, info.subscriptionId)
+            val thisPhoneNumber = LocalPhoneNumber(phoneNumber, info.subscriptionId, info.simSlotIndex)
             phoneNumbers.add(thisPhoneNumber)
         }
         return phoneNumbers.stream()
@@ -385,13 +385,17 @@ object TelephonyHelper {
          * The subscription ID to which this phone number belongs
          */
         val subscriptionID: Int,
+        /**
+         * Physical SIM slot index (0 = SIM1, 1 = SIM2). -1 if unknown.
+         */
+        val index: Int = -1,
     ) {
         override fun toString(): String {
             return number
         }
 
         fun toDto(): PhoneNumber {
-            return PhoneNumber(number, subscriptionID)
+            return PhoneNumber(number, subscriptionID, index)
         }
 
         /**

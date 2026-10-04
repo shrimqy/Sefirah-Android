@@ -10,10 +10,10 @@ package sefirah.communication.sms
 import android.annotation.SuppressLint
 import android.content.ContentUris
 import android.content.Context
+import android.database.Cursor
 import android.database.sqlite.SQLiteException
-import android.media.MediaMetadataRetriever
-import android.media.ThumbnailUtils
 import android.net.Uri
+import android.os.Build
 import android.os.Looper
 import android.provider.Telephony
 import android.provider.Telephony.Threads
@@ -31,17 +31,13 @@ import sefirah.common.util.MimeType
 import sefirah.communication.utils.TelephonyHelper
 import sefirah.communication.utils.TelephonyHelper.LocalPhoneNumber
 import java.io.IOException
-import java.util.SortedMap
-import java.util.TreeMap
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.text.Charsets.UTF_8
 
 @SuppressLint("InlinedApi")
 object SMSHelper {
-    private const val THUMBNAIL_HEIGHT = 100
-    private const val THUMBNAIL_WIDTH = 100
-
     // The constant Telephony.Mms.Part.CONTENT_URI was added in API 29
     val mMSPartUri : Uri = "content://mms/part/".toUri()
 
@@ -51,7 +47,6 @@ object SMSHelper {
     // in all conversations
     // See https://stackoverflow.com/a/36439630/3723163
     private val completeConversationsUri : Uri =  "content://mms-sms/complete-conversations".toUri()
-
     /**
      * Column used to discriminate between SMS and MMS messages
      * Unfortunately, this column is not defined for Telephony.MmsSms.CONTENT_CONVERSATIONS_URI
@@ -69,15 +64,18 @@ object SMSHelper {
      * @return Timestamp of the oldest known message.
      */
     fun getNewestMessageTimestamp(context: Context): Long {
-        var oldestMessageTimestamp = Long.MIN_VALUE
-        val newestMessage = getMessagesInRange(context, null, Long.MAX_VALUE, 1L, true)
-        // There should only be one, but in case for some reason there are more, take the latest
-        for (message in newestMessage) {
-            if (message.date > oldestMessageTimestamp) {
-                oldestMessageTimestamp = message.date
-            }
+        val sms = newestDate(context, Telephony.Sms.CONTENT_URI)
+        val mms = newestDate(context, Telephony.Mms.CONTENT_URI)?.times(1000)
+        return maxOf(sms ?: Long.MIN_VALUE, mms ?: Long.MIN_VALUE)
+    }
+
+    private fun newestDate(context: Context, uri: Uri): Long? {
+        context.contentResolver.query(
+            uri, arrayOf(Message.DATE), null, null, "${Message.DATE} DESC",
+        ).use { cursor ->
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) return cursor.getLong(0)
         }
-        return oldestMessageTimestamp
+        return null
     }
 
     /**
@@ -91,6 +89,117 @@ object SMSHelper {
     fun getMessagesInThread(context: Context, threadID: ThreadID, numberToGet: Long?): List<Message> {
         return getMessagesInRange(context, threadID, Long.MAX_VALUE, numberToGet, true)
     }
+
+    /** Every SMS/MMS id in [threadId], newest first. */
+    fun getMessageIds(context: Context, threadId: Long): List<Long> {
+        val selection = "${Message.THREAD_ID} = ?"
+        val args = arrayOf(threadId.toString())
+        return (queryRefs(context, isMms = false, selection, args) + queryRefs(context, isMms = true, selection, args))
+            .sortedWith(compareByDescending<MessageRef> { it.date }.thenByDescending { it.uniqueId })
+            .map { it.uniqueId }
+            .distinct()
+    }
+
+    /** Full messages in [threadId] with the given ids, oldest first. */
+    fun getMessagesByIds(context: Context, threadId: Long, ids: Collection<Long>): List<Message> {
+        if (ids.isEmpty()) return emptyList()
+        val selection = "${Message.THREAD_ID} = ? AND ${Message.U_ID} IN (${ids.joinToString(",")})"
+        val args = arrayOf(threadId.toString())
+        val messages = ArrayList<Message>(ids.size)
+        messages.addAll(getMessages(Telephony.Sms.CONTENT_URI, context, smsColumns(context), selection, args, null, null))
+        messages.addAll(getMessages(Telephony.Mms.CONTENT_URI, context, mmsColumns(context), selection, args, null, null))
+        messages.sortBy { it.date }
+        return messages
+    }
+
+    data class MessageRef(val threadId: Long, val uniqueId: Long, val date: Long, val isMms: Boolean)
+
+    /** New SMS/MMS rows after [afterTimestampMs] — id, thread, date only. */
+    fun getMessageRefsNewerThan(context: Context, afterTimestampMs: Long): List<MessageRef> =
+        queryRefs(context, isMms = false, "${Message.DATE} > ?", arrayOf(afterTimestampMs.toString())) +
+            queryRefs(context, isMms = true, "${Message.DATE} > ?", arrayOf((afterTimestampMs / 1000).toString()))
+
+    /** Newest SMS/MMS row in a thread — id, thread, date only. */
+    fun getNewestMessageRef(context: Context, threadId: Long): MessageRef? {
+        val selection = "${Message.THREAD_ID} = ?"
+        val args = arrayOf(threadId.toString())
+        val sms = queryRefs(context, isMms = false, selection, args, newestFirst = true, limit = 1)
+        val mms = queryRefs(context, isMms = true, selection, args, newestFirst = true, limit = 1)
+        return (sms + mms).maxByOrNull { it.date }
+    }
+
+    private fun queryRefs(
+        context: Context,
+        isMms: Boolean,
+        selection: String?,
+        selectionArgs: Array<String>?,
+        newestFirst: Boolean = false,
+        limit: Long? = null,
+    ): List<MessageRef> {
+        val uri = if (isMms) Telephony.Mms.CONTENT_URI else Telephony.Sms.CONTENT_URI
+        val refs = ArrayList<MessageRef>()
+        context.contentResolver.query(
+            uri,
+            arrayOf(Message.U_ID, Message.THREAD_ID, Message.DATE),
+            selection,
+            selectionArgs,
+            "${Message.DATE} ${if (newestFirst) "DESC" else "ASC"}",
+        ).use { cursor ->
+            checkNotNull(cursor) { "Message provider returned no cursor for $uri" }
+            val idCol = cursor.getColumnIndexOrThrow(Message.U_ID)
+            val threadCol = cursor.getColumnIndexOrThrow(Message.THREAD_ID)
+            val dateCol = cursor.getColumnIndexOrThrow(Message.DATE)
+            while (cursor.moveToNext()) {
+                val date = cursor.getLong(dateCol)
+                refs.add(
+                    MessageRef(
+                        threadId = cursor.getLong(threadCol),
+                        uniqueId = cursor.getLong(idCol),
+                        // MMS dates are epoch seconds, SMS dates are epoch milliseconds
+                        date = if (isMms) date * 1000 else date,
+                        isMms = isMms,
+                    ),
+                )
+                if (limit != null && refs.size >= limit) break
+            }
+        }
+        return refs
+    }
+
+    /** Full messages for the given refs, oldest first. */
+    fun getMessagesByRefs(context: Context, refs: Collection<MessageRef>): List<Message> {
+        if (refs.isEmpty()) return emptyList()
+        val (mmsRefs, smsRefs) = refs.partition { it.isMms }
+        val messages = ArrayList<Message>(refs.size)
+        if (smsRefs.isNotEmpty()) {
+            messages.addAll(
+                getMessages(
+                    Telephony.Sms.CONTENT_URI, context, smsColumns(context),
+                    "${Message.U_ID} IN (${smsRefs.joinToString(",") { it.uniqueId.toString() }})",
+                    null, null, null,
+                ),
+            )
+        }
+        if (mmsRefs.isNotEmpty()) {
+            messages.addAll(
+                getMessages(
+                    Telephony.Mms.CONTENT_URI, context, mmsColumns(context),
+                    "${Message.U_ID} IN (${mmsRefs.joinToString(",") { it.uniqueId.toString() }})",
+                    null, null, null,
+                ),
+            )
+        }
+        messages.sortBy { it.date }
+        return messages
+    }
+
+    private fun smsColumns(context: Context): List<String> =
+        if (getSubscriptionIdSupport(Telephony.Sms.CONTENT_URI, context)) (Message.smsColumns + Message.multiSIMColumns).toList()
+        else Message.smsColumns.toList()
+
+    private fun mmsColumns(context: Context): List<String> =
+        if (getSubscriptionIdSupport(Telephony.Mms.CONTENT_URI, context)) (Message.mmsColumns + Message.multiSIMColumns).toList()
+        else Message.mmsColumns.toList()
 
     /**
      * Get some messages in the given thread based on a start timestamp and an optional count
@@ -114,14 +223,6 @@ object SMSHelper {
         // while the SMS database uses epoch *milliseconds*.
         // I can think of no way around this other than manually querying each one with a different
         // "WHERE" statement.
-        val allSmsColumns: MutableList<String> = Message.smsColumns.toMutableList()
-        val allMmsColumns: MutableList<String> = Message.mmsColumns.toMutableList()
-        if (getSubscriptionIdSupport(Telephony.Sms.CONTENT_URI, context)) {
-            allSmsColumns.addAll(Message.multiSIMColumns)
-        }
-        if (getSubscriptionIdSupport(Telephony.Mms.CONTENT_URI, context)) {
-            allMmsColumns.addAll(Message.multiSIMColumns)
-        }
         var selection: String = if (getMessagesOlderStartTime) {
             Message.DATE + " <= ?"
         } else {
@@ -136,48 +237,24 @@ object SMSHelper {
             smsSelectionArgs.add(threadID.toString())
             mmsSelectionArgs.add(threadID.toString())
         }
-        val sortOrder = Message.DATE + " DESC"
-        val allMessages = getMessages(
-            Telephony.Sms.CONTENT_URI,
-            context,
-            allSmsColumns,
-            selection,
-            smsSelectionArgs.toTypedArray<String>(),
-            sortOrder,
-            numberToGet
-        )
-        allMessages.addAll(
-            getMessages(
-                Telephony.Mms.CONTENT_URI,
-                context,
-                allMmsColumns,
-                selection,
-                mmsSelectionArgs.toTypedArray<String>(),
-                sortOrder,
-                numberToGet
-            )
-        )
 
-        // Need to now only return the requested number of messages:
-        // Suppose we were requested to return N values and suppose a user sends only one MMS per
-        // week and N SMS per day. We have requested the same N for each, so if we just return everything
-        // we would return some very old MMS messages which would be very confusing.
-        val sortedMessages: SortedMap<Long, MutableCollection<Message>> =
-            TreeMap(Comparator.reverseOrder())
-        for (message in allMessages) {
-            val existingMessages = sortedMessages.computeIfAbsent(
-                message.date
-            ) { _: Long? -> ArrayList() }
-            existingMessages?.add(message)
-        }
-        val toReturn: MutableList<Message> = ArrayList(allMessages.size)
-        for (messages in sortedMessages.values) {
-            toReturn.addAll(messages)
-            if (numberToGet != null && toReturn.size >= numberToGet) {
-                break
-            }
-        }
-        return toReturn
+        // Light index from each table first. Suppose we were requested to return N values and
+        // suppose a user sends only one MMS per week and N SMS per day. We still need the same N
+        // candidates from each table, then keep only the newest N after merge — otherwise we would
+        // return some very old MMS messages which would be very confusing. Full bodies are loaded
+        // only for those winners.
+        val smsRefs = queryRefs(
+            context, isMms = false, selection, smsSelectionArgs.toTypedArray(),
+            newestFirst = true, limit = numberToGet,
+        )
+        val mmsRefs = queryRefs(
+            context, isMms = true, selection, mmsSelectionArgs.toTypedArray(),
+            newestFirst = true, limit = numberToGet,
+        )
+        val winners = (smsRefs + mmsRefs)
+            .sortedByDescending { it.date }
+            .let { refs -> if (numberToGet != null) refs.take(numberToGet.toInt()) else refs }
+        return getMessagesByRefs(context, winners).sortedByDescending { it.date }
     }
 
     /**
@@ -186,7 +263,12 @@ object SMSHelper {
      * @param uri Uri indicating the messages database to check
      * @param context android.content.Context running the request.
      */
-    private fun getSubscriptionIdSupport(uri: Uri, context: Context): Boolean {
+    private val subscriptionIdSupport = ConcurrentHashMap<Uri, Boolean>()
+
+    private fun getSubscriptionIdSupport(uri: Uri, context: Context): Boolean =
+        subscriptionIdSupport.getOrPut(uri) { probeSubscriptionIdSupport(uri, context) }
+
+    private fun probeSubscriptionIdSupport(uri: Uri, context: Context): Boolean {
         // Some (Xiaomi) devices running >= Android Lollipop (SDK 22+) don't support
         // `Telephony.Sms.SUBSCRIPTION_ID`, so additional check is needed.
         // It may be possible to use "sim_id" instead of "sub_id" on these devices
@@ -233,7 +315,7 @@ object SMSHelper {
 
         // Get all the active phone numbers so we can filter the user out of the list of targets
         // of any MMSes
-        val userPhoneNumbers = TelephonyHelper.getAllPhoneNumbers(context)
+        val userPhoneNumbers by lazy { TelephonyHelper.getAllPhoneNumbers(context) }
         try {
             context.contentResolver.query(
                 uri,
@@ -242,11 +324,11 @@ object SMSHelper {
                 selectionArgs,
                 sortOrder
             ).use { myCursor ->
-                if (myCursor != null && myCursor.moveToFirst()) {
+                if (myCursor == null)
+                    throw IllegalStateException("Message provider returned no cursor for $uri")
+                if (myCursor.moveToFirst()) {
                     do {
-                        val transportTypeColumn = myCursor.getColumnIndex(
-                            TRANSPORT_TYPE_DISCRIMINATOR_COLUMN
-                        )
+                        val transportTypeColumn = myCursor.getColumnIndex(TRANSPORT_TYPE_DISCRIMINATOR_COLUMN)
                         val transportType = if (transportTypeColumn < 0) {
                             // The column didn't actually exist. See https://issuetracker.google.com/issues/134592631
                             // Try to determine using other information
@@ -280,13 +362,7 @@ object SMSHelper {
                         try {
                             when (transportType) {
                                 TransportType.SMS -> toReturn.add(parseSMS(context, messageInfo))
-                                TransportType.MMS -> toReturn.add(
-                                    parseMMS(
-                                        context,
-                                        messageInfo,
-                                        userPhoneNumbers
-                                    )
-                                )
+                                TransportType.MMS -> toReturn.add(parseMMS(context, messageInfo, userPhoneNumbers))
                             }
                         } catch (e: Exception) {
                             // Swallow exceptions in case we get an error reading one message so that we
@@ -401,9 +477,11 @@ object SMSHelper {
      * Otherwise ordering is undefined.
      *
      * @param context android.content.Context running the request
+     * @param threadIds Only return these threads. Pass null for all
      * @return Non-blocking iterable of conversation info (message with recipients)
      */
-    fun getConversations(context: Context): Sequence<ConversationInfo> {
+    fun getConversations(context: Context, threadIds: Set<Long>? = null, checksums: Map<Long, Long>? = null): Sequence<ConversationInfo> {
+        if (threadIds?.isEmpty() == true) return emptySequence()
         // Used to avoid spewing logs in case there is an overall problem with fetching thread IDs
         var warnedForNullThreadIDs = false
 
@@ -419,7 +497,7 @@ object SMSHelper {
         context.contentResolver.query(
             mConversationUri,
             null,
-            null,
+            threadIds?.let { "${Threads._ID} IN (${it.joinToString(",")})" },
             null,
             null
         ).use { threadIdCursor ->
@@ -431,13 +509,15 @@ object SMSHelper {
                 // looking at them here.
                 val idColumn = threadIdCursor.getColumnIndex(Threads._ID)
                 val dateColumn = threadIdCursor.getColumnIndex(Threads.DATE)
-                val recipientsColumn = threadIdCursor.getColumnIndex(Threads.RECIPIENT_IDS)
                 var threadID: ThreadID? = null
                 var messageDate: Long = -1
-                val recipients: MutableList<String> = ArrayList()
                 
                 if (!threadIdCursor.isNull(idColumn)) {
                     threadID = ThreadID(threadIdCursor.getLong(idColumn))
+                }
+                // Skip before the per-recipient lookups below, which are the expensive part
+                if (threadIds != null && threadID?.threadID !in threadIds) {
+                    continue
                 }
                 if (!threadIdCursor.isNull(dateColumn)) {
                     // I think the presence of the "date" column depends on the specifics of the
@@ -446,18 +526,7 @@ object SMSHelper {
                     // conversations URI returns sorted anyway).
                     messageDate = threadIdCursor.getLong(dateColumn)
                 }
-                if (!threadIdCursor.isNull(recipientsColumn)) {
-                    val recipientIDs = threadIdCursor.getString(recipientsColumn).split(" ")
-                    for (recipient in recipientIDs) {
-                        context.contentResolver.query("content://mms-sms/canonical-addresses".toUri(), null, "_id = ?", arrayOf(recipient.trim()), null).use { cursor ->
-                            if (cursor != null && cursor.moveToFirst()) {
-                                // The canonical-addresses table typically has columns: _id, address
-                                val address = cursor.getString(1)
-                                address?.let { recipients.add(it) }
-                            }
-                        }
-                    }
-                }
+                val recipients = resolveThreadRecipients(context, threadIdCursor)
                 
                 if (messageDate <= 0) {
                     if (!warnedForUnorderedOutputs) {
@@ -479,7 +548,7 @@ object SMSHelper {
                     continue
                 }
                 
-                threadInfos.add(ThreadInfo(threadID, messageDate, recipients.toList()))
+                threadInfos.add(ThreadInfo(threadID, messageDate, recipients, checksums?.get(threadID.threadID) ?: threadChecksum(threadIdCursor)))
             }
             threadInfoList = threadInfos
                 // Sort oldest-to-newest (smallest to largest)
@@ -499,9 +568,80 @@ object SMSHelper {
                     // This is a strange issue, but I don't know how to say what is wrong, so just continue along
                     continue
                 }
-                yield(ConversationInfo(firstMessage[0], threadInfo.recipients))
+                yield(ConversationInfo(firstMessage[0], threadInfo.recipients, threadInfo.checksum))
             }
         }
+    }
+
+    /** Conversation-list change detection uses one query of the threads table. */
+    data class ThreadState(val checksum: Long, val messageCount: Long)
+
+    fun getThreadStates(context: Context): Map<Long, ThreadState> {
+        val states = mutableMapOf<Long, ThreadState>()
+        context.contentResolver.query(mConversationUri, null, null, null, null).use { cursor ->
+            if (cursor == null) throw IllegalStateException("Thread provider returned no cursor")
+            val idColumn = cursor.getColumnIndexOrThrow(Threads._ID)
+            val countColumn = cursor.getColumnIndex(Threads.MESSAGE_COUNT)
+            while (cursor.moveToNext()) {
+                if (cursor.isNull(idColumn)) continue
+                val count = if (countColumn >= 0 && !cursor.isNull(countColumn)) cursor.getLong(countColumn) else 0L
+                states[cursor.getLong(idColumn)] = ThreadState(threadChecksum(cursor), count)
+            }
+        }
+        return states
+    }
+
+    fun getThreadChecksums(context: Context): Map<Long, Long> =
+        getThreadStates(context).mapValues { it.value.checksum }
+
+    private fun threadChecksum(cursor: Cursor): Long {
+        var checksum = 17L
+        for (column in arrayOf(Threads.DATE, Threads.MESSAGE_COUNT, Threads.READ)) {
+            val index = cursor.getColumnIndex(column)
+            val value = if (index >= 0 && !cursor.isNull(index)) cursor.getLong(index) else 0L
+            checksum = checksum * 31 + value
+        }
+        return checksum
+    }
+
+    /** Thread roster only — no tip message. */
+    fun getThreadRecipients(context: Context, threadId: Long): List<String> {
+        context.contentResolver.query(
+            mConversationUri,
+            null,
+            "${Threads._ID}=?",
+            arrayOf(threadId.toString()),
+            null
+        ).use { cursor ->
+            if (cursor != null && cursor.moveToFirst()) {
+                return resolveThreadRecipients(context, cursor)
+            }
+        }
+        return emptyList()
+    }
+
+    private fun resolveThreadRecipients(context: Context, cursor: Cursor): List<String> {
+        val recipientsColumn = cursor.getColumnIndex(Threads.RECIPIENT_IDS)
+        if (recipientsColumn < 0 || cursor.isNull(recipientsColumn)) return emptyList()
+
+        val recipients = mutableListOf<String>()
+        for (recipient in cursor.getString(recipientsColumn).split(" ")) {
+            val id = recipient.trim()
+            if (id.isEmpty()) continue
+            context.contentResolver.query(
+                "content://mms-sms/canonical-addresses".toUri(),
+                null,
+                "_id = ?",
+                arrayOf(id),
+                null
+            ).use { addressCursor ->
+                if (addressCursor != null && addressCursor.moveToFirst()) {
+                    // The canonical-addresses table typically has columns: _id, address
+                    addressCursor.getString(1)?.let { recipients.add(it) }
+                }
+            }
+        }
+        return recipients
     }
 
     private fun addEventFlag(oldEvent: Int, eventFlag: Int): Int {
@@ -520,10 +660,6 @@ object SMSHelper {
             read = messageInfo[Message.READ]?.toIntOrNull() ?: 0,
             threadID = ThreadID(messageInfo[Message.THREAD_ID]?.toLongOrNull() ?: ThreadID.invalidThreadId.threadID),
             uID = messageInfo[Message.U_ID]?.toLongOrNull() ?: 0L,
-            event = addEventFlag(
-                Message.EVENT_UNKNOWN,
-                Message.EVENT_TEXT_MESSAGE
-            ),
             subscriptionID = messageInfo[Message.SUBSCRIPTION_ID]?.toIntOrNull() ?: 0,
             attachments = null,
         )
@@ -551,7 +687,10 @@ object SMSHelper {
             Telephony.Mms.Part._DATA,  // The location in the filesystem of the data
             Telephony.Mms.Part.CONTENT_TYPE,  // The mime type of the data
             Telephony.Mms.Part.TEXT,  // The plain text body of this MMS
-            Telephony.Mms.Part.CHARSET
+            Telephony.Mms.Part.CHARSET,
+            Telephony.Mms.Part.FILENAME,
+            Telephony.Mms.Part.NAME,
+            Telephony.Mms.Part.CONTENT_LOCATION,
         )
         val mmsID = messageInfo[Message.U_ID]
         val selection = Telephony.Mms.Part.MSG_ID + " = ?"
@@ -571,11 +710,21 @@ object SMSHelper {
                     val contentTypeColumn = cursor.getColumnIndexOrThrow(Telephony.Mms.Part.CONTENT_TYPE)
                     val dataColumn = cursor.getColumnIndexOrThrow(Telephony.Mms.Part._DATA)
                     val textColumn = cursor.getColumnIndexOrThrow(Telephony.Mms.Part.TEXT)
+                    val fileNameColumn = cursor.getColumnIndexOrThrow(Telephony.Mms.Part.FILENAME)
+                    val nameColumn = cursor.getColumnIndexOrThrow(Telephony.Mms.Part.NAME)
+                    val contentLocationColumn = cursor.getColumnIndexOrThrow(Telephony.Mms.Part.CONTENT_LOCATION)
                     // TODO: Parse charset (As usual, it is skimpily documented) (Possibly refer to MMS spec)
                     do {
                         val partID = cursor.getLong(partIDColumn)
                         val contentType = cursor.getString(contentTypeColumn)
                         val data = cursor.getString(dataColumn)
+                        val fileName = SmsMmsUtils.resolveMmsPartFileName(
+                            partId = partID,
+                            fileName = cursor.getString(fileNameColumn),
+                            name = cursor.getString(nameColumn),
+                            contentLocation = cursor.getString(contentLocationColumn),
+                            dataPath = data,
+                        )
                         if (MimeType.isTypeText(contentType)) {
                             body = if (data != null) {
                                 // data != null means the data is on disk. Go get it.
@@ -584,71 +733,24 @@ object SMSHelper {
                                 cursor.getString(textColumn)
                             }
                             event = addEventFlag(event, Message.EVENT_TEXT_MESSAGE)
-                        } else if (MimeType.isTypeImage(contentType)) {
-                            val fileName = data.substring(data.lastIndexOf('/') + 1)
-
-                            // Get the actual image from the mms database convert it into thumbnail and encode to Base64
-                            val image = SmsMmsUtils.getMmsImage(context, partID)
-                            if (image != null) {
-                                val thumbnailImage = ThumbnailUtils.extractThumbnail(
-                                    image,
-                                    THUMBNAIL_WIDTH,
-                                    THUMBNAIL_HEIGHT
-                                )
-                                val encodedThumbnail = SmsMmsUtils.bitMapToBase64(thumbnailImage)
-                                attachments.add(
-                                    Attachment(
-                                        partID,
-                                        contentType,
-                                        encodedThumbnail,
-                                        fileName
-                                    )
-                                )
-                                thumbnailImage.recycle()
-                                if (!image.isRecycled) image.recycle()
-                            }
-                        } else if (MimeType.isTypeVideo(contentType)) {
-                            val fileName = data.substring(data.lastIndexOf('/') + 1)
-
-                            // Can't use try-with-resources since MediaMetadataRetriever's close method was only added in API 29
-                            val retriever = MediaMetadataRetriever()
-                            try {
-                                retriever.setDataSource(
-                                    context,
-                                    ContentUris.withAppendedId(mMSPartUri, partID)
-                                )
-                                val videoThumbnail = retriever.getScaledFrameAtTime(
-                                    -1,
-                                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
-                                    THUMBNAIL_WIDTH,
-                                    THUMBNAIL_HEIGHT
-                                )
-                                if (videoThumbnail != null) {
-                                    val encodedThumbnail = SmsMmsUtils.bitMapToBase64(videoThumbnail)
-                                    attachments.add(
-                                        Attachment(
-                                            partID,
-                                            contentType,
-                                            encodedThumbnail,
-                                            fileName
-                                        )
-                                    )
-                                    videoThumbnail.recycle()
-                                }
-                            } finally {
-                                retriever.release()
-                            }
-                        } else if (MimeType.isTypeAudio(contentType)) {
-                            val fileName = data.substring(data.lastIndexOf('/') + 1)
-                            attachments.add(Attachment(partID, contentType, null, fileName))
+                        } else if (
+                            // SMIL is the MMS layout document, not a user-facing file
+                            contentType.equals("application/smil", ignoreCase = true)
+                            // RCS / RBM protocol parts (bot JSON, FT HTTP XML, location, etc.).
+                            // Carriers persist these in mms/part next to the real media; they are
+                            // not downloadable attachments (ghosts like …_attachment on desktop).
+                            || contentType.startsWith("application/vnd.gsma.", ignoreCase = true)
+                        ) {
+                            // skip
                         } else {
-                            Log.v("SMSHelper", "Unsupported attachment type: $contentType")
+                            val thumbnail = SmsMmsUtils.createThumbnail(context, partID, contentType)
+                            attachments.add(Attachment(partID, contentType, thumbnail, fileName))
                         }
                     } while (cursor.moveToNext())
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("SMSHelper", "Could not read parts of MMS $mmsID", e)
         }
 
         // Determine whether the message was in- our out- bound
@@ -710,7 +812,6 @@ object SMSHelper {
             read,
             threadID,
             uID,
-            event,
             subscriptionID,
             attachments
         )
@@ -761,7 +862,8 @@ object SMSHelper {
     data class ThreadInfo(
         val threadId: ThreadID,
         val messageDate: Long,
-        val recipients: List<String>
+        val recipients: List<String>,
+        val checksum: Long
     )
 
     /**
@@ -769,7 +871,8 @@ object SMSHelper {
      */
     data class ConversationInfo(
         val message: Message,
-        val recipients: List<String>
+        val recipients: List<String>,
+        val checksum: Long
     )
 
     /**
@@ -795,9 +898,9 @@ object SMSHelper {
     }
 
     class Attachment(
-        private val partID: Long,
+        val partID: Long,
         val mimeType: String,
-        val base64EncodedFile: String?,
+        val encodedFile: String?,
         val uniqueIdentifier: String,
     ) {
 
@@ -821,10 +924,18 @@ object SMSHelper {
 
         override fun equals(other: Any?) = when (other) {
             null -> false
-            is Address -> PhoneNumberUtils.areSamePhoneNumber(address, other.address, networkCountryIso)
-            is String -> PhoneNumberUtils.areSamePhoneNumber(address, other, networkCountryIso)
+            is Address -> isSameNumber(other.address)
+            is String -> isSameNumber(other)
             else -> false
         }
+
+        private fun isSameNumber(other: String): Boolean =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PhoneNumberUtils.areSamePhoneNumber(address, other, networkCountryIso)
+            } else {
+                @Suppress("DEPRECATION")
+                PhoneNumberUtils.compare(address, other)
+            }
 
         override fun hashCode(): Int {
             return address.hashCode()
@@ -846,7 +957,7 @@ object SMSHelper {
         internal constructor(uri: Uri, cause: Throwable?) : super("Error getting messages from $uri", cause)
 
         internal constructor(availableColumns: Array<String?>, uri: Uri, cause: Throwable?) :
-            super("Error getting messages from $uri. Available columns were: $availableColumns", cause)
+            super("Error getting messages from $uri. Available columns were: ${availableColumns.contentToString()}", cause)
     }
 
     /**
@@ -869,7 +980,6 @@ object SMSHelper {
         val read: Int,
         val threadID: ThreadID,
         val uID: Long,
-        val event: Int,
         val subscriptionID: Int,
         val attachments: List<Attachment>?,
     ) {
@@ -937,7 +1047,7 @@ object SMSHelper {
      */
     class MessageLooper private constructor() : Thread() {
         init {
-            setName("MessageHelperLooper")
+            name = "MessageHelperLooper"
         }
 
         override fun run() {

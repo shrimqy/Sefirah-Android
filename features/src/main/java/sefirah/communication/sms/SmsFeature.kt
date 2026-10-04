@@ -1,46 +1,80 @@
 package sefirah.communication.sms
 
+import android.content.ContentUris
 import android.content.Context
 import android.database.ContentObserver
 import android.os.Handler
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import sefirah.BoundFeature
 import sefirah.common.util.smsPermissionGranted
 import sefirah.communication.sms.SMSHelper.MessageLooper.Companion.getLooper
 import sefirah.communication.sms.SMSHelper.getConversations
+import sefirah.communication.sms.SMSHelper.getMessageIds
+import sefirah.communication.sms.SMSHelper.getMessageRefsNewerThan
+import sefirah.communication.sms.SMSHelper.getMessagesByIds
+import sefirah.communication.sms.SMSHelper.getMessagesByRefs
 import sefirah.communication.sms.SMSHelper.getMessagesInRange
+import sefirah.communication.sms.SMSHelper.getNewestMessageRef
 import sefirah.communication.sms.SMSHelper.getNewestMessageTimestamp
+import sefirah.communication.sms.SMSHelper.ThreadState
+import sefirah.communication.sms.SMSHelper.getThreadChecksums
+import sefirah.communication.sms.SMSHelper.getThreadStates
+import sefirah.communication.sms.SMSHelper.getThreadRecipients
 import sefirah.communication.sms.SMSHelper.mConversationUri
 import sefirah.communication.sms.SmsMmsUtils.sendMessage
-import sefirah.communication.sms.SmsMmsUtils.toHelperSmsAddress
-import sefirah.communication.sms.SmsMmsUtils.toHelperSmsAttachment
 import sefirah.communication.sms.SmsMmsUtils.toTextMessage
 import sefirah.domain.interfaces.DeviceManager
 import sefirah.domain.interfaces.NetworkManager
+import sefirah.domain.interfaces.PreferencesRepository
 import sefirah.domain.model.ConversationInfo
-import sefirah.domain.model.ConversationInfoType
+import sefirah.domain.model.ConversationsRequest
 import sefirah.domain.model.DevicePreferences
+import sefirah.domain.model.FileMetadata
+import sefirah.domain.model.MessageIndex
+import sefirah.domain.model.MessageList
+import sefirah.domain.model.MessageListKind
+import sefirah.domain.model.MessagesRequest
+import sefirah.domain.model.RemoveConversation
+import sefirah.domain.model.SmsAttachmentRequest
+import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.TextMessage
-import sefirah.domain.model.ThreadRequest
-import sefirah.BoundFeature
-import java.util.concurrent.locks.Lock
-import java.util.concurrent.locks.ReentrantLock
+import sefirah.transfer.FileTransferService
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.collections.map
 
 @Singleton
 class SmsFeature @Inject constructor(
     private val context: Context,
     deviceManager: DeviceManager,
     private val networkManager: NetworkManager,
+    private val fileTransferService: FileTransferService,
+    private val preferencesRepository: PreferencesRepository,
 ) : BoundFeature(deviceManager) {
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var messageObserver: ContentObserver = MessageContentObserver(Handler(getLooper()!!))
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val sendMutex = Mutex()
+    private val syncJobs = ConcurrentHashMap<String, Job>()
+    private val threadJobs = ConcurrentHashMap<Pair<String, Long>, Job>()
+    private val pendingSyncRequests = ConcurrentHashMap<String, ConversationsRequest>()
+    private val messageObserver: ContentObserver = MessageContentObserver(Handler(getLooper()!!))
 
-    // Cache of existing thread IDs
-    private var existingThreadIds: Set<Long> = emptySet()
+    /** Thread checksum + message count cache for change and delete detection. */
+    private var cachedThreadStates: Map<Long, ThreadState> = emptyMap()
+
+    /** New-SMS watermark — messages with date > these are treated as additions. */
+    private var mostRecentTimestamp: Long = Long.MIN_VALUE
 
     override fun isPrefEnabled(prefs: DevicePreferences) = prefs.messageSync
 
@@ -55,10 +89,20 @@ class SmsFeature @Inject constructor(
     }
 
     override suspend fun onStart(deviceId: String) {
-        sendAllConversations(deviceId)
+        pendingSyncRequests.remove(deviceId)?.let { startSync(deviceId, it) }
+    }
+
+    override suspend fun onStop(deviceId: String) {
+        pendingSyncRequests.remove(deviceId)
+        syncJobs.remove(deviceId)?.cancel()
+        threadJobs.keys.filter { it.first == deviceId }.forEach { threadJobs.remove(it)?.cancel() }
     }
 
     fun stop() {
+        syncJobs.values.forEach { it.cancel() }
+        syncJobs.clear()
+        threadJobs.values.forEach { it.cancel() }
+        threadJobs.clear()
         stopContentObserver()
     }
 
@@ -70,219 +114,298 @@ class SmsFeature @Inject constructor(
         context.contentResolver.registerContentObserver(mConversationUri, true, messageObserver)
         isObserverRegistered = true
 
-        mostRecentTimestampLock.lock()
+        cachedThreadStates = getThreadStates(context)
         mostRecentTimestamp = getNewestMessageTimestamp(context)
-        mostRecentTimestampLock.unlock()
-        existingThreadIds = emptySet()
     }
 
     private fun stopContentObserver() {
         if (!isObserverRegistered) return
         context.contentResolver.unregisterContentObserver(messageObserver)
         isObserverRegistered = false
-        // Reset state
-        mostRecentTimestampLock.lock()
-        mostRecentTimestamp = 0
-        mostRecentTimestampLock.unlock()
-        existingThreadIds = emptySet()
-        haveMessagesBeenRequested = false
+        cachedThreadStates = emptyMap()
+        mostRecentTimestamp = Long.MIN_VALUE
     }
 
-    /**
-     * Keep track of the most-recently-seen message so that we can query for later ones as they arrive
-     */
-    private var mostRecentTimestamp: Long = 0
-
-    // Since the mostRecentTimestamp is accessed both from the feature's thread and the ContentObserver
-    // thread, make sure that access is coherent
-    private val mostRecentTimestampLock: Lock = ReentrantLock()
-
-    /**
-     * Keep track of whether we have received any packet which requested messages.
-     *
-     * If not, we will not send updates, since probably the user doesn't care.
-     */
-    private var haveMessagesBeenRequested: Boolean = false
-
-    private inner class MessageContentObserver
-    /**
-     * Create a ContentObserver to watch the Messages database. onChange is called for
-     * every subscribed change
-     *
-     * @param handler Handler object used to make the callback
-     */
-        (handler: Handler?) : ContentObserver(handler) {
-        /**
-         * The onChange method is called whenever the subscribed-to database changes
-         *
-         * In this case, this onChange expects to be called whenever *anything* in the Messages
-         * database changes and simply reports those updated messages to anyone who might be listening
-         */
+    private inner class MessageContentObserver(handler: Handler) : ContentObserver(handler) {
         override fun onChange(selfChange: Boolean) {
-            sendLatestMessage()
-            checkForDeletedThreads()
+            syncThreadChanges()
         }
     }
 
-    private fun sendLatestMessage() {
-        // Lock so no one uses the mostRecentTimestamp between the moment we read it and the
-        // moment we update it. This is because reading the Messages DB can take long.
-        mostRecentTimestampLock.lock()
+    private fun syncThreadChanges() {
+        scope.launch {
+            lifecycleMutex.withLock {
+                if (enabledDevices.isEmpty()) return@withLock
+                try {
+                    // Wait for in-flight desktop sends so tips can stamp tempId.
+                    SmsMmsUtils.awaitPendingTempIdMaps()
 
-        val messages: List<SMSHelper.Message> = getMessagesInRange(context, null, mostRecentTimestamp, null, false)
-        var newMostRecentTimestamp: Long = mostRecentTimestamp
-        for (message: SMSHelper.Message? in messages) {
-            if (message == null || message.date >= newMostRecentTimestamp) {
-                newMostRecentTimestamp = message!!.date
+                    // Light index first; load full bodies only for new rows we will broadcast.
+                    val newRefs = getMessageRefsNewerThan(context, mostRecentTimestamp)
+                    val newRefsByThread = newRefs.groupBy { it.threadId }
+
+                    val current = getThreadStates(context)
+                    val previous = cachedThreadStates
+
+                    for (threadId in previous.keys - current.keys) {
+                        broadcast(RemoveConversation(threadId))
+                    }
+
+                    val changed = current.filter { (id, state) -> previous[id]?.checksum != state.checksum }.keys + newRefsByThread.keys
+                    for (threadId in changed) {
+                        currentCoroutineContext().ensureActive()
+                        val state = current[threadId] ?: continue
+                        val checksum = state.checksum
+                        val added = newRefsByThread[threadId]
+                        when {
+                            // Brand-new thread — establish list row with recipients + tip.
+                            threadId !in previous -> {
+                                val tipRef = added?.maxByOrNull { it.date }
+                                    ?: getNewestMessageRef(context, threadId)
+                                    ?: continue
+                                val tip = getMessagesByRefs(context, listOf(tipRef)).firstOrNull() ?: continue
+                                broadcast(
+                                    ConversationInfo(
+                                        threadId = threadId,
+                                        recipients = getThreadRecipients(context, threadId),
+                                        checksum = checksum,
+                                        message = tip.toTextMessage(SmsMmsUtils.takeTempId(tip.uID)),
+                                    ),
+                                )
+                            }
+                            else -> {
+                                // New SMS, or the tip after a read / edit / delete.
+                                val messages = if (added != null) {
+                                    getMessagesByRefs(context, added)
+                                } else {
+                                    getNewestMessageRef(context, threadId)
+                                        ?.let { getMessagesByRefs(context, listOf(it)) }
+                                        .orEmpty()
+                                }
+                                if (messages.isNotEmpty()) {
+                                    broadcast(
+                                        MessageList(
+                                            threadId = threadId,
+                                            kind = MessageListKind.New,
+                                            messages = messages.map {
+                                                it.toTextMessage(SmsMmsUtils.takeTempId(it.uID))
+                                            },
+                                            checksum = checksum,
+                                        ),
+                                    )
+                                }
+
+                                // Membership only changes on delete; reads / edits keep the count.
+                                val expectedCount = (previous[threadId]?.messageCount ?: 0L) + (added?.size ?: 0)
+                                if (messages.isEmpty() || state.messageCount < expectedCount) {
+                                    broadcast(MessageIndex(threadId, getMessageIds(context, threadId), checksum))
+                                }
+                            }
+                        }
+                    }
+
+                    newRefs.maxOfOrNull { it.date }?.let { mostRecentTimestamp = it }
+                    cachedThreadStates = current
+                } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
+                    Log.e(TAG, "Could not refresh conversations", e)
+                }
+            }
+        }
+    }
+
+    private fun broadcast(message: SocketMessage) {
+        for (deviceId in enabledDevices)
+            networkManager.sendMessage(deviceId, message)
+    }
+
+    suspend fun handleConversationsRequest(deviceId: String, request: ConversationsRequest) = lifecycleMutex.withLock {
+        if (deviceId !in enabledDevices) {
+            pendingSyncRequests[deviceId] = request
+            return@withLock
+        }
+        startSync(deviceId, request)
+    }
+
+    private suspend fun startSync(deviceId: String, request: ConversationsRequest) {
+        syncJobs[deviceId]?.cancelAndJoin()
+        syncJobs[deviceId] = scope.launch {
+            try {
+                lifecycleMutex.withLock {
+                    if (deviceId in enabledDevices) sendConversations(deviceId, request)
+                }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                Log.e(TAG, "Could not synchronize conversations", e)
+            }
+        }
+    }
+
+    private suspend fun sendConversations(deviceId: String, request: ConversationsRequest) {
+        val currentChecksums = getThreadChecksums(context)
+        val knownChecksums = request.knownThreads.associate { it.threadId to it.checksum }
+
+        for (threadId in knownChecksums.keys) {
+            if (threadId in currentChecksums) continue
+            if (!networkManager.sendMessage(deviceId, RemoveConversation(threadId))) {
+                Log.d(TAG, "Stopping conversation sync; connection gone")
+                return
             }
         }
 
-        // Update the most recent counter
-        mostRecentTimestamp = newMostRecentTimestamp
-        mostRecentTimestampLock.unlock()
+        val changedThreadIds = currentChecksums
+            .filter { (threadId, checksum) -> knownChecksums[threadId] != checksum }
+            .keys
+        if (changedThreadIds.isEmpty()) return
 
-        if (messages.isEmpty()) {
+        for ((message, recipients, checksum) in getConversations(context, changedThreadIds, currentChecksums)) {
+            currentCoroutineContext().ensureActive()
+            val info = ConversationInfo(
+                threadId = message.threadID.threadID,
+                recipients = recipients,
+                checksum = checksum,
+                message = message.toTextMessage(),
+            )
+            if (!networkManager.sendMessage(deviceId, info)) {
+                Log.d(TAG, "Stopping conversation sync; connection gone")
+                return
+            }
+        }
+    }
+
+    fun handleAttachmentRequest(deviceId: String, request: SmsAttachmentRequest) {
+        val partInfo = SmsMmsUtils.getMmsPartInfo(context, request.partId)
+        if (partInfo == null) {
+            Log.e(TAG, "Failed to read MMS part info. partId=${request.partId}")
+            return
+        }
+        val (mimeType, fileName) = partInfo
+        val partUri = ContentUris.withAppendedId(SMSHelper.mMSPartUri, request.partId)
+        val pfd = try {
+            context.contentResolver.openFileDescriptor(partUri, "r")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open MMS part. partId=${request.partId}", e)
+            null
+        }
+        if (pfd == null) {
+            Log.e(TAG, "Loaded attachment is empty. partId=${request.partId}")
             return
         }
 
-        // Group messages by thread ID since they can belong to different threads
-        val messagesByThread = messages.groupBy { it.threadID.threadID }
-        
-        // Send a separate conversation for each thread
-        messagesByThread.forEach { (threadId, messagesInThread) ->
-            val textMessages = messagesInThread.map {
-                it.toTextMessage()
-            }
-
-            val isNew = !existingThreadIds.contains(threadId)
-
-            val conversation = ConversationInfo(
-                infoType = if (isNew) ConversationInfoType.New else ConversationInfoType.ActiveUpdated,
-                threadId = threadId,
-                messages = textMessages
-            )
-            existingThreadIds = existingThreadIds.plus(threadId)
-            sendToDesktop(conversation, enabledDevices)
-        }
-    }
-
-    /**
-     * Send all conversations (one message per thread)
-     */
-    fun sendAllConversations(deviceId: String?) {
-        val targetDeviceIds = deviceId?.let { setOf(it) } ?: enabledDevices
-        if (targetDeviceIds.isEmpty()) return
-
-        val conversations = getConversations(this.context)
-        // Build a set of thread IDs while we process the conversations
-        val currentThreadIds = mutableSetOf<Long>()
-        
-        // For each conversation (already one message per thread from getConversations)
-        conversations.forEach { conversationInfo ->
-            val threadId = conversationInfo.message.threadID.threadID
-            currentThreadIds.add(threadId)
-            
-            val textMessage = conversationInfo.message.toTextMessage()
-
-            // Create a ConversationInfo with just this one message
-            val conversation = ConversationInfo(
-                infoType = ConversationInfoType.Active,
-                threadId = threadId,
-                recipients = conversationInfo.recipients,
-                messages = listOf(textMessage)
-            )
-            sendToDesktop(conversation, targetDeviceIds)
-        }
-        
-        // Store the current thread IDs for later comparison
-        existingThreadIds = currentThreadIds
-    }
-
-    /**
-     * Handle a request for all messages in a specific thread
-     */
-    fun handleThreadRequest(request: ThreadRequest) {
-        haveMessagesBeenRequested = true
-
-        val threadID = SMSHelper.ThreadID(request.threadId)
-
-        // Get all messages in the thread
-        val messages = if (request.rangeStartTimestamp < 0) {
-            SMSHelper.getMessagesInThread(context, threadID,
-                if (request.numberToRequest < 0) null else request.numberToRequest)
-        } else {
-            getMessagesInRange(context, threadID, request.rangeStartTimestamp,
-                if (request.numberToRequest < 0) null else request.numberToRequest, true)
-        }
-
-        // Convert all messages to TextMessage objects
-        val textMessages = messages.map { it.toTextMessage() }
-
-        val conversation = ConversationInfo(
-            infoType = ConversationInfoType.Active,
-            threadId = request.threadId,
-            messages = textMessages
+        val size = pfd.statSize
+        fileTransferService.sendSmsAttachment(
+            deviceId = deviceId,
+            pfd = pfd,
+            metadata = FileMetadata(
+                fileName = fileName,
+                mimeType = mimeType,
+                fileSize = if (size > 0) size else 0L,
+            ),
+            partId = request.partId,
         )
-        
-        // Send the conversation packet
-        sendToDesktop(conversation, enabledDevices)
     }
 
-    private fun sendToDesktop(conversation: ConversationInfo, targetDeviceIds: Set<String> = enabledDevices) {
-        targetDeviceIds.forEach { deviceId ->
-            networkManager.sendMessage(deviceId, conversation)
+    fun handleMessagesRequest(deviceId: String, request: MessagesRequest) {
+        if (deviceId !in enabledDevices) return
+
+        val ids = request.messageIds
+        if (ids != null) {
+            scope.launch {
+                try {
+                    lifecycleMutex.withLock {
+                        if (deviceId !in enabledDevices) return@withLock
+                        sendHistory(deviceId, request.threadId, ids)
+                    }
+                } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
+                    Log.e(TAG, "Could not fetch messages for thread ${request.threadId}", e)
+                }
+            }
+            return
+        }
+
+        // A re-open supersedes an in-flight open for the same thread.
+        val key = deviceId to request.threadId
+        threadJobs[key]?.cancel()
+        threadJobs[key] = scope.launch {
+            try {
+                lifecycleMutex.withLock {
+                    if (deviceId !in enabledDevices) return@withLock
+                    sendOpen(deviceId, request.threadId)
+                }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                Log.e(TAG, "Could not fetch thread ${request.threadId}", e)
+            } finally {
+                threadJobs.remove(key, currentCoroutineContext()[Job])
+            }
         }
     }
 
-    fun sendTextMessage(message: TextMessage) {
-        val addresses = message.addresses.toHelperSmsAddress(context)
-        val attachments = message.attachments?.toHelperSmsAttachment()
-        sendMessage(
+    private fun sendOpen(deviceId: String, threadId: Long) {
+        val bodies = getMessagesInRange(
             context,
-            message.body,
-            attachments,
-            addresses,
-            subID = message.subscriptionId,
+            SMSHelper.ThreadID(threadId),
+            Long.MAX_VALUE,
+            PAGE_SIZE,
+            getMessagesOlderStartTime = true,
+        ).map { it.toTextMessage() }
+
+        networkManager.sendMessage(
+            deviceId,
+            MessageList(
+                threadId = threadId,
+                kind = MessageListKind.Open,
+                messages = bodies,
+                messageIds = getMessageIds(context, threadId),
+            ),
         )
     }
 
-    /**
-     * Check if any threads were deleted
-     */
-    private fun checkForDeletedThreads() {
-        // Get current threads
-        val currentThreadIds = mutableSetOf<Long>()
-        getConversations(context).forEach { conversationInfo ->
-            currentThreadIds.add(conversationInfo.message.threadID.threadID)
-        }
+    private fun sendHistory(deviceId: String, threadId: Long, ids: List<Long>) {
+        networkManager.sendMessage(
+            deviceId,
+            MessageList(
+                threadId = threadId,
+                kind = MessageListKind.History,
+                messages = getMessagesByIds(context, threadId, ids).map { it.toTextMessage() },
+            ),
+        )
+    }
 
-        // Find deleted threads
-        val deletedThreadIds = existingThreadIds.minus(currentThreadIds)
-        
-        // Notify about deleted threads
-        if (deletedThreadIds.isNotEmpty()) {
-            for (threadId in deletedThreadIds) {
-                Log.d(TAG, "Thread deleted: $threadId")
-                notifyThreadDeleted(threadId)
+    fun sendTextMessage(deviceId: String, message: TextMessage) {
+        scope.launch {
+            sendMutex.withLock {
+                val prefs = preferencesRepository.preferenceSettings(deviceId).first()
+                sendMessage(
+                    context,
+                    message.body,
+                    message.attachments?.map {
+                        SMSHelper.Attachment(
+                            encodedFile = it.base64EncodedFile,
+                            mimeType = it.mimeType,
+                            uniqueIdentifier = it.fileName,
+                            partID = -1
+                        )
+                    },
+                    message.addresses.map {
+                        SMSHelper.Address(
+                            context,
+                            address = it
+                        )
+                    }.toMutableList(),
+                    subID = message.subscriptionId,
+                    tempId = message.uniqueId,
+                    longTextAsMms = prefs.longTextAsMms,
+                    groupMessageAsMms = prefs.groupMessageAsMms,
+                    convertToMmsAfter = prefs.convertToMmsAfter,
+                )
             }
         }
-        
-        // Update our cache for next time
-        existingThreadIds = currentThreadIds
-    }
-    
-    /**
-     * Notify that a thread was deleted
-     */
-    private fun notifyThreadDeleted(threadId: Long) {
-        val deleteNotification = ConversationInfo(
-            infoType = ConversationInfoType.Removed,
-            threadId = threadId,
-        )
-        sendToDesktop(deleteNotification, enabledDevices)
     }
 
     companion object {
         const val TAG = "SmsFeature"
+        private const val PAGE_SIZE = 10L
     }
 }

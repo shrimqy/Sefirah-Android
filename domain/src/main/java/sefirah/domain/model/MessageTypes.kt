@@ -7,11 +7,10 @@ enum class NotificationInfoType {
     Invoke
 }
 
-enum class ConversationInfoType {
-    Active,
-    ActiveUpdated,
+enum class MessageListKind {
+    Open,
+    History,
     New,
-    Removed,
 }
 
 enum class PlaybackInfoType {

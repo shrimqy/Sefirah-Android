@@ -12,6 +12,7 @@ import com.castle.sefirah.navigation.MainRouteScreen
 import com.castle.sefirah.presentation.devices.AddressScreen
 import com.castle.sefirah.presentation.devices.DeviceSettingsScreen
 import com.castle.sefirah.presentation.devices.MediaSessionSettingsScreen
+import com.castle.sefirah.presentation.devices.SmsSettingsScreen
 
 fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
     navigation(
@@ -36,6 +37,9 @@ fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
                     onNavigateToMediaSessionSettings = {
                         rootNavController.navigate(DeviceRouteScreen.MediaSessionSettings.route)
                     },
+                    onNavigateToSmsSettings = {
+                        rootNavController.navigate(DeviceRouteScreen.SmsSettings.route)
+                    },
                 )
             }
         }
@@ -53,6 +57,15 @@ fun NavGraphBuilder.deviceNavGraph(rootNavController: NavHostController) {
             route = DeviceRouteScreen.MediaSessionSettings.route
         ) {
             MediaSessionSettingsScreen(
+                rootNavController = rootNavController,
+                onNavigateBack = { rootNavController.navigateUp() },
+            )
+        }
+
+        composable(
+            route = DeviceRouteScreen.SmsSettings.route
+        ) {
+            SmsSettingsScreen(
                 rootNavController = rootNavController,
                 onNavigateBack = { rootNavController.navigateUp() },
             )

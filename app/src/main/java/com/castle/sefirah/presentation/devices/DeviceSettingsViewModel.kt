@@ -166,6 +166,24 @@ class DeviceSettingsViewModel @Inject constructor(
         }
     }
 
+    fun saveLongTextAsMmsSettings(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveLongTextAsMmsSettingsForDevice(deviceId, enabled)
+        }
+    }
+
+    fun saveGroupMessageAsMmsSettings(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveGroupMessageAsMmsSettingsForDevice(deviceId, enabled)
+        }
+    }
+
+    fun saveConvertToMmsAfterSettings(after: Int) {
+        viewModelScope.launch {
+            preferencesRepository.saveConvertToMmsAfterSettingsForDevice(deviceId, after)
+        }
+    }
+
     fun saveNotificationSyncSettings(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.saveNotificationSyncSettingsForDevice(deviceId, enabled)

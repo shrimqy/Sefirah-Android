@@ -73,6 +73,7 @@ fun DeviceSettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToAddressScreen: () -> Unit,
     onNavigateToMediaSessionSettings: () -> Unit,
+    onNavigateToSmsSettings: () -> Unit,
 ) {
     val device by viewModel.device.collectAsState()
     val preferences by viewModel.preferences.collectAsState()
@@ -238,7 +239,8 @@ fun DeviceSettingsScreen(
                     onCheckedChanged = { checked ->
                         viewModel.saveMessageSyncSettings(checked)
                     },
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    onContentClick = onNavigateToSmsSettings,
                 )
             }
 

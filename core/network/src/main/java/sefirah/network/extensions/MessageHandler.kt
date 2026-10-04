@@ -11,25 +11,27 @@ import sefirah.domain.model.BluetoothPairingRequest
 import sefirah.domain.model.ClearNotifications
 import sefirah.domain.model.ClipboardInfo
 import sefirah.domain.model.ClipboardTransfer
+import sefirah.domain.model.ConversationsRequest
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.Disconnect
 import sefirah.domain.model.DiscoveredDevice
 import sefirah.domain.model.DndState
 import sefirah.domain.model.MediaAction
+import sefirah.domain.model.MessagesRequest
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationInfo
 import sefirah.domain.model.NotificationInfoType
 import sefirah.domain.model.NotificationReply
 import sefirah.domain.model.PairMessage
 import sefirah.domain.model.PairedDevice
-import sefirah.domain.model.PlaybackInfo
 import sefirah.domain.model.PlaySound
+import sefirah.domain.model.PlaybackInfo
 import sefirah.domain.model.RequestApplicationList
 import sefirah.domain.model.RingerModeState
 import sefirah.domain.model.ShareTransfer
+import sefirah.domain.model.SmsAttachmentRequest
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.TextMessage
-import sefirah.domain.model.ThreadRequest
 import sefirah.network.NetworkService
 import sefirah.network.NetworkService.Companion.TAG
 
@@ -63,8 +65,10 @@ suspend fun NetworkService.handleMessage(device: BaseRemoteDevice, message: Sock
                 is ClipboardTransfer -> fileTransferService.receiveClipboard(device.deviceId, message)
                 is RingerModeState -> deviceControlHandler.handleRingerMode(message)
                 is DndState -> deviceControlHandler.handleDndStatus(message)
-                is ThreadRequest -> smsFeature.handleThreadRequest(message)
-                is TextMessage -> smsFeature.sendTextMessage(message)
+                is MessagesRequest -> smsFeature.handleMessagesRequest(device.deviceId, message)
+                is ConversationsRequest -> smsFeature.handleConversationsRequest(device.deviceId, message)
+                is SmsAttachmentRequest -> smsFeature.handleAttachmentRequest(device.deviceId, message)
+                is TextMessage -> smsFeature.sendTextMessage(device.deviceId, message)
                 is AudioDeviceInfo -> remotePlaybackFeature.handleAudioDevice(device.deviceId, message)
                 is AudioStreamState -> deviceControlHandler.setStreamVolume(device.deviceId, message)
                 is ActionInfo -> actionFeature.addAction(device.deviceId, message)
