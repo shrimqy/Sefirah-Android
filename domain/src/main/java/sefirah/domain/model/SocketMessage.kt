@@ -81,6 +81,12 @@ data class BatteryState(
 ) : SocketMessage()
 
 @Serializable
+@SerialName("BluetoothState")
+data class BluetoothState(
+    val isEnabled: Boolean
+) : SocketMessage()
+
+@Serializable
 @SerialName("RingerModeState")
 data class RingerModeState(
     val mode: Int

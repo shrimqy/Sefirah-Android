@@ -21,6 +21,7 @@ object MessageSerializer {
                 subclass(AudioDeviceInfo::class)
                 subclass(AudioStreamState::class)
                 subclass(BatteryState::class)
+                subclass(BluetoothState::class)
                 subclass(BluetoothPairingResult::class)
                 subclass(BluetoothPairingRequest::class)
                 subclass(CallInfo::class)

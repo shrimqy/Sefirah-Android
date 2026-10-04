@@ -1,6 +1,8 @@
 package sefirah.status
 
 import android.app.NotificationManager
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -12,9 +14,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import sefirah.common.util.nearbyDevicesPermissionGranted
 import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.model.AudioStreamState
 import sefirah.domain.model.BatteryState
+import sefirah.domain.model.BluetoothState
 import sefirah.domain.model.DndState
 import sefirah.domain.model.RingerModeState
 import javax.inject.Inject
@@ -33,9 +37,12 @@ class DeviceControlHandler @Inject constructor(
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val notificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val bluetoothAdapter =
+        (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
 
     private var lastBatteryStatus: BatteryState? = null
     private var receiversRegistered = false
+    private var bluetoothReceiverRegistered = false
 
     fun start() {
         if (receiversRegistered) return
@@ -53,13 +60,23 @@ class DeviceControlHandler @Inject constructor(
             IntentFilter(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED),
         )
         receiversRegistered = true
+
+        if (bluetoothAdapter != null && nearbyDevicesPermissionGranted(context)) {
+            context.registerReceiver(bluetoothReceiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED))
+            bluetoothReceiverRegistered = true
+        }
     }
 
     fun stop() {
-        if (!receiversRegistered) return
-        runCatching { context.unregisterReceiver(batteryReceiver) }
-        runCatching { context.unregisterReceiver(interruptionFilterReceiver) }
-        receiversRegistered = false
+        if (receiversRegistered) {
+            runCatching { context.unregisterReceiver(batteryReceiver) }
+            runCatching { context.unregisterReceiver(interruptionFilterReceiver) }
+            receiversRegistered = false
+        }
+        if (bluetoothReceiverRegistered) {
+            runCatching { context.unregisterReceiver(bluetoothReceiver) }
+            bluetoothReceiverRegistered = false
+        }
     }
 
     fun handleRingerMode(ringerMode: RingerModeState) {
@@ -112,6 +129,10 @@ class DeviceControlHandler @Inject constructor(
         networkManager.sendMessage(deviceId, ringerMode)
         networkManager.sendMessage(deviceId, dndStatus)
 
+        if (bluetoothAdapter != null && nearbyDevicesPermissionGranted(context)) {
+            networkManager.sendMessage(deviceId, getBluetoothState())
+        }
+
         getAudioLevels().forEach { audioLevel ->
             networkManager.sendMessage(deviceId, audioLevel)
         }
@@ -127,6 +148,20 @@ class DeviceControlHandler @Inject constructor(
                 lastBatteryStatus = batteryStatus
             }
         }
+    }
+
+    private fun broadcastBluetoothState() {
+        if (bluetoothAdapter == null || !nearbyDevicesPermissionGranted(context)) return
+        networkManager.broadcastMessage(getBluetoothState())
+    }
+
+    private fun getBluetoothState(): BluetoothState {
+        val isEnabled = try {
+            bluetoothAdapter?.isEnabled == true
+        } catch (e: SecurityException) {
+            false
+        }
+        return BluetoothState(isEnabled)
     }
 
     private fun broadcastRingerMode() {
@@ -178,6 +213,15 @@ class DeviceControlHandler @Inject constructor(
                 NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED,
                 NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED -> broadcastDndStatus()
                 AudioManager.RINGER_MODE_CHANGED_ACTION -> broadcastRingerMode()
+            }
+        }
+    }
+
+    private val bluetoothReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)
+            if (state == BluetoothAdapter.STATE_ON || state == BluetoothAdapter.STATE_OFF) {
+                broadcastBluetoothState()
             }
         }
     }
