@@ -31,7 +31,7 @@ class SendFileHandler(
     private val deviceName: String,
     notificationCenter: NotificationCenter?,
 ) {
-    val totalBytes: Long = files.sumOf { it.metadata.fileSize }
+    private val totalBytes: Long = files.sumOf { it.metadata.fileSize }
     private var totalBytesTransferred: Long = 0
 
     private val notification: TransferNotification? =

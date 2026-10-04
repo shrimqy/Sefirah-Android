@@ -231,11 +231,25 @@ data class NotificationReply(
 
 @Serializable
 @Parcelize
-@SerialName("FileTransferInfo")
-data class FileTransferInfo(
+data class FileTransferSession(
     val files: List<FileMetadata>,
     val serverInfo: ServerInfo,
-    val isClipboard: Boolean = false
+) : Parcelable
+
+@Serializable
+@Parcelize
+@SerialName("ShareTransfer")
+data class ShareTransfer(
+    val transfer: FileTransferSession,
+) : Parcelable, SocketMessage()
+
+@Serializable
+@Parcelize
+@SerialName("ClipboardTransfer")
+data class ClipboardTransfer(
+    val transfer: FileTransferSession,
+) : Parcelable, SocketMessage()
+
 ) : Parcelable, SocketMessage()
 
 @Serializable

@@ -16,9 +16,11 @@ import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.streams.asByteWriteChannel
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import sefirah.common.R
 import sefirah.common.notifications.NotificationCenter
 import sefirah.common.util.createTempFileUri
@@ -30,7 +32,8 @@ import javax.net.ssl.SSLSocket
 
 /**
  * Handles receiving files from a remote device.
- * @param notificationCenter If null, no notifications are shown (e.g., clipboard transfers).
+ * @param notificationCenter If null, no notifications are shown.
+ * @param useTempStorage If true, write to a temp file (clipboard); otherwise use Downloads/custom storage.
  */
 class ReceiveFileHandler(
     private val context: Context,
@@ -39,23 +42,20 @@ class ReceiveFileHandler(
     private val files: List<FileMetadata>,
     private val deviceName: String,
     private val preferencesRepository: PreferencesRepository? = null,
-    notificationCenter: NotificationCenter? = null
+    notificationCenter: NotificationCenter? = null,
+    private val useTempStorage: Boolean = false,
 ) {
-    val totalBytes: Long = files.sumOf { it.fileSize }
+    private val totalBytes: Long = files.sumOf { it.fileSize }
     private var totalBytesReceived: Long = 0
-
-    var lastFileUri: Uri? = null
-        private set
 
     private val notification: TransferNotification? = notificationCenter?.let {
         TransferNotification(context, transferId, it)
     }
 
-    private val isSilent: Boolean get() = notification == null
-
     suspend fun receive(): Uri? {
         val readChannel = clientSocket.inputStream.toByteReadChannel()
         val writeChannel = clientSocket.outputStream.asByteWriteChannel()
+        var lastFileUri: Uri? = null
 
         try {
             notification?.let {
@@ -110,8 +110,7 @@ class ReceiveFileHandler(
         val fileUri = createOutputUri(metadata)
 
         try {
-            // Send "start" message to indicate we're ready to receive this file
-            writeChannel.writeStringUtf8("start")
+            writeChannel.writeStringUtf8(SendFileHandler.TRANSFER_START_MESSAGE)
             writeChannel.flush()
 
             context.contentResolver.openOutputStream(fileUri)?.use { output ->
@@ -155,8 +154,7 @@ class ReceiveFileHandler(
     }
 
     private suspend fun createOutputUri(metadata: FileMetadata): Uri {
-        // Silent mode (clipboard) -> temp file URI
-        if (isSilent) {
+        if (useTempStorage) {
             val extension = metadata.mimeType
                 .substringAfter('/')
                 .substringBefore(';')
@@ -197,7 +195,9 @@ class ReceiveFileHandler(
                     File(downloadsDir, candidate).exists()
                 }
                 val file = File(downloadsDir, fileName)
-                if (!file.createNewFile()) throw IOException("Failed to create file in Downloads")
+                if (!withContext(Dispatchers.IO) {
+                        file.createNewFile()
+                    }) throw IOException("Failed to create file in Downloads")
                 Uri.fromFile(file)
             }
         }

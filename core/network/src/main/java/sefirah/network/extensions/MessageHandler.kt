@@ -10,11 +10,11 @@ import sefirah.domain.model.BatteryState
 import sefirah.domain.model.BluetoothPairingRequest
 import sefirah.domain.model.ClearNotifications
 import sefirah.domain.model.ClipboardInfo
+import sefirah.domain.model.ClipboardTransfer
 import sefirah.domain.model.DeviceInfo
 import sefirah.domain.model.Disconnect
 import sefirah.domain.model.DiscoveredDevice
 import sefirah.domain.model.DndState
-import sefirah.domain.model.FileTransferInfo
 import sefirah.domain.model.MediaAction
 import sefirah.domain.model.NotificationAction
 import sefirah.domain.model.NotificationInfo
@@ -26,6 +26,7 @@ import sefirah.domain.model.PlaybackInfo
 import sefirah.domain.model.PlaySound
 import sefirah.domain.model.RequestApplicationList
 import sefirah.domain.model.RingerModeState
+import sefirah.domain.model.ShareTransfer
 import sefirah.domain.model.SocketMessage
 import sefirah.domain.model.TextMessage
 import sefirah.domain.model.ThreadRequest
@@ -58,7 +59,8 @@ suspend fun NetworkService.handleMessage(device: BaseRemoteDevice, message: Sock
                 is PlaybackInfo -> remotePlaybackFeature.handlePlaybackSessionUpdates(device.deviceId, message)
                 is MediaAction -> playbackFeature.handlePlaybackAction(device.deviceId, message)
                 is ClipboardInfo -> clipboardFeature.setClipboard(message)
-                is FileTransferInfo -> fileTransferService.receiveFiles(device.deviceId, message)
+                is ShareTransfer -> fileTransferService.receiveShare(device.deviceId, message)
+                is ClipboardTransfer -> fileTransferService.receiveClipboard(device.deviceId, message)
                 is RingerModeState -> deviceControlHandler.handleRingerMode(message)
                 is DndState -> deviceControlHandler.handleDndStatus(message)
                 is ThreadRequest -> smsFeature.handleThreadRequest(message)

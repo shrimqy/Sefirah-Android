@@ -206,7 +206,7 @@ class ClipboardFeature @Inject constructor(
 
     /**
      * Image FD from the shell worker or [sendPrimaryClipboard].
-     * Known size ≤2MB → base64 [ClipboardInfo]. Larger → [FileTransferService.sendFromPfd].
+     * Known size ≤2MB → base64 [ClipboardInfo]. Larger → [FileTransferService.sendClipboard].
      */
     private suspend fun sendClipboardImage(mimeType: String, pfd: ParcelFileDescriptor) {
         var toClose = pfd
@@ -242,11 +242,10 @@ class ClipboardFeature @Inject constructor(
                             Log.e(TAG, "pfd.dup failed for $deviceId", e)
                             return@forEach
                         }
-                        fileTransferService.get().sendFromPfd(
+                        fileTransferService.get().sendClipboard(
                             deviceId = deviceId,
                             pfd = dup,
                             metadata = metadata,
-                            isClipboard = true,
                         )
                     }
                 }
