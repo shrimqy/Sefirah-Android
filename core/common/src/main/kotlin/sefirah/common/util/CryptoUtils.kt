@@ -9,11 +9,13 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.SecureRandom
 import java.security.Security
 import java.security.cert.X509Certificate
 import java.security.spec.ECGenParameterSpec
 import java.util.Calendar
 import javax.security.auth.x500.X500Principal
+import kotlin.random.asKotlinRandom
 
 class CryptoUtils {
     init {
@@ -87,5 +89,6 @@ fun getDeviceKeyStore(): KeyStore {
 
 fun generateRandomPassword(): String {
     val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9') + "!@#$%^&*"
-    return (1..12).map { allowedChars.random() }.joinToString("")
+    val random = SecureRandom().asKotlinRandom()
+    return (1..28).map { allowedChars.random(random) }.joinToString("")
 }

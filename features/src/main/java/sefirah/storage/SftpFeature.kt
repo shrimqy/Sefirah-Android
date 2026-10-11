@@ -15,7 +15,7 @@ import org.apache.sshd.scp.server.ScpCommandFactory
 import org.apache.sshd.server.ServerBuilder
 import org.apache.sshd.server.SshServer
 import org.apache.sshd.server.auth.password.PasswordAuthenticator
-import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator
+import org.apache.sshd.server.auth.password.UserAuthPasswordFactory
 import org.apache.sshd.server.subsystem.SubsystemFactory
 import org.apache.sshd.sftp.server.FileHandle
 import org.apache.sshd.sftp.server.SftpFileSystemAccessor
@@ -250,7 +250,7 @@ class SftpFeature @Inject constructor(
         }
 
         server.keyPairProvider = PfxKeyPairProvider()
-        server.publickeyAuthenticator = PublickeyAuthenticator { _, _, _ -> true }
+        server.userAuthFactories = listOf(UserAuthPasswordFactory.INSTANCE)
         server.passwordAuthenticator = PasswordAuthenticator { user, password, _ ->
             user == USER && password == pwd
         }
