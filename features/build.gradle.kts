@@ -47,8 +47,6 @@ dependencies {
     implementation(libs.apache.sshd.core)
     implementation(libs.apache.sshd.sftp)
     implementation(libs.apache.sshd.scp)
-    implementation(libs.apache.sshd.mina)
-    implementation(libs.apache.mina.core)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
 }

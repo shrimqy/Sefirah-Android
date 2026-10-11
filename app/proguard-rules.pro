@@ -42,8 +42,6 @@
 
 -keep class org.apache.sshd.** { *; }
 
--keep class org.apache.mina.** { *; }
-
 -keep class org.bouncycastle.** { *; }
 
 -keep class java.rmi.** { *; }
