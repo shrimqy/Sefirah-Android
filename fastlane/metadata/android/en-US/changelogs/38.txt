@@ -1,0 +1,5 @@
+• Overhauled SMS sync: conversations load faster and update live
+• Per-device SMS settings: send long texts or group messages as MMS, and choose when to convert to MMS
+• Your PC now shows whether Bluetooth is on
+• Clipboard sync recovers automatically after Shizuku restarts
+• More reliable connection, security and general bug fixes
