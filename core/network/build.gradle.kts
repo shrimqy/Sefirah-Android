@@ -44,4 +44,7 @@ dependencies {
 
     implementation(libs.bundles.ktor)
     implementation(libs.androidx.hilt.work)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
