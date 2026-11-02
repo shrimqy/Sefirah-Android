@@ -9,8 +9,8 @@ import kotlinx.serialization.Serializable
 data class DevicePresentation(
     val version: Int = 1,
     val kind: String = "unknown",
-    val orientation: String = "portrait",
-    val aspectRatio: String = "9:20",
+    val orientation: String = "landscape",
+    val aspectRatio: String = "16:9",
     val wallpaperSource: String = "none",
     val wallpaperId: String? = null,
     val wallpaper: String? = null,

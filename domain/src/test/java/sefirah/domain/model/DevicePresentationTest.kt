@@ -56,4 +56,13 @@ class DevicePresentationTest {
         assertEquals(emptyList<PhoneNumber>(), cleared.phoneNumbers)
         assertFalse(MessageSerializer.serialize(DeviceInfo("peer"))!!.contains("phoneNumbers"))
     }
+    @Test fun omittedDefaultsMatchDesktopAndPhoneOverridesStayOnTheWire() {
+        val empty = MessageSerializer.deserialize("""{"type":"DeviceInfo","deviceName":"peer","presentation":{}}""") as DeviceInfo
+        assertEquals("landscape", empty.presentation!!.orientation)
+        assertEquals("16:9", empty.presentation!!.aspectRatio)
+        val wire = MessageSerializer.serialize(DeviceInfo("phone", presentation = DevicePresentation(
+            kind = "phone", orientation = "portrait", aspectRatio = "9:20")))!!
+        assertTrue(wire.contains("\"orientation\":\"portrait\""))
+        assertTrue(wire.contains("\"aspectRatio\":\"9:20\""))
+    }
 }

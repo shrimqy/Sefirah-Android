@@ -28,3 +28,7 @@ DeviceInfo extensions are partial updates: absent phoneNumbers keeps the existin
 list, while [] explicitly clears it. Capability and presentation publishers reuse
 the authenticated connection and existing settings owners; neither creates a new
 transport or device identity.
+
+Omitted v1 presentation defaults are identical on both platforms: unknown,
+landscape, 16:9, no wallpaper. Android chooses its phone/tablet suggestion
+explicitly, so portrait and phone ratios remain present on the wire.
