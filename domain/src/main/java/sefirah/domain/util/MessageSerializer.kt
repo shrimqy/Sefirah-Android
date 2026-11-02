@@ -22,6 +22,8 @@ object MessageSerializer {
                 subclass(AudioStreamState::class)
                 subclass(BatteryState::class)
                 subclass(BluetoothState::class)
+                subclass(sefirah.domain.model.DeviceControlRequest::class)
+                subclass(sefirah.domain.model.DeviceControlResult::class)
                 subclass(BluetoothPairingResult::class)
                 subclass(BluetoothPairingRequest::class)
                 subclass(CallInfo::class)

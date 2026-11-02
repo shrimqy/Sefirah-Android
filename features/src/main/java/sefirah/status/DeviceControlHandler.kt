@@ -14,6 +14,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.withLock
 import sefirah.common.util.nearbyDevicesPermissionGranted
 import sefirah.domain.interfaces.NetworkManager
 import sefirah.domain.model.AudioStreamState
@@ -32,6 +35,8 @@ import javax.inject.Singleton
 class DeviceControlHandler @Inject constructor(
     private val context: Context,
     private val networkManager: NetworkManager,
+    private val preferences: sefirah.domain.interfaces.PreferencesRepository,
+    private val devices: sefirah.domain.interfaces.DeviceManager,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -40,28 +45,129 @@ class DeviceControlHandler @Inject constructor(
     private val bluetoothAdapter =
         (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
 
+    data class BluetoothPrompt(val deviceId: String, val enabled: Boolean, val created: Long = android.os.SystemClock.elapsedRealtime())
+    private val _bluetoothPrompt = kotlinx.coroutines.flow.MutableStateFlow<BluetoothPrompt?>(null)
+    val bluetoothPrompt = _bluetoothPrompt as kotlinx.coroutines.flow.StateFlow<BluetoothPrompt?>
+    fun dismissBluetoothPrompt() { _bluetoothPrompt.value = null }
+    suspend fun consumeBluetoothPrompt(prompt: BluetoothPrompt): Boolean {
+        if (_bluetoothPrompt.value != prompt || android.os.SystemClock.elapsedRealtime() - prompt.created > 30_000) return false
+        _bluetoothPrompt.value = null
+        val peer = devices.getPairedDevice(prompt.deviceId) ?: return false
+        return peer.connectionState.isConnected &&
+            preferences.preferenceSettings(peer.deviceId).first().allowRemoteDeviceControls
+    }
+
+    private val _controlNotice = kotlinx.coroutines.flow.MutableStateFlow<Map<String, String>>(emptyMap())
+    val controlNotice = _controlNotice as kotlinx.coroutines.flow.StateFlow<Map<String, String>>
+    private val pendingOutgoing = java.util.concurrent.ConcurrentHashMap<String, String>()
+    fun requestBluetooth(peer: sefirah.domain.model.PairedDevice) {
+        val controls = peer.controls ?: return
+        if (!peer.connectionState.isConnected || controls.version != 1 || pendingOutgoing.containsKey(peer.deviceId) ||
+            controls.bluetoothEnabled == null || controls.bluetoothControl !in listOf("direct", "local")) return
+        val id = java.util.UUID.randomUUID().toString()
+        if (pendingOutgoing.putIfAbsent(peer.deviceId, id) != null) return
+        _controlNotice.update { it + (peer.deviceId to "pending") }
+        networkManager.sendMessage(peer.deviceId, sefirah.domain.model.DeviceControlRequest(id, "bluetooth",
+            if (controls.bluetoothEnabled == true) 0 else 1))
+        scope.launch {
+            kotlinx.coroutines.delay(8000)
+            if (pendingOutgoing.remove(peer.deviceId, id))
+                _controlNotice.update { it + (peer.deviceId to "unconfirmed") }
+        }
+    }
+    fun handleResult(peerId: String, result: sefirah.domain.model.DeviceControlResult) {
+        if (!pendingOutgoing.remove(peerId, result.requestId)) return
+        _controlNotice.update { notices ->
+            if (result.status == "applied") notices - peerId else notices + (peerId to result.status)
+        }
+    }
+
+    suspend fun capabilities(deviceId: String): sefirah.domain.model.DeviceControls {
+        val allowed = preferences.preferenceSettings(deviceId).first().allowRemoteDeviceControls
+        start()
+        val state = getBluetoothState()
+        return sefirah.domain.model.DeviceControls(
+            ringerControl = allowed,
+            bluetoothControl = when {
+                bluetoothAdapter == null -> "unsupported"
+                !allowed || state.isAvailable == false -> "denied"
+                else -> "local"
+            },
+            bluetoothEnabled = if (state.isAvailable == false) null else state.isEnabled,
+        )
+    }
+
+    private val requestGate = kotlinx.coroutines.sync.Mutex()
+    private val recentRequests = linkedMapOf<Pair<String, String>, Pair<sefirah.domain.model.DeviceControlRequest, sefirah.domain.model.DeviceControlResult>>()
+
+    suspend fun handleControl(deviceId: String, request: sefirah.domain.model.DeviceControlRequest) {
+        val peer = devices.getPairedDevice(deviceId) ?: return
+        if (!peer.connectionState.isConnected || peer.controls?.version != 1) return
+        if (runCatching { java.util.UUID.fromString(request.requestId) }.isFailure) return
+        requestGate.withLock {
+            val currentPeer = devices.getPairedDevice(deviceId) ?: return@withLock
+            if (!currentPeer.connectionState.isConnected || currentPeer.controls?.version != 1) return@withLock
+            val key = deviceId to request.requestId
+            val previous = recentRequests[key]
+            if (previous != null) {
+                networkManager.sendMessage(deviceId, if (previous.first == request) previous.second
+                    else sefirah.domain.model.DeviceControlResult(request.requestId, "invalid"))
+                return@withLock
+            }
+            val allowed = preferences.preferenceSettings(deviceId).first().allowRemoteDeviceControls
+            val status = if (!allowed) "denied" else when (request.control) {
+                "ringer" -> if (request.value !in 0..2) "invalid" else try {
+                    audioManager.ringerMode = request.value
+                    if (audioManager.ringerMode == request.value) "applied" else "unconfirmed"
+                } catch (_: SecurityException) { "denied" } catch (_: IllegalArgumentException) { "invalid" }
+                "bluetooth" -> when {
+                    request.value !in 0..1 -> "invalid"
+                    bluetoothAdapter == null -> "unsupported"
+                    getBluetoothState().isAvailable == false -> "denied"
+                    getBluetoothState().isEnabled == (request.value == 1) -> "applied"
+                    else -> {
+                        val prompt = BluetoothPrompt(deviceId, request.value == 1)
+                        _bluetoothPrompt.value = prompt
+                        scope.launch {
+                            kotlinx.coroutines.delay(30_000)
+                            _bluetoothPrompt.compareAndSet(prompt, null)
+                        }
+                        "local"
+                    }
+                }
+                else -> "unsupported"
+            }
+            val result = sefirah.domain.model.DeviceControlResult(request.requestId, status)
+            if (recentRequests.size >= 128) recentRequests.remove(recentRequests.keys.first())
+            recentRequests[key] = request to result
+            networkManager.sendMessage(deviceId, result)
+            sendDeviceStatus(deviceId)
+        }
+    }
+
     private var lastBatteryStatus: BatteryState? = null
     private var receiversRegistered = false
     private var bluetoothReceiverRegistered = false
 
     fun start() {
-        if (receiversRegistered) return
-        context.registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        context.registerReceiver(
-            interruptionFilterReceiver,
-            IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED),
-        )
-        context.registerReceiver(
-            interruptionFilterReceiver,
-            IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION),
-        )
-        context.registerReceiver(
-            interruptionFilterReceiver,
-            IntentFilter(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED),
-        )
-        receiversRegistered = true
+        if (!receiversRegistered) {
+            context.registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            context.registerReceiver(
+                interruptionFilterReceiver,
+                IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED),
+            )
+            context.registerReceiver(
+                interruptionFilterReceiver,
+                IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION),
+            )
+            context.registerReceiver(
+                interruptionFilterReceiver,
+                IntentFilter(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED),
+            )
+            receiversRegistered = true
+        }
 
-        if (bluetoothAdapter != null && nearbyDevicesPermissionGranted(context)) {
+        if (!bluetoothReceiverRegistered && bluetoothAdapter != null && nearbyDevicesPermissionGranted(context)) {
             context.registerReceiver(bluetoothReceiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED))
             bluetoothReceiverRegistered = true
         }
@@ -121,6 +227,15 @@ class DeviceControlHandler @Inject constructor(
     }
 
     fun sendDeviceStatus(deviceId: String) {
+        scope.launch {
+            val peer = devices.getPairedDevice(deviceId) ?: return@launch
+            if (peer.connectionState.isConnected) {
+                networkManager.sendMessage(deviceId, sefirah.domain.model.DeviceInfo(
+                    devices.localDevice.deviceName,
+                    phoneNumbers = runCatching { sefirah.communication.utils.TelephonyHelper.getAllPhoneNumbers(context).map { it.toDto() } }.getOrDefault(emptyList()),
+                    controls = capabilities(deviceId)))
+            }
+        }
         val batteryStatus = getBatteryStatus()
         val ringerMode = RingerModeState(audioManager.ringerMode)
         val dndStatus = getDndStatus()
@@ -156,12 +271,13 @@ class DeviceControlHandler @Inject constructor(
     }
 
     private fun getBluetoothState(): BluetoothState {
-        val isEnabled = try {
-            bluetoothAdapter?.isEnabled == true
-        } catch (e: SecurityException) {
-            false
+        if (bluetoothAdapter == null || !nearbyDevicesPermissionGranted(context))
+            return BluetoothState(false, isAvailable = false)
+        return try {
+            BluetoothState(bluetoothAdapter.isEnabled, isAvailable = true)
+        } catch (_: SecurityException) {
+            BluetoothState(false, isAvailable = false)
         }
-        return BluetoothState(isEnabled)
     }
 
     private fun broadcastRingerMode() {

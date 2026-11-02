@@ -40,6 +40,7 @@ class DeviceSettingsViewModel @Inject constructor(
     private val networkManager: NetworkManager,
     private val preferencesRepository: PreferencesRepository,
     private val featureManager: FeatureManager,
+    private val deviceControlHandler: sefirah.status.DeviceControlHandler,
     private val appScope: AppCoroutineScope,
     savedStateHandle: SavedStateHandle,
     application: Application
@@ -149,6 +150,16 @@ class DeviceSettingsViewModel @Inject constructor(
                 val updatedDevice = currentDevice.copy(addresses = updatedIps)
                 deviceManager.addOrUpdatePairedDevice(updatedDevice)
             }
+        }
+    }
+
+    fun saveRemoteDeviceControls(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.saveRemoteDeviceControls(deviceId, enabled)
+            networkManager.sendMessage(deviceId, sefirah.domain.model.DeviceInfo(
+                deviceManager.localDevice.deviceName,
+                controls = deviceControlHandler.capabilities(deviceId)
+            ))
         }
     }
 

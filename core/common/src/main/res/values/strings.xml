@@ -225,4 +225,15 @@
     <string name="location_permission_dialog_message">Sefirah needs background location permission to know the WiFi network when the app is in the background. We only use it to get the WiFi name—nothing else from the location permission is used.</string>
     <string name="media_session_preference">Desktop media sessions</string>
 
+    <string name="remote_device_controls">Allow this device to control ringing and request Bluetooth changes</string>
+    <string name="remote_device_controls_description">Bluetooth changes require confirmation on this phone and may disconnect accessories.</string>
+    <string name="bluetooth_confirmation">A paired device requested a Bluetooth change</string>
+    <string name="bluetooth_confirmation_description">Continue to Android Bluetooth settings. This can disconnect headphones, keyboards and network connections.</string>
+    <string name="bluetooth_open_settings">Continue</string>
+    <string name="bluetooth_turn_off">Turn Bluetooth off</string>
+    <string name="bluetooth_turn_on">Turn Bluetooth on</string>
+    <string name="bluetooth_control_unavailable">Bluetooth control unavailable. Check permissions on the target.</string>
+    <string name="bluetooth_remote_confirmation">Open Sefirah on the target device to confirm.</string>
+    <string name="device_control_pending">Waiting for the target device…</string>
+    <string name="device_control_failed">The target device did not confirm this change.</string>
 </resources>

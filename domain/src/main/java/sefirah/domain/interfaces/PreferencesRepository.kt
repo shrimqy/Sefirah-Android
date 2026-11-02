@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import sefirah.domain.model.DevicePreferences
 
 interface PreferencesRepository {
+    suspend fun saveRemoteDeviceControls(deviceId: String, enabled: Boolean)
     fun preferenceSettings(deviceId: String): Flow<DevicePreferences>
 
     suspend fun readAppEntry(): Boolean

@@ -70,7 +70,9 @@ data class UdpBroadcast(
 data class DeviceInfo(
     val deviceName: String,
     val avatar: String? = null,
-    val phoneNumbers: List<PhoneNumber> = emptyList(),
+    // Absent means no update; an explicit empty list clears known numbers.
+    val phoneNumbers: List<PhoneNumber>? = null,
+    val controls: DeviceControls? = null,
 ) : SocketMessage(), Parcelable
 
 @Serializable
@@ -83,7 +85,8 @@ data class BatteryState(
 @Serializable
 @SerialName("BluetoothState")
 data class BluetoothState(
-    val isEnabled: Boolean
+    val isEnabled: Boolean,
+    val isAvailable: Boolean? = null
 ) : SocketMessage()
 
 @Serializable

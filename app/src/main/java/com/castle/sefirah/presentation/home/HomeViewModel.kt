@@ -30,10 +30,22 @@ class HomeViewModel @Inject constructor(
     private val remotePlaybackFeature: RemotePlaybackFeature,
     private val deviceManager: DeviceManager,
     private val networkManager: NetworkManager,
+    private val deviceControlHandler: sefirah.status.DeviceControlHandler,
     actionFeature: ActionFeature,
     remoteDeviceStatusFeature: RemoteDeviceStatusFeature,
     preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
+
+    val bluetoothPrompt = deviceControlHandler.bluetoothPrompt
+    val confirmBluetoothPrompt = deviceControlHandler::consumeBluetoothPrompt
+    val controlNotice = kotlinx.coroutines.flow.combine(deviceControlHandler.controlNotice, deviceManager.selectedDeviceId) { notices, selected ->
+        notices[selected]
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val selectedControlDevice = kotlinx.coroutines.flow.combine(deviceManager.pairedDevices, deviceManager.selectedDeviceId) { peers, selected ->
+        peers.firstOrNull { it.deviceId == selected }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    fun requestBluetooth() { selectedControlDevice.value?.let(deviceControlHandler::requestBluetooth) }
+    val dismissBluetoothPrompt = deviceControlHandler::dismissBluetoothPrompt
 
     val batteryByDevice: StateFlow<Map<String, BatteryState>> =
         remoteDeviceStatusFeature.batteryByDevice

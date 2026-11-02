@@ -26,6 +26,10 @@ class PreferencesRepositoryImpl @Inject constructor(
 
     private val datastore = context.dataStore
 
+    override suspend fun saveRemoteDeviceControls(deviceId: String, enabled: Boolean) {
+        booleanPreferencesKey("remoteDeviceControls_$deviceId").update(enabled)
+    }
+
     override suspend fun readAppEntry(): Boolean {
         return datastore.data.map { preferences ->
             preferences[APP_ENTRY] == true
@@ -304,6 +308,7 @@ class PreferencesRepositoryImpl @Inject constructor(
                 imageClipboard = preferences[deviceImageClipboardKey(deviceId)] != false,
                 mediaSession = preferences[deviceMediaSessionKey(deviceId)] != false,
                 mediaSessionNotification = preferences[deviceMediaSessionNotificationKey(deviceId)] != false,
+                allowRemoteDeviceControls = preferences[booleanPreferencesKey("remoteDeviceControls_$deviceId")] == true,
                 remoteVolumeControl = preferences[deviceRemoteVolumeControlKey(deviceId)] == true,
                 mediaPlayerControl = preferences[deviceMediaPlayerControlKey(deviceId)] != false,
                 remoteStorage = preferences[deviceRemoteStorageKey(deviceId)] == true,

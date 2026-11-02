@@ -63,6 +63,8 @@ suspend fun NetworkService.handleMessage(device: BaseRemoteDevice, message: Sock
                 is ClipboardInfo -> clipboardFeature.setClipboard(message)
                 is ShareTransfer -> fileTransferService.receiveShare(device.deviceId, message)
                 is ClipboardTransfer -> fileTransferService.receiveClipboard(device.deviceId, message)
+                is sefirah.domain.model.DeviceControlResult -> deviceControlHandler.handleResult(device.deviceId, message)
+                is sefirah.domain.model.DeviceControlRequest -> deviceControlHandler.handleControl(device.deviceId, message)
                 is RingerModeState -> deviceControlHandler.handleRingerMode(message)
                 is DndState -> deviceControlHandler.handleDndStatus(message)
                 is MessagesRequest -> smsFeature.handleMessagesRequest(device.deviceId, message)

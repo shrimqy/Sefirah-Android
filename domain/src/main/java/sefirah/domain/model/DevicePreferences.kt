@@ -1,6 +1,7 @@
 package sefirah.domain.model
 
 data class DevicePreferences(
+    val allowRemoteDeviceControls: Boolean = false,
     val clipboardSync: Boolean = false,
     val messageSync: Boolean = false,
     val longTextAsMms: Boolean = false,

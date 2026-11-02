@@ -577,7 +577,7 @@ class NetworkService : Service() {
     suspend fun disconnectDevice(device: PairedDevice, forcedDisconnect: Boolean = false) {
         Log.i(TAG, "Disconnected ${device.deviceName}")
 
-        deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected(forcedDisconnect)))
+        deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected(forcedDisconnect), controls = null))
         removeConnection(device.deviceId)
         featureManager.onDisconnect(device.deviceId)
     }
@@ -633,7 +633,8 @@ class NetworkService : Service() {
     suspend fun handleDeviceInfo(deviceInfo: DeviceInfo, device: PairedDevice) {
         val updatedDevice = device.copy(
             deviceName = deviceInfo.deviceName,
-            avatar = deviceInfo.avatar
+            controls = deviceInfo.controls ?: device.controls,
+            avatar = deviceInfo.avatar ?: device.avatar
         )
         deviceManager.addOrUpdatePairedDevice(updatedDevice)
         Log.d(TAG, "DeviceInfo updated for ${device.deviceId}")

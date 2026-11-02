@@ -161,6 +161,12 @@ fun DeviceSettingsScreen(
             ) {
                 item { 
                     DeviceHeader(device = currentDevice)
+                    SwitchPreferenceWidget(
+                        title = stringResource(R.string.remote_device_controls),
+                        subtitle = stringResource(R.string.remote_device_controls_description),
+                        checked = preferences.allowRemoteDeviceControls,
+                        onCheckedChanged = viewModel::saveRemoteDeviceControls
+                    )
                 }
                 
                 item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }

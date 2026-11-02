@@ -33,6 +33,34 @@ fun HomeScreen(
     connectionViewModel: ConnectionViewModel
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
+    val bluetoothActionScope = rememberCoroutineScope()
+    val controlPeer by viewModel.selectedControlDevice.collectAsState()
+    val controlNotice by viewModel.controlNotice.collectAsState()
+    val bluetoothPrompt by viewModel.bluetoothPrompt.collectAsState()
+    val bluetoothContext = androidx.compose.ui.platform.LocalContext.current
+    bluetoothPrompt?.let { prompt ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = viewModel.dismissBluetoothPrompt,
+            title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(sefirah.common.R.string.bluetooth_confirmation)) },
+            text = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(sefirah.common.R.string.bluetooth_confirmation_description)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    bluetoothActionScope.launch {
+                        if (!viewModel.confirmBluetoothPrompt(prompt)) return@launch
+                        val intent = if (prompt.enabled) android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                            else android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
+                        runCatching { bluetoothContext.startActivity(intent) }
+                    }
+                }) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(sefirah.common.R.string.bluetooth_open_settings)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = viewModel.dismissBluetoothPrompt) {
+                    androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
+
 
     val pairedDevicesList by connectionViewModel.pairedDevices.collectAsState()
 
@@ -88,6 +116,30 @@ fun HomeScreen(
                     )
                 }
 
+
+                controlPeer?.controls?.let { controls ->
+                    item(key = "bluetooth_control") {
+                        androidx.compose.material3.TextButton(
+                            enabled = controlPeer?.connectionState?.isConnected == true &&
+                                controls.bluetoothEnabled != null &&
+                                controls.bluetoothControl in listOf("direct", "local") &&
+                                controlNotice != "pending",
+                            onClick = viewModel::requestBluetooth
+                        ) {
+                            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(
+                                if (controls.bluetoothEnabled == true) sefirah.common.R.string.bluetooth_turn_off
+                                else sefirah.common.R.string.bluetooth_turn_on))
+                        }
+                        if (controls.bluetoothControl !in listOf("direct", "local"))
+                            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(sefirah.common.R.string.bluetooth_control_unavailable))
+                        controlNotice?.let { notice ->
+                            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(
+                                if (notice == "local") sefirah.common.R.string.bluetooth_remote_confirmation
+                                else if (notice == "pending") sefirah.common.R.string.device_control_pending
+                                else sefirah.common.R.string.device_control_failed))
+                        }
+                    }
+                }
                 if (actions.isNotEmpty()) {
                     item(key = "device_control") {
                         DeviceControlCard(
