@@ -40,7 +40,8 @@ import javax.inject.Singleton
 @Singleton
 class DeviceManagerImpl @Inject constructor(
     private val context: Context,
-    private val appRepository: AppRepository
+    private val appRepository: AppRepository,
+    private val preferences: sefirah.domain.interfaces.PreferencesRepository
 ) : DeviceManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val devicesMutex = Mutex()
@@ -93,7 +94,13 @@ class DeviceManagerImpl @Inject constructor(
                 devicesMutex.withLock {
                     val pairedList = allDevices.map { deviceEntity ->
                         val remoteDevice = deviceEntity.toDomain()
-                        remoteDevice.copy(connectionState = ConnectionState.Disconnected())
+                        val metadata = runCatching {
+                            kotlinx.serialization.json.Json.decodeFromString<sefirah.domain.model.DevicePresentation>(
+                                preferences.readPresentation("peer_${remoteDevice.deviceId}").first())
+                        }.getOrNull()?.takeIf { it.isValid() }
+                        remoteDevice.copy(connectionState = ConnectionState.Disconnected(), presentation = metadata,
+                            avatar = if (metadata?.wallpaperSource in listOf("wallpaper", "userSelected") &&
+                                metadata != null) sefirah.domain.util.PresentationImage.validate(remoteDevice.avatar, metadata.wallpaperId) else null)
                     }
                     _pairedDevices.value = pairedList
                     

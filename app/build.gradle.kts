@@ -76,6 +76,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.kotlinx.serialization.json)
     api(projects.core.common)
     api(projects.core.network)
     api(projects.core.presentation)

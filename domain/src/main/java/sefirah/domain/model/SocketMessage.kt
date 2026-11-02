@@ -70,7 +70,10 @@ data class UdpBroadcast(
 data class DeviceInfo(
     val deviceName: String,
     val avatar: String? = null,
-    val phoneNumbers: List<PhoneNumber> = emptyList(),
+    // Absent means no update; an explicit empty list clears known numbers.
+    val phoneNumbers: List<PhoneNumber>? = null,
+    val presentation: DevicePresentation? = null,
+    val requestedWallpaperId: String? = null,
 ) : SocketMessage(), Parcelable
 
 @Serializable

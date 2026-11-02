@@ -225,4 +225,20 @@
     <string name="location_permission_dialog_message">Sefirah needs background location permission to know the WiFi network when the app is in the background. We only use it to get the WiFi name—nothing else from the location permission is used.</string>
     <string name="media_session_preference">Desktop media sessions</string>
 
+    <string name="device_presentation_title">This device on other devices</string>
+    <string name="device_presentation_description">Choose its frame, orientation and preview. These settings do not rotate your screen.</string>
+    <string name="device_presentation_kind">Device type</string>
+    <string name="device_presentation_orientation">Display orientation</string>
+    <string name="device_presentation_ratio">Display ratio</string>
+    <string name="share_wallpaper_preview">Share a wallpaper preview with allowed paired devices</string>
+    <string name="choose_presentation_image">Choose a preview image</string>
+    <string name="use_system_wallpaper">Use system wallpaper</string>
+    <string name="share_wallpaper_with_device">Share this computer\'s wallpaper preview</string>
+    <string name="share_wallpaper_with_device_description">Also enable wallpaper sharing in General. Turning this off clears the preview on upgraded peers.</string>
+    <string name="presentation_unknown">Unknown device</string>
+    <string name="presentation_phone">Phone</string>
+    <string name="presentation_tablet">Tablet</string>
+    <string name="presentation_computer">Computer</string>
+    <string name="presentation_portrait">Portrait</string>
+    <string name="presentation_landscape">Landscape</string>
 </resources>

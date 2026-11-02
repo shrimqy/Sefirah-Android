@@ -53,17 +53,7 @@ fun DeviceCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                val avatarBitmap = remember(device.avatar) {
-                    base64ToBitmap(device.avatar)
-                }
-                Image(
-                    painter = rememberAsyncImagePainter(model = avatarBitmap),
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
-                )
+                DevicePreview(device)
 
                 Spacer(Modifier.width(16.dp))
 

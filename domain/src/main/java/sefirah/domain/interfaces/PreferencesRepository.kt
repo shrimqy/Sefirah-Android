@@ -4,6 +4,9 @@ import kotlinx.coroutines.flow.Flow
 import sefirah.domain.model.DevicePreferences
 
 interface PreferencesRepository {
+    fun readPresentation(key: String): Flow<String>
+    suspend fun savePresentation(key: String, value: String)
+
     fun preferenceSettings(deviceId: String): Flow<DevicePreferences>
 
     suspend fun readAppEntry(): Boolean

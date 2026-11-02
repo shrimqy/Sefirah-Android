@@ -2,7 +2,6 @@ package sefirah.network
 
 import android.annotation.SuppressLint
 import android.app.Service
-import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -36,7 +35,6 @@ import sefirah.apps.AppListHandler
 import sefirah.clipboard.ClipboardFeature
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
-import sefirah.common.util.drawableToBase64Compressed
 import sefirah.common.util.isContactsPermissionGranted
 import sefirah.communication.bluetooth.BluetoothPairingHandler
 import sefirah.communication.sms.SmsFeature
@@ -83,6 +81,8 @@ import kotlin.time.Duration.Companion.milliseconds
 @AndroidEntryPoint
 class NetworkService : Service() {
     @Inject lateinit var socketFactory: SocketFactory
+
+    @Inject lateinit var presentationPublisher: sefirah.status.DevicePresentationPublisher
 
     @Inject lateinit var appRepository: AppRepository
 
@@ -540,16 +540,6 @@ class NetworkService : Service() {
     @SuppressLint("MissingPermission")
     fun sendDeviceInfo(device: PairedDevice) {
         try {
-            val wallpaper = try {
-                val wallpaperManager = WallpaperManager.getInstance(applicationContext)
-                wallpaperManager.drawable?.let { drawable ->
-                    drawableToBase64Compressed(drawable)
-                }
-            } catch (e: SecurityException) {
-                Log.w(TAG, "Unable to access wallpaper", e)
-                null
-            }
-
             val localPhoneNumbers = try {
                 TelephonyHelper.getAllPhoneNumbers(this).map { it.toDto() }
             } catch (e: Exception) {
@@ -557,7 +547,7 @@ class NetworkService : Service() {
                 emptyList()
             }
 
-            val deviceInfo = DeviceInfo(deviceManager.localDevice.deviceName, wallpaper, localPhoneNumbers)
+            val deviceInfo = DeviceInfo(deviceManager.localDevice.deviceName, phoneNumbers = localPhoneNumbers, presentation = runBlocking { presentationPublisher.metadata(device.deviceId) })
             sendMessage(device.deviceId, deviceInfo)
             Log.d(TAG, "DeviceInfo sent to ${device.deviceId}")
         } catch (e: Exception) {
@@ -631,10 +621,7 @@ class NetworkService : Service() {
     }
 
     suspend fun handleDeviceInfo(deviceInfo: DeviceInfo, device: PairedDevice) {
-        val updatedDevice = device.copy(
-            deviceName = deviceInfo.deviceName,
-            avatar = deviceInfo.avatar
-        )
+        val updatedDevice = presentationPublisher.receive(device, deviceInfo).copy(deviceName = deviceInfo.deviceName)
         deviceManager.addOrUpdatePairedDevice(updatedDevice)
         Log.d(TAG, "DeviceInfo updated for ${device.deviceId}")
     }

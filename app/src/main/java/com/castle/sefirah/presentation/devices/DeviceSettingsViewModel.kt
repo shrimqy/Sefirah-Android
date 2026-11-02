@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.komu.sekia.di.AppCoroutineScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +41,7 @@ class DeviceSettingsViewModel @Inject constructor(
     private val networkManager: NetworkManager,
     private val preferencesRepository: PreferencesRepository,
     private val featureManager: FeatureManager,
+    private val presentationPublisher: sefirah.status.DevicePresentationPublisher,
     private val appScope: AppCoroutineScope,
     savedStateHandle: SavedStateHandle,
     application: Application
@@ -149,6 +151,15 @@ class DeviceSettingsViewModel @Inject constructor(
                 val updatedDevice = currentDevice.copy(addresses = updatedIps)
                 deviceManager.addOrUpdatePairedDevice(updatedDevice)
             }
+        }
+    }
+
+    val shareWallpaper = preferencesRepository.readPresentation("allow_$deviceId")
+        .map { it == "true" }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    fun saveShareWallpaper(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.savePresentation("allow_$deviceId", enabled.toString())
+            presentationPublisher.publishAll()
         }
     }
 

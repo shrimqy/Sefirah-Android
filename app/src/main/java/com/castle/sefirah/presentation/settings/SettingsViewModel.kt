@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -47,10 +48,45 @@ class SettingsViewModel @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
     private val appRepository: AppRepository,
     private val networkManager: NetworkManager,
+    private val presentationPublisher: sefirah.status.DevicePresentationPublisher,
     networkDiscovery: NetworkDiscovery,
     deviceManager: DeviceManager,
     application: Application
 ) : AndroidViewModel(application) {
+    var presentation by mutableStateOf(sefirah.domain.model.DevicePresentation())
+        private set
+    var presentationPreview by mutableStateOf<sefirah.domain.model.DevicePresentation?>(null)
+        private set
+    private suspend fun refreshPreview() { presentationPreview = presentationPublisher.metadata(null, true) }
+    var shareWallpaper by mutableStateOf(false)
+        private set
+    init {
+        viewModelScope.launch {
+            presentation = presentationPublisher.localSettings()
+            shareWallpaper = preferencesRepository.readPresentation("share").first() == "true"
+            refreshPreview()
+        }
+    }
+    fun updatePresentation(value: sefirah.domain.model.DevicePresentation) {
+        if (!value.isValid()) return
+        presentation = value
+        viewModelScope.launch {
+            preferencesRepository.savePresentation("local", kotlinx.serialization.json.Json.encodeToString(sefirah.domain.model.DevicePresentation.serializer(), value.metadata()))
+            refreshPreview()
+            presentationPublisher.publishAll()
+        }
+    }
+    fun shareWallpaper(enabled: Boolean) {
+        shareWallpaper = enabled
+        viewModelScope.launch {
+            preferencesRepository.savePresentation("share", enabled.toString())
+            refreshPreview()
+            presentationPublisher.publishAll()
+        }
+    }
+    fun selectPresentationImage(uri: android.net.Uri) { viewModelScope.launch(Dispatchers.IO) { presentationPublisher.saveImage(uri); refreshPreview() } }
+    fun useSystemWallpaper() { presentationPublisher.useWallpaper(); viewModelScope.launch { refreshPreview(); presentationPublisher.publishAll() } }
+
     val localDevice: StateFlow<LocalDevice?> = deviceManager.localDeviceFlow
 
     val networkList: StateFlow<List<NetworkEntity>> = appRepository

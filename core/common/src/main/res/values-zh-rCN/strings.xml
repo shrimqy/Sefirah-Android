@@ -128,4 +128,20 @@
     <string name="connection_toggle">Connection toggle</string>
     <string name="trust_all_networks">Trust all networks</string>
     <string name="device_settings">Device settings</string>
+    <string name="device_presentation_title">此设备在其他设备上的外观</string>
+    <string name="device_presentation_description">选择外框、方向与预览；这些设置不会旋转系统屏幕。</string>
+    <string name="device_presentation_kind">设备类型</string>
+    <string name="device_presentation_orientation">展示方向</string>
+    <string name="device_presentation_ratio">展示比例</string>
+    <string name="share_wallpaper_preview">向允许的配对设备分享壁纸预览</string>
+    <string name="choose_presentation_image">选择展示图片</string>
+    <string name="use_system_wallpaper">使用系统壁纸</string>
+    <string name="share_wallpaper_with_device">向此设备分享本机壁纸预览</string>
+    <string name="share_wallpaper_with_device_description">还需在通用设置启用壁纸分享；关闭后将清除新版本接收端的预览。</string>
+    <string name="presentation_unknown">未知设备</string>
+    <string name="presentation_phone">手机</string>
+    <string name="presentation_tablet">平板</string>
+    <string name="presentation_computer">电脑</string>
+    <string name="presentation_portrait">竖向</string>
+    <string name="presentation_landscape">横向</string>
 </resources>
