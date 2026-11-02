@@ -557,7 +557,7 @@ class NetworkService : Service() {
                 emptyList()
             }
 
-            val deviceInfo = DeviceInfo(deviceManager.localDevice.deviceName, wallpaper, localPhoneNumbers)
+            val deviceInfo = DeviceInfo(deviceManager.localDevice.deviceName, wallpaper, localPhoneNumbers, runBlocking { deviceControlHandler.capabilities(device.deviceId) })
             sendMessage(device.deviceId, deviceInfo)
             Log.d(TAG, "DeviceInfo sent to ${device.deviceId}")
         } catch (e: Exception) {

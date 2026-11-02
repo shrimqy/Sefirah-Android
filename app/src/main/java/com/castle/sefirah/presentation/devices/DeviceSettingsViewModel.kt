@@ -156,7 +156,8 @@ class DeviceSettingsViewModel @Inject constructor(
     fun saveRemoteDeviceControls(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.saveRemoteDeviceControls(deviceId, enabled)
-            networkManager.sendMessage(deviceId, sefirah.domain.model.DeviceInfo(
+            if (deviceManager.getPairedDevice(deviceId)?.controls?.version == 1)
+                networkManager.sendMessage(deviceId, sefirah.domain.model.DeviceInfo(
                 deviceManager.localDevice.deviceName,
                 controls = deviceControlHandler.capabilities(deviceId)
             ))

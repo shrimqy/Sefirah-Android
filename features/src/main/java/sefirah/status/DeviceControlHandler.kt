@@ -229,10 +229,9 @@ class DeviceControlHandler @Inject constructor(
     fun sendDeviceStatus(deviceId: String) {
         scope.launch {
             val peer = devices.getPairedDevice(deviceId) ?: return@launch
-            if (peer.connectionState.isConnected) {
+            if (peer.connectionState.isConnected && peer.controls?.version == 1) {
                 networkManager.sendMessage(deviceId, sefirah.domain.model.DeviceInfo(
                     devices.localDevice.deviceName,
-                    phoneNumbers = runCatching { sefirah.communication.utils.TelephonyHelper.getAllPhoneNumbers(context).map { it.toDto() } }.getOrDefault(emptyList()),
                     controls = capabilities(deviceId)))
             }
         }
