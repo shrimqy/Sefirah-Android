@@ -10,6 +10,8 @@ interface NetworkManager {
     suspend fun connectPaired(device: PairedDevice)
     suspend fun connectTo(connectionDetails: ConnectionDetails)
     suspend fun disconnect(deviceId: String)
+    /** Removes the pairing with [deviceId], telling the device first if it is connected. */
+    suspend fun unpair(deviceId: String)
     fun broadcastMessage(message: SocketMessage)
     /** @return false if there is no live connection */
     fun sendMessage(deviceId: String, message: SocketMessage): Boolean

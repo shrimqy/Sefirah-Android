@@ -17,6 +17,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import sefirah.domain.util.MessageSerializer
 import javax.net.ssl.SSLSocket
 
@@ -106,6 +107,19 @@ class DeviceConnection(
                 }
             }
         }
+    }
+
+    /**
+     * Sends [message] as the last thing on this connection, then closes it. Unlike [close], queued
+     * messages are written out first (for up to [timeoutMillis]) instead of being dropped.
+     */
+    suspend fun sendAndClose(message: SocketMessage, timeoutMillis: Long = 2_000) {
+        if (!closed && outbound.trySend(message).isSuccess) {
+            // The writer drains what is queued and then finishes
+            outbound.close()
+            withTimeoutOrNull(timeoutMillis) { writerJob.join() }
+        }
+        close()
     }
 
     /**

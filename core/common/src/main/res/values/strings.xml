@@ -108,6 +108,10 @@
     <string name="add_address">Add Address</string>
     <string name="add">Add</string>
     <string name="cancel">Cancel</string>
+    <string name="revoke_adb_dialog_title">Revoke ADB access</string>
+    <string name="revoke_adb_dialog_message">%1$s was unpaired, but if it was ever allowed USB debugging, its ADB key is still trusted on this phone. It could still use ADB and screen mirroring until you revoke it.\n\nIf you no longer trust that computer, open Developer options and tap \"Revoke USB debugging authorizations\". This revokes every computer, so approve the ones you still use again.</string>
+    <string name="open_developer_options">Developer options</string>
+    <string name="done">Done</string>
 
     <!-- Onboarding & Welcome -->
     <string name="welcome">Welcome</string>

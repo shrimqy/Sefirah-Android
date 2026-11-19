@@ -2,6 +2,7 @@ package sefirah.network.extensions
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import sefirah.clipboard.ClipboardChangeActivity
 import sefirah.common.R
@@ -66,6 +67,37 @@ fun NetworkService.showPairingVerificationNotification(approval: PendingDeviceAp
         setDefaults(NotificationCompat.DEFAULT_ALL)
         addAction(R.drawable.ic_launcher_foreground, getString(R.string.pairing_request_approve), approvePendingIntent)
         addAction(R.drawable.ic_launcher_foreground, getString(R.string.pairing_request_reject), rejectPendingIntent)
+    }
+}
+
+/**
+ * A computer unpaired this phone. Its ADB key stays trusted until revoked in Developer options,
+ * and the app may not be on screen, so this is a notification rather than a dialog.
+ */
+fun NetworkService.showRevokeAdbNotification(deviceId: String, deviceName: String) {
+    val developerOptionsIntent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+    val developerOptionsPendingIntent: PendingIntent = PendingIntent.getActivity(
+        this,
+        deviceId.hashCode() + 3,
+        developerOptionsIntent,
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+    val contentText = getString(R.string.revoke_adb_dialog_message, deviceName)
+
+    notificationCenter.showNotification(
+        channelId = AppNotifications.PAIRING_REQUEST_CHANNEL,
+        notificationId = AppNotifications.PAIRING_REQUEST_ID + deviceId.hashCode() + 1,
+    ) {
+        setContentTitle(getString(R.string.revoke_adb_dialog_title))
+        setContentText(contentText)
+        setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
+        setContentIntent(developerOptionsPendingIntent)
+        setAutoCancel(true)
+        setPriority(NotificationCompat.PRIORITY_HIGH)
+        addAction(R.drawable.ic_launcher_foreground, getString(R.string.open_developer_options), developerOptionsPendingIntent)
     }
 }
 

@@ -62,6 +62,10 @@ class NetworkManagerImpl @Inject constructor(
         networkService?.disconnect(deviceId)
     }
 
+    override suspend fun unpair(deviceId: String) {
+        networkService?.unpair(deviceId)
+    }
+
     override fun broadcastMessage(message: SocketMessage) {
         networkService?.broadcastMessage(message)
     }
