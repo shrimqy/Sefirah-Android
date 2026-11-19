@@ -137,7 +137,9 @@ class DeviceSettingsViewModel @Inject constructor(
 
     fun removeDevice() {
         appScope.launch(Dispatchers.IO) {
-            networkManager.disconnect(deviceId)
+            // Tells the PC it was unpaired so it drops the pairing too
+            networkManager.unpair(deviceId)
+            // Still remove it when the network service isn't running
             deviceManager.removePairedDevice(deviceId)
         }
     }

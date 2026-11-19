@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -30,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -57,6 +59,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.castle.sefirah.presentation.settings.components.SwitchPreferenceWidget
 import com.castle.sefirah.presentation.settings.components.TextPreferenceWidget
 import sefirah.common.R
+import sefirah.common.util.isAdbDebuggingEnabled
 import sefirah.common.util.isNotificationListenerEnabled
 import sefirah.common.util.openAppSettings
 import sefirah.domain.model.PairedDevice
@@ -78,6 +81,28 @@ fun DeviceSettingsScreen(
     val device by viewModel.device.collectAsState()
     val preferences by viewModel.preferences.collectAsState()
     val permissionStates by viewModel.permissionStates.collectAsState()
+    val screenContext = LocalContext.current
+    // Name of the device just unpaired while ADB debugging is on; shows the revoke warning
+    var revokeAdbDeviceName by remember { mutableStateOf<String?>(null) }
+
+    revokeAdbDeviceName?.let { deviceName ->
+        RevokeAdbDialog(
+            deviceName = deviceName,
+            onOpenDeveloperOptions = {
+                try {
+                    screenContext.startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+                } catch (_: Exception) {
+                    screenContext.startActivity(Intent(Settings.ACTION_SETTINGS))
+                }
+                revokeAdbDeviceName = null
+                onNavigateBack()
+            },
+            onDismiss = {
+                revokeAdbDeviceName = null
+                onNavigateBack()
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -90,8 +115,15 @@ fun DeviceSettingsScreen(
                 },
                 actions = {
                     IconButton(onClick = {
+                        val deviceName = device?.deviceName
+                        // Checked first: unpairing turns wireless debugging off
+                        val adbWasEnabled = isAdbDebuggingEnabled(screenContext)
                         viewModel.removeDevice()
-                        onNavigateBack()
+                        if (deviceName != null && adbWasEnabled) {
+                            revokeAdbDeviceName = deviceName
+                        } else {
+                            onNavigateBack()
+                        }
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_delete_fill),
@@ -525,4 +557,28 @@ fun SwitchPermissionPrefWidget(
 
 private fun convertTimestampToDate(timestamp: Long): String {
     return SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault()).format(Date(timestamp))
+}
+
+
+@Composable
+private fun RevokeAdbDialog(
+    deviceName: String,
+    onOpenDeveloperOptions: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.revoke_adb_dialog_title)) },
+        text = { Text(stringResource(R.string.revoke_adb_dialog_message, deviceName)) },
+        confirmButton = {
+            TextButton(onClick = onOpenDeveloperOptions) {
+                Text(stringResource(R.string.open_developer_options))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.done))
+            }
+        }
+    )
 }

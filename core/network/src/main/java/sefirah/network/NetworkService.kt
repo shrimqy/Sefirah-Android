@@ -36,6 +36,8 @@ import sefirah.apps.AppListHandler
 import sefirah.clipboard.ClipboardFeature
 import sefirah.common.notifications.AppNotifications
 import sefirah.common.notifications.NotificationCenter
+import sefirah.common.util.disableWirelessDebugging
+import sefirah.common.util.isAdbDebuggingEnabled
 import sefirah.common.util.drawableToBase64Compressed
 import sefirah.common.util.isContactsPermissionGranted
 import sefirah.communication.bluetooth.BluetoothPairingHandler
@@ -68,6 +70,7 @@ import sefirah.network.extensions.handleMessage
 import sefirah.network.extensions.startForegroundNotification
 import sefirah.network.extensions.updateNotification
 import sefirah.network.extensions.showPairingVerificationNotification
+import sefirah.network.extensions.showRevokeAdbNotification
 import sefirah.network.util.SslHelper
 import sefirah.notification.NotificationFeature
 import sefirah.playsound.PlaySoundFeature
@@ -580,6 +583,31 @@ class NetworkService : Service() {
         deviceManager.addOrUpdatePairedDevice(device.copy(connectionState = ConnectionState.Disconnected(forcedDisconnect)))
         removeConnection(device.deviceId)
         featureManager.onDisconnect(device.deviceId)
+    }
+
+    /** Removes the pairing with [deviceId], telling it first (when connected) so it drops us too. */
+    suspend fun unpair(deviceId: String) {
+        connections.remove(deviceId)?.sendAndClose(PairMessage(pair = false))
+        deviceManager.getPairedDevice(deviceId)?.let { disconnectDevice(it, true) }
+        deviceManager.removePairedDevice(deviceId)
+        disableWirelessDebugging(this)
+        Log.i(TAG, "Unpaired $deviceId")
+    }
+
+    /**
+     * A PairMessage is only ever sent to a device the sender doesn't consider paired: an unpair
+     * notice (pair = false) or a pairing request after it forgot us (pair = true). Either way it no
+     * longer trusts this pairing, so drop it here too.
+     */
+    suspend fun handlePairMessage(device: PairedDevice, message: PairMessage) {
+        Log.i(TAG, "${device.deviceName} no longer considers us paired (pair=${message.pair}), removing it")
+        val adbWasEnabled = isAdbDebuggingEnabled(this)
+        disconnectDevice(device, true)
+        deviceManager.removePairedDevice(device.deviceId)
+        disableWirelessDebugging(this)
+        if (adbWasEnabled) {
+            showRevokeAdbNotification(device.deviceId, device.deviceName)
+        }
     }
 
     private suspend fun disconnectDevice(device: DiscoveredDevice) {

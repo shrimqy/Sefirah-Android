@@ -51,6 +51,7 @@ suspend fun NetworkService.handleMessage(device: BaseRemoteDevice, message: Sock
                 is ClearNotifications -> notificationFeature.removeAllNotification()
                 is RequestApplicationList -> appListHandler.handleRequest(device.deviceId)
                 is Disconnect -> disconnectDevice(device, true)
+                is PairMessage -> handlePairMessage(device, message)
                 is NotificationInfo -> when (message.infoType) {
                     NotificationInfoType.Removed -> notificationFeature.removeNotification(message.notificationKey)
                     NotificationInfoType.Invoke -> notificationFeature.openNotification(message.notificationKey)
