@@ -9,6 +9,8 @@ import androidx.core.net.toUri
 import org.apache.sshd.common.file.nativefs.NativeFileSystemFactory
 import org.apache.sshd.common.keyprovider.KeyPairProvider
 import org.apache.sshd.common.session.SessionContext
+import org.apache.sshd.common.util.buffer.Buffer
+import org.apache.sshd.common.util.buffer.BufferUtils
 import org.apache.sshd.common.util.io.PathUtils
 import org.apache.sshd.common.util.security.SecurityUtils
 import org.apache.sshd.scp.server.ScpCommandFactory
@@ -16,9 +18,17 @@ import org.apache.sshd.server.ServerBuilder
 import org.apache.sshd.server.SshServer
 import org.apache.sshd.server.auth.password.PasswordAuthenticator
 import org.apache.sshd.server.auth.password.UserAuthPasswordFactory
+import org.apache.sshd.server.channel.ChannelSession
+import org.apache.sshd.server.command.Command
 import org.apache.sshd.server.subsystem.SubsystemFactory
+import org.apache.sshd.sftp.SftpModuleProperties
+import org.apache.sshd.sftp.common.SftpConstants
+import org.apache.sshd.sftp.common.SftpHelper
+import org.apache.sshd.sftp.server.DirectoryHandle
 import org.apache.sshd.sftp.server.FileHandle
 import org.apache.sshd.sftp.server.SftpFileSystemAccessor
+import org.apache.sshd.sftp.server.SftpSubsystem
+import org.apache.sshd.sftp.server.SftpSubsystemConfigurator
 import org.apache.sshd.sftp.server.SftpSubsystemFactory
 import org.apache.sshd.sftp.server.SftpSubsystemProxy
 import kotlinx.coroutines.flow.first
@@ -37,9 +47,12 @@ import sefirah.domain.model.DevicePreferences
 import sefirah.domain.model.SftpServerInfo
 import java.io.IOException
 import java.nio.channels.Channel
+import java.nio.charset.StandardCharsets
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.CopyOption
+import java.nio.file.DirectoryStream
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -142,8 +155,7 @@ class SftpFeature @Inject constructor(
         }.build()
 
         sshd.commandFactory = ScpCommandFactory()
-        sshd.subsystemFactories =
-            listOf<SubsystemFactory>(SftpSubsystemFactory.Builder().apply {
+        val sftpFactory = SftpSubsystemFactory.Builder().apply {
                 withFileSystemAccessor(object : SftpFileSystemAccessor {
                     fun notifyMediaStore(path: Path) {
                         runCatching {
@@ -154,6 +166,17 @@ class SftpFeature @Inject constructor(
                             onSuccess = { Log.i(TAG, "Notified media store: $path, $it") },
                             onFailure = { Log.w(TAG, "Failed to notify media store: $path", it) }
                         )
+                    }
+
+                    override fun openDirectory(
+                        subsystem: SftpSubsystemProxy?,
+                        dirHandle: DirectoryHandle?,
+                        dir: Path?,
+                        handle: String?,
+                        vararg linkOptions: LinkOption?
+                    ): DirectoryStream<Path> {
+                        dir?.let { volumeAncestorChildren(it) }?.let { return FixedDirectoryStream(it) }
+                        return super.openDirectory(subsystem, dirHandle, dir, handle, *linkOptions)
                     }
 
                     override fun openFile(
@@ -228,8 +251,114 @@ class SftpFeature @Inject constructor(
                         }
                     }
                 })
-            }.build())
+            }.build()
+        sshd.subsystemFactories = listOf<SubsystemFactory>(VolumeAwareSftpSubsystemFactory(sftpFactory))
         this.sshd = sshd
+    }
+
+    /** Creates [VolumeAwareSftpSubsystem]s with the built factory's configuration and listeners. */
+    private inner class VolumeAwareSftpSubsystemFactory(
+        private val delegate: SftpSubsystemFactory
+    ) : SubsystemFactory {
+        override fun getName(): String = delegate.name
+
+        override fun createSubsystem(channel: ChannelSession): Command =
+            VolumeAwareSftpSubsystem(channel, delegate).also { subsystem ->
+                delegate.registeredListeners.forEach { subsystem.addSftpEventListener(it) }
+            }
+    }
+
+    /**
+     * SFTP's opendir refuses directories the app can't read before the file system accessor is
+     * asked, so the volume ancestors are opened here directly; the accessor's openDirectory then
+     * lists only the entries that lead to a volume. Every other directory uses the stock checks.
+     */
+    private inner class VolumeAwareSftpSubsystem(
+        channel: ChannelSession,
+        configurator: SftpSubsystemConfigurator
+    ) : SftpSubsystem(channel, configurator) {
+        override fun doOpenDir(id: Int, path: String?, p: Path?, vararg options: LinkOption?): String? {
+            if (p == null || volumeAncestorChildren(p) == null) {
+                return super.doOpenDir(id, path, p, *options)
+            }
+            val handle = generateFileHandle(p)
+            handles[handle] = DirectoryHandle(this, p, handle)
+            return handle
+        }
+
+        // readdir repeats opendir's readability check, so volume ancestors get the same reply
+        // SftpSubsystem.doReadDir builds, minus that check. Mirrors sshd-sftp 2.20.0; recheck
+        // against SftpSubsystem.doReadDir when upgrading sshd.
+        override fun doReadDir(buffer: Buffer, id: Int) {
+            val start = buffer.rpos()
+            val handle = buffer.getString(StandardCharsets.ISO_8859_1)
+            val dirHandle = handles[handle] as? DirectoryHandle
+            if (dirHandle == null || volumeAncestorChildren(dirHandle.file) == null) {
+                buffer.rpos(start)
+                super.doReadDir(buffer, id)
+                return
+            }
+
+            try {
+                if (dirHandle.isDone) {
+                    sendStatus(prepareReply(buffer), id, SftpConstants.SSH_FX_EOF, "Directory reading is done")
+                    return
+                }
+                if (!dirHandle.isSendDot && !dirHandle.isSendDotDot && !dirHandle.hasNext()) {
+                    dirHandle.markDone()
+                    sendStatus(prepareReply(buffer), id, SftpConstants.SSH_FX_EOF, "Empty directory")
+                    return
+                }
+
+                val session = serverSession
+                val reply = prepareReply(buffer)
+                reply.putByte(SftpConstants.SSH_FXP_NAME.toByte())
+                reply.putInt(id.toLong())
+                val lengthPos = reply.wpos()
+                reply.putUInt(0)
+                val maxSize = SftpModuleProperties.MAX_READDIR_DATA_SIZE.getRequired(session)
+                val count = doReadDir(id, handle, dirHandle, reply, maxSize, false)
+                BufferUtils.updateLengthPlaceholder(reply, lengthPos, count.toLong())
+                if (!dirHandle.isSendDot && !dirHandle.isSendDotDot && !dirHandle.hasNext()) {
+                    dirHandle.markDone()
+                }
+                SftpHelper.indicateEndOfNamesList(reply, version, session, dirHandle.isDone)
+                send(reply)
+            } catch (e: IOException) {
+                Log.w(TAG, "readdir of volume ancestor ${dirHandle.file} failed", e)
+                sendStatus(prepareReply(buffer), id, e, SftpConstants.SSH_FXP_READDIR, handle)
+            }
+        }
+    }
+
+    /** Real directories of the shared storage volumes, e.g. /storage/emulated/0 and /storage/XXXX-XXXX. */
+    private fun storageVolumeRoots(): List<Path> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyList()
+        return context.getSystemService(StorageManager::class.java).storageVolumes
+            .mapNotNull { it.directory?.toPath()?.toAbsolutePath()?.normalize() }
+    }
+
+    /**
+     * Android hides the parents of the storage volumes ("/", "/storage", "/storage/emulated") from
+     * apps, so listing them fails and clients that open the server root get "Permission denied".
+     * For those directories only, list just the entries that lead to a volume. No path is renamed or
+     * remapped, so clients that go straight to a volume path (like the Windows sync roots) see no change.
+     */
+    private fun volumeAncestorChildren(dir: Path): List<Path>? {
+        val normalized = dir.toAbsolutePath().normalize()
+        val roots = storageVolumeRoots()
+        if (normalized in roots) return null
+
+        return roots
+            .filter { it.nameCount > normalized.nameCount && it.startsWith(normalized) }
+            .map { normalized.resolve(it.getName(normalized.nameCount).toString()) }
+            .distinct()
+            .ifEmpty { null }
+    }
+
+    private class FixedDirectoryStream(private val entries: List<Path>) : DirectoryStream<Path> {
+        override fun iterator(): MutableIterator<Path> = entries.toMutableList().iterator()
+        override fun close() {}
     }
 
     fun start(): SftpServerInfo? {
